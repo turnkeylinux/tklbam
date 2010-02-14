@@ -7,6 +7,7 @@ Options:
 """
 import sys
 import getopt
+import dirindex 
 
 def usage(e=None):
     if e:
@@ -39,12 +40,11 @@ def main():
     if len(args) < 2:
         usage()
 
-    index = args[0]
+    path_index = args[0]
     paths = args[1:]
 
-    print 'index: ' + `index`
-    print 'paths: ' + `paths`
-    print 'opt_create: ' + `opt_create`
+    if opt_create:
+        dirindex.create(path_index, paths)
 
 if __name__=="__main__":
     main()
