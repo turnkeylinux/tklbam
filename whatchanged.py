@@ -45,6 +45,9 @@ def main():
 
     if opt_create:
         dirindex.create(path_index, paths)
+    else:
+        for path in dirindex.compare(path_index, paths):
+            print path
 
 if __name__=="__main__":
     main()
