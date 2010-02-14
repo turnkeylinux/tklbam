@@ -1,0 +1,12 @@
+Source: whatchanged
+Section: misc
+Priority: optional
+Maintainer: Liraz Siri <liraz@sterilesecurity.com>
+Build-Depends: debhelper (>> 4.2.0)
+Standards-Version: 3.6.1
+
+Package: whatchanged
+Architecture: all
+Depends: python (>= 2.4)
+Section: misc
+Description: Example
