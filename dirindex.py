@@ -27,10 +27,29 @@ class DirIndex(dict):
                 self[path] = (mtime, size)
 
     def walk(self, *paths):
+        includes = []
+        excludes = []
+
         for path in paths:
+            if path[0] == '-':
+                excludes.append(abspath(path[1:]))
+            else:
+                includes.append(abspath(path))
+
+        def excluded(path):
+            for exclude in excludes:
+                if path == exclude or path.startswith(exclude + '/'):
+                    return True
+
+            return False
+
+        for path in includes:
             for dpath, dnames, fnames in os.walk(path):
                 for fname in fnames:
-                    path = abspath(join(dpath, fname))
+                    path = join(dpath, fname)
+                    if excluded(path):
+                        continue
+                    
                     st = os.lstat(path)
                     self[path] = (int(st.st_mtime), int(st.st_size))
 
