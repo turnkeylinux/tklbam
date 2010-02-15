@@ -39,6 +39,19 @@ class DirIndex(dict):
         for path in self:
             print >> fh, self._fmt(path, *self[path])
 
+    def new_or_changed(self, other):
+        a = set(self)
+        b = set(other)
+
+        delta = list(b - a)
+        samepaths = b & a
+
+        for path in samepaths:
+            if self[path] != other[path]:
+                delta.append(path)
+        
+        return delta
+
 def create(path_index, paths):
     di = DirIndex()
     di.walk(*paths)
@@ -49,10 +62,4 @@ def compare(path_index, paths):
     di_fs = DirIndex()
     di_fs.walk(*paths)
 
-    delta = list(set(di_fs) - set(di_saved))
-    samepaths = set(di_fs) & set(di_saved)
-    for path in samepaths:
-        if di_saved[path] != di_fs[path]:
-            delta.append(path)
-    
-    return delta
+    return di_saved.new_or_changed(di_fs)
