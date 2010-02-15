@@ -36,7 +36,9 @@ class DirIndex(dict):
 
     def save(self, tofile):
         fh = file(tofile, "w")
-        for path in self:
+        paths = self.keys()
+        paths.sort()
+        for path in paths:
             print >> fh, self._fmt(path, *self[path])
 
     def new_or_changed(self, other):
