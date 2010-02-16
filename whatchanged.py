@@ -4,7 +4,8 @@
 Options:
     -i --input=PATH     Read a list of paths frmo a file (- for stdin)
 
-    --create            Create index
+    -d --deleted        Show deleted files
+    -c --create         Create index
 
 """
 import re
@@ -43,11 +44,12 @@ def parse_input(inputfile):
 
 def main():
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], 'i:c:h', 
-                                       ['create', 'input='])
+        opts, args = getopt.gnu_getopt(sys.argv[1:], 'i:cdh', 
+                                       ['deleted', 'create', 'input='])
     except getopt.GetoptError, e:
         usage(e)
 
+    opt_deleted = False
     opt_create = False
     opt_input = None
 
@@ -58,11 +60,17 @@ def main():
         elif opt in ('-c', '--create'):
             opt_create = True
 
+        elif opt in ('-d', '--deleted'):
+            opt_deleted = True
+
         elif opt in ('-i', '--input'):
             opt_input = val
 
     if not args or (not opt_input and len(args) < 2):
         usage()
+
+    if opt_deleted and opt_create:
+        fatal("--deleted and --create are incompatible")
 
     path_index = args[0]
     paths = args[1:]
@@ -72,9 +80,15 @@ def main():
 
     if opt_create:
         dirindex.create(path_index, paths)
+        return
+
+    if opt_deleted:
+        op = dirindex.deleted
     else:
-        for path in dirindex.compare(path_index, paths):
-            print path
+        op = dirindex.new_or_changed
+
+    for path in op(path_index, paths):
+        print path
 
 if __name__=="__main__":
     main()

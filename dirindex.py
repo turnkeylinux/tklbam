@@ -73,14 +73,44 @@ class DirIndex(dict):
         
         return delta
 
+    def prune(self, *paths):
+        includes = []
+        excludes = []
+
+        for path in paths:
+            if path[0] == '-':
+                excludes.append(abspath(path[1:]))
+            else:
+                includes.append(abspath(path))
+
+        def included(path, includes):
+            for include in includes:
+                if path == include or path.startswith(include + '/'):
+                    return True
+
+            return False
+
+        for path in self.keys():
+            if not included(path, includes) or included(path, excludes):
+                del self[path]
+
 def create(path_index, paths):
     di = DirIndex()
     di.walk(*paths)
     di.save(path_index)
 
-def compare(path_index, paths):
+def new_or_changed(path_index, paths):
     di_saved = DirIndex(path_index)
     di_fs = DirIndex()
     di_fs.walk(*paths)
 
     return di_saved.new_or_changed(di_fs)
+
+def deleted(path_index, paths):
+    di_saved = DirIndex(path_index)
+    di_saved.prune(*paths)
+
+    di_fs = DirIndex()
+    di_fs.walk(*paths)
+
+    return set(di_saved) - set(di_fs)
