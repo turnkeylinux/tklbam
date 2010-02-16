@@ -26,7 +26,8 @@ class DirIndex(dict):
                 path, mtime, size = self._parse(line)
                 self[path] = (mtime, size)
 
-    def walk(self, *paths):
+    @staticmethod
+    def _parse_paths(paths):
         includes = []
         excludes = []
 
@@ -35,6 +36,19 @@ class DirIndex(dict):
                 excludes.append(abspath(path[1:]))
             else:
                 includes.append(abspath(path))
+
+        return includes, excludes
+
+    @staticmethod
+    def _included(path, includes):
+        for include in includes:
+            if path == include or path.startswith(include + '/'):
+                return True
+
+        return False
+
+    def walk(self, *paths):
+        includes, excludes = self._parse_paths(paths)
 
         def excluded(path):
             for exclude in excludes:
@@ -47,11 +61,21 @@ class DirIndex(dict):
             for dpath, dnames, fnames in os.walk(path):
                 for fname in fnames:
                     path = join(dpath, fname)
-                    if excluded(path):
+
+                    if self._included(path, excludes):
                         continue
                     
                     st = os.lstat(path)
                     self[path] = (int(st.st_mtime), int(st.st_size))
+
+    def prune(self, *paths):
+        """prune index down to paths that are included AND not excluded"""
+
+        includes, excludes = self._parse_paths(paths)
+
+        for path in self.keys():
+            if not self._included(path, includes) or self._included(path, excludes):
+                del self[path]
 
     def save(self, tofile):
         fh = file(tofile, "w")
@@ -72,27 +96,6 @@ class DirIndex(dict):
                 delta.append(path)
         
         return delta
-
-    def prune(self, *paths):
-        includes = []
-        excludes = []
-
-        for path in paths:
-            if path[0] == '-':
-                excludes.append(abspath(path[1:]))
-            else:
-                includes.append(abspath(path))
-
-        def included(path, includes):
-            for include in includes:
-                if path == include or path.startswith(include + '/'):
-                    return True
-
-            return False
-
-        for path in self.keys():
-            if not included(path, includes) or included(path, excludes):
-                del self[path]
 
 def create(path_index, paths):
     di = DirIndex()
