@@ -20,12 +20,6 @@ class DirIndex(dict):
     def _fmt(path, mtime, size):
         return "%s\t%d\t%d" % (path, mtime, size)
 
-    def __init__(self, fromfile=None):
-        if fromfile:
-            for line in file(fromfile).readlines():
-                path, mtime, size = self._parse(line)
-                self[path] = (mtime, size)
-
     @staticmethod
     def _parse_paths(paths):
         includes = []
@@ -47,7 +41,14 @@ class DirIndex(dict):
 
         return False
 
+    def __init__(self, fromfile=None):
+        if fromfile:
+            for line in file(fromfile).readlines():
+                path, mtime, size = self._parse(line)
+                self[path] = (mtime, size)
+
     def walk(self, *paths):
+        """walk paths and add files to index"""
         includes, excludes = self._parse_paths(paths)
 
         def excluded(path):
@@ -91,6 +92,7 @@ class DirIndex(dict):
         delta = list(b - a)
         samepaths = b & a
 
+        # add to delta files with different sizes / timestamps
         for path in samepaths:
             if self[path] != other[path]:
                 delta.append(path)
@@ -98,11 +100,13 @@ class DirIndex(dict):
         return delta
 
 def create(path_index, paths):
+    """create index from paths"""
     di = DirIndex()
     di.walk(*paths)
     di.save(path_index)
 
 def new_or_changed(path_index, paths):
+    """compare index with paths and return list of new or changed files"""
     di_saved = DirIndex(path_index)
     di_fs = DirIndex()
     di_fs.walk(*paths)
@@ -110,6 +114,7 @@ def new_or_changed(path_index, paths):
     return di_saved.new_or_changed(di_fs)
 
 def deleted(path_index, paths):
+    """return a list of paths which are in index but not in paths"""
     di_saved = DirIndex(path_index)
     di_saved.prune(*paths)
 
