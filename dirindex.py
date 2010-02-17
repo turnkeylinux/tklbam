@@ -59,9 +59,6 @@ class DirIndex(dict):
             return False
 
         def _walk(dir):
-            if not isdir(dir):
-                return []
-
             fnames = []
 
             for dentry in os.listdir(dir):
@@ -75,6 +72,9 @@ class DirIndex(dict):
             yield dir, fnames
 
         for path in includes:
+            if islink(path) or not isdir(path):
+                continue
+
             for dpath, fnames in _walk(path):
                 for fname in fnames:
                     path = join(dpath, fname)
