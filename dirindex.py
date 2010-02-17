@@ -59,6 +59,9 @@ class DirIndex(dict):
             return False
 
         def _walk(dir):
+            if not isdir(dir):
+                return []
+
             fnames = []
 
             for dentry in os.listdir(dir):
