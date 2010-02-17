@@ -105,6 +105,15 @@ def create(path_index, paths):
     di.walk(*paths)
     di.save(path_index)
 
+def sorted(method):
+    def wrapper(*args, **kws):
+        retval = list(method(*args, **kws))
+        retval.sort()
+        return retval
+
+    return wrapper
+
+@sorted
 def new_or_changed(path_index, paths):
     """compare index with paths and return list of new or changed files"""
     di_saved = DirIndex(path_index)
@@ -113,6 +122,7 @@ def new_or_changed(path_index, paths):
 
     return di_saved.new_or_changed(di_fs)
 
+@sorted
 def deleted(path_index, paths):
     """return a list of paths which are in index but not in paths"""
     di_saved = DirIndex(path_index)
