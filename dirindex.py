@@ -19,20 +19,37 @@ class Error(Exception):
     pass
 
 class DirIndex(dict):
-    @staticmethod
-    def _parse(line):
-        vals = line.strip().split('\t')
-        if len(vals) != 3:
-            raise Error("bad index record: " + line)
+    class Record:
+        def __init__(self, path, mod, uid, gid, size, mtime):
+            self.path = path
+            self.mod = mod
+            self.uid = uid
+            self.gid = gid
+            self.size = size
+            self.mtime = mtime
 
-        path = vals[0]
-        mtime, size = int(vals[1]), int(vals[2])
+        @classmethod
+        def fromline(cls, line):
+            vals = line.strip().split('\t')
+            if len(vals) != 6:
+                raise Error("bad index record: " + line)
 
-        return path, mtime, size
+            path = vals[0]
+            del vals[0]
 
-    @staticmethod
-    def _fmt(path, mtime, size):
-        return "%s\t%d\t%d" % (path, mtime, size)
+            vals = [ int(val, 16) for val in vals ]
+            return cls(path, *vals)
+
+        def fmt(self):
+            vals = [ self.path ] 
+            for val in ( self.mod, self.uid, self.gid, self.size, self.mtime ):
+                vals.append("%x" % val)
+
+            return "\t".join(vals)
+
+        def __repr__(self):
+            return "DirIndex.Record(%s, mod=%s, uid=%d, gid=%d, size=%d, mtime=%d)" % \
+                    (`self.path`, oct(self.mod), self.uid, self.gid, self.size, self.mtime)
 
     @staticmethod
     def _parse_paths(paths):
@@ -58,8 +75,8 @@ class DirIndex(dict):
     def __init__(self, fromfile=None):
         if fromfile:
             for line in file(fromfile).readlines():
-                path, mtime, size = self._parse(line)
-                self[path] = (mtime, size)
+                rec = DirIndex.Record.fromline(line)
+                self[rec.path] = rec
 
     def walk(self, *paths):
         """walk paths and add files to index"""
@@ -97,7 +114,10 @@ class DirIndex(dict):
                         continue
                     
                     st = os.lstat(path)
-                    self[path] = (int(st.st_mtime), int(st.st_size))
+                    self[path] = DirIndex.Record(path, 
+                                                 st.st_mode, 
+                                                 st.st_uid, st.st_gid, 
+                                                 st.st_size, st.st_mtime)
 
     def prune(self, *paths):
         """prune index down to paths that are included AND not excluded"""
@@ -113,7 +133,7 @@ class DirIndex(dict):
         paths = self.keys()
         paths.sort()
         for path in paths:
-            print >> fh, self._fmt(path, *self[path])
+            print >> fh, self[path].fmt()
 
     def new_or_changed(self, other):
         a = set(self)
@@ -124,7 +144,7 @@ class DirIndex(dict):
 
         # add to delta files with different sizes / timestamps
         for path in samepaths:
-            if self[path] != other[path]:
+            if (self[path].size != other[path].size) or (self[path].mtime != other[path].mtime):
                 delta.append(path)
         
         return delta
