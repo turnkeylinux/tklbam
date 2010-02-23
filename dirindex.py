@@ -177,14 +177,11 @@ def whatchanged(path_index, paths):
     di_fs.walk(*paths)
 
     overwritten = di_saved.new_or_changed(di_fs)
-    changes = []
-    for path in overwritten:
-        changes.append(ChangeOverwrite(path))
+    changes = [ ChangeOverwrite(path) for path in overwritten ]
 
     di_saved.prune(*paths)
     deleted = set(di_saved) - set(di_fs)
-    for path in deleted:
-        changes.append(ChangeDeleted(path))
+    changes += [ ChangeDeleted(path) for path in deleted ]
 
     return changes
 
