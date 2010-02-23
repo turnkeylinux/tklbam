@@ -137,15 +137,15 @@ class DirIndex(dict):
         a = set(self)
         b = set(other)
 
-        delta = list(b - a)
+        newpaths = list(b - a)
         samepaths = b & a
 
-        # add to delta files with different sizes / timestamps
+        changed = []
         for path in samepaths:
             if (self[path].size != other[path].size) or (self[path].mtime != other[path].mtime):
-                delta.append(path)
+                changed.append(path)
         
-        return delta
+        return newpaths + changed
 
 def create(path_index, paths):
     """create index from paths"""
