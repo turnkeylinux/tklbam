@@ -133,19 +133,20 @@ class DirIndex(dict):
         for path in paths:
             print >> fh, self[path].fmt()
 
-    def new_or_changed(self, other):
+    def diff(self, other):
         a = set(self)
         b = set(other)
 
-        newpaths = list(b - a)
-        samepaths = b & a
+        paths_new = list(b - a)
+        paths_in_both = b & a
 
-        changed = []
-        for path in samepaths:
+        paths_edited = []
+        for path in paths_in_both:
             if (self[path].size != other[path].size) or (self[path].mtime != other[path].mtime):
-                changed.append(path)
+                paths_edited.append(path)
         
-        return newpaths + changed
+        paths_stat = []
+        return paths_new, paths_edited, paths_stat
 
 def create(path_index, paths):
     """create index from paths"""
@@ -176,8 +177,8 @@ def whatchanged(path_index, paths):
     di_fs = DirIndex()
     di_fs.walk(*paths)
 
-    overwritten = di_saved.new_or_changed(di_fs)
-    changes = [ ChangeOverwrite(path) for path in overwritten ]
+    new, edited, stat = di_saved.diff(di_fs)
+    changes = [ ChangeOverwrite(path) for path in new + edited ]
 
     di_saved.prune(*paths)
     deleted = set(di_saved) - set(di_fs)
