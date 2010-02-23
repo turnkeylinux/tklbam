@@ -80,13 +80,6 @@ class DirIndex(dict):
         """walk paths and add files to index"""
         includes, excludes = self._parse_paths(paths)
 
-        def excluded(path):
-            for exclude in excludes:
-                if path == exclude or path.startswith(exclude + '/'):
-                    return True
-
-            return False
-
         def _walk(dir):
             fnames = []
 
