@@ -4,9 +4,7 @@
 Options:
     -i --input=PATH     Read a list of paths frmo a file (- for stdin)
 
-    -d --deleted        Show deleted files
     -c --create         Create index
-
 """
 import re
 import sys
@@ -155,33 +153,40 @@ def create(path_index, paths):
     di.walk(*paths)
     di.save(path_index)
 
-def sorted(method):
-    def wrapper(*args, **kws):
-        retval = list(method(*args, **kws))
-        retval.sort()
-        return retval
+class Change:
+    def __init__(self, path):
+        self.path = path
 
-    return wrapper
+class ChangeDeleted(Change):
+    def fmt(self):
+        return "d " + self.path
 
-@sorted
-def new_or_changed(path_index, paths):
-    """compare index with paths and return list of new or changed files"""
+class ChangeOverwrite(Change):
+    def fmt(self):
+        st = os.stat(self.path)
+        return "o %s\t%d\t%d" % (self.path, st.st_uid, st.st_gid)
+
+class ChangeStat(Change):
+    def fmt(self):
+        st = os.stat(self.path)
+        return "s %s\t%d\t%d\t%s" % (self.path, st.st_uid, st.st_gid, oct(st.st_mode))
+
+def whatchanged(path_index, paths):
     di_saved = DirIndex(path_index)
     di_fs = DirIndex()
     di_fs.walk(*paths)
 
-    return di_saved.new_or_changed(di_fs)
+    overwritten = di_saved.new_or_changed(di_fs)
+    changes = []
+    for path in overwritten:
+        changes.append(ChangeOverwrite(path))
 
-@sorted
-def deleted(path_index, paths):
-    """return a list of paths which are in index but not in paths"""
-    di_saved = DirIndex(path_index)
     di_saved.prune(*paths)
+    deleted = set(di_saved) - set(di_fs)
+    for path in deleted:
+        changes.append(ChangeDeleted(path))
 
-    di_fs = DirIndex()
-    di_fs.walk(*paths)
-
-    return set(di_saved) - set(di_fs)
+    return changes
 
 def usage(e=None):
     if e:
@@ -219,7 +224,6 @@ def main():
     except getopt.GetoptError, e:
         usage(e)
 
-    opt_deleted = False
     opt_create = False
     opt_input = None
 
@@ -230,17 +234,11 @@ def main():
         elif opt in ('-c', '--create'):
             opt_create = True
 
-        elif opt in ('-d', '--deleted'):
-            opt_deleted = True
-
         elif opt in ('-i', '--input'):
             opt_input = val
 
     if not args or (not opt_input and len(args) < 2):
         usage()
-
-    if opt_deleted and opt_create:
-        fatal("--deleted and --create are incompatible")
 
     path_index = args[0]
     paths = args[1:]
@@ -252,13 +250,8 @@ def main():
         create(path_index, paths)
         return
 
-    if opt_deleted:
-        op = deleted
-    else:
-        op = new_or_changed
-
-    for path in op(path_index, paths):
-        print path
+    for change in whatchanged(path_index, paths):
+        print change.fmt()
 
 if __name__=="__main__":
     main()
