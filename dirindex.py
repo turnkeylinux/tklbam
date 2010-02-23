@@ -141,11 +141,22 @@ class DirIndex(dict):
         paths_in_both = b & a
 
         paths_edited = []
-        for path in paths_in_both:
-            if (self[path].size != other[path].size) or (self[path].mtime != other[path].mtime):
-                paths_edited.append(path)
-        
         paths_stat = []
+
+        def attrs_equal(attrs, a, b):
+            for attr in attrs:
+                if getattr(a, attr) != getattr(b, attr):
+                    return False
+
+            return True
+
+        for path in paths_in_both:
+            if not attrs_equal(('size', 'mtime'), self[path], other[path]):
+                paths_edited.append(path)
+
+            elif not attrs_equal(('mod', 'uid', 'gid'), self[path], other[path]):
+                paths_stat.append(path)
+        
         return paths_new, paths_edited, paths_stat
 
 def create(path_index, paths):
@@ -160,17 +171,17 @@ class Change:
 
 class ChangeDeleted(Change):
     def fmt(self):
-        return "d " + self.path
+        return "d\t" + self.path
 
 class ChangeOverwrite(Change):
     def fmt(self):
         st = os.stat(self.path)
-        return "o %s\t%d\t%d" % (self.path, st.st_uid, st.st_gid)
+        return "o\t%s\t%d\t%d" % (self.path, st.st_uid, st.st_gid)
 
 class ChangeStat(Change):
     def fmt(self):
         st = os.stat(self.path)
-        return "s %s\t%d\t%d\t%s" % (self.path, st.st_uid, st.st_gid, oct(st.st_mode))
+        return "s\t%s\t%d\t%d\t%s" % (self.path, st.st_uid, st.st_gid, oct(st.st_mode))
 
 def whatchanged(path_index, paths):
     di_saved = DirIndex(path_index)
@@ -179,6 +190,8 @@ def whatchanged(path_index, paths):
 
     new, edited, stat = di_saved.diff(di_fs)
     changes = [ ChangeOverwrite(path) for path in new + edited ]
+
+    changes += [ ChangeStat(path) for path in stat ]
 
     di_saved.prune(*paths)
     deleted = set(di_saved) - set(di_fs)
