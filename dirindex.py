@@ -17,6 +17,34 @@ from os.path import *
 class Error(Exception):
     pass
 
+class PathMap(dict):
+    def __init__(self, paths):
+        for path in paths:
+            if path[0] == '-':
+                self[abspath(path[1:])] = False
+            else:
+                self[abspath(path)] = True
+
+    def includes(self):
+        for path in self:
+            if self[path]:
+                yield path
+    includes = property(includes)
+
+    def excludes(self):
+        for path in self:
+            if not self[path]:
+                yield path
+    excludes = property(excludes)
+
+    def is_included(self, path):
+        while path not in ('', '/'):
+            if path in self:
+                return self[path]
+            path = dirname(path)
+
+        return False
+
 class DirIndex(dict):
     class Record:
         def __init__(self, path, mod, uid, gid, size, mtime):
@@ -50,33 +78,6 @@ class DirIndex(dict):
             return "DirIndex.Record(%s, mod=%s, uid=%d, gid=%d, size=%d, mtime=%d)" % \
                     (`self.path`, oct(self.mod), self.uid, self.gid, self.size, self.mtime)
 
-    @staticmethod
-    def _parse_paths(paths):
-        directives = {}
-        for path in paths:
-            if path[0] == '-':
-                directives[abspath(path[1:])] = -1
-            else:
-                directives[abspath(path)] = +1
-
-        includes = []
-        excludes = []
-        for path in directives.keys():
-            if directives[path] > 0:
-                includes.append(path)
-            else:
-                excludes.append(path)
-
-        return includes, excludes
-
-    @staticmethod
-    def _included(path, includes):
-        for include in includes:
-            if path == include or path.startswith(include + '/'):
-                return True
-
-        return False
-
     def __init__(self, fromfile=None):
         if fromfile:
             for line in file(fromfile).readlines():
@@ -92,14 +93,14 @@ class DirIndex(dict):
 
     def walk(self, *paths):
         """walk paths and add files to index"""
-        includes, excludes = self._parse_paths(paths)
+        pathmap = PathMap(paths)
 
         def _walk(dir):
             dentries = []
 
             for dentry in os.listdir(dir):
                 path = join(dir, dentry)
-                if path in excludes:
+                if path in pathmap.excludes:
                     continue
                 
                 dentries.append(dentry)
@@ -110,7 +111,7 @@ class DirIndex(dict):
 
             yield dir, dentries
 
-        for path in includes:
+        for path in pathmap.includes:
 
             self._add_path(path)
 
@@ -126,10 +127,9 @@ class DirIndex(dict):
     def prune(self, *paths):
         """prune index down to paths that are included AND not excluded"""
 
-        includes, excludes = self._parse_paths(paths)
-
+        pathmap = PathMap(paths)
         for path in self.keys():
-            if not self._included(path, includes) or self._included(path, excludes):
+            if not pathmap.is_included(path):
                 del self[path]
 
     def save(self, tofile):
