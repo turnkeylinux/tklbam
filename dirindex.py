@@ -14,16 +14,36 @@ import os
 import stat
 from os.path import *
 
+import glob
+
 class Error(Exception):
     pass
 
 class PathMap(dict):
+    @staticmethod
+    def _expand(path):
+        def needsglob(path):
+            for c in ('*?[]'):
+                if c in path:
+                    return True
+            return False
+
+        path = abspath(path)
+        if needsglob(path):
+            return glob.glob(path)
+        else:
+            return [ path ]
+
     def __init__(self, paths):
         for path in paths:
             if path[0] == '-':
-                self[abspath(path[1:])] = False
+                path = path[1:]
+                sign = False
             else:
-                self[abspath(path)] = True
+                sign = True
+
+            for expanded in self._expand(path):
+                self[expanded] = sign
 
     def includes(self):
         for path in self:
