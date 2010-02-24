@@ -52,14 +52,20 @@ class DirIndex(dict):
 
     @staticmethod
     def _parse_paths(paths):
-        includes = []
-        excludes = []
-
+        directives = {}
         for path in paths:
             if path[0] == '-':
-                excludes.append(abspath(path[1:]))
+                directives[abspath(path[1:])] = -1
             else:
-                includes.append(abspath(path))
+                directives[abspath(path)] = +1
+
+        includes = []
+        excludes = []
+        for path in directives.keys():
+            if directives[path] > 0:
+                includes.append(path)
+            else:
+                excludes.append(path)
 
         return includes, excludes
 
@@ -77,6 +83,13 @@ class DirIndex(dict):
                 rec = DirIndex.Record.fromline(line)
                 self[rec.path] = rec
 
+    def _add_path(self, path):
+        st = os.lstat(path)
+        self[path] = DirIndex.Record(path, 
+                                     st.st_mode, 
+                                     st.st_uid, st.st_gid, 
+                                     st.st_size, st.st_mtime)
+
     def walk(self, *paths):
         """walk paths and add files to index"""
         includes, excludes = self._parse_paths(paths)
@@ -86,6 +99,9 @@ class DirIndex(dict):
 
             for dentry in os.listdir(dir):
                 path = join(dir, dentry)
+                if path in excludes:
+                    continue
+                
                 dentries.append(dentry)
 
                 if not islink(path) and isdir(path):
@@ -95,6 +111,9 @@ class DirIndex(dict):
             yield dir, dentries
 
         for path in includes:
+
+            self._add_path(path)
+
             if islink(path) or not isdir(path):
                 continue
 
@@ -102,14 +121,7 @@ class DirIndex(dict):
                 for dentry in dentries:
                     path = join(dpath, dentry)
 
-                    if self._included(path, excludes):
-                        continue
-                    
-                    st = os.lstat(path)
-                    self[path] = DirIndex.Record(path, 
-                                                 st.st_mode, 
-                                                 st.st_uid, st.st_gid, 
-                                                 st.st_size, st.st_mtime)
+                    self._add_path(path)
 
     def prune(self, *paths):
         """prune index down to paths that are included AND not excluded"""
