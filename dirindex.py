@@ -11,6 +11,7 @@ import sys
 import getopt
 
 import os
+import stat
 from os.path import *
 
 class Error(Exception):
@@ -81,25 +82,25 @@ class DirIndex(dict):
         includes, excludes = self._parse_paths(paths)
 
         def _walk(dir):
-            fnames = []
+            dentries = []
 
             for dentry in os.listdir(dir):
                 path = join(dir, dentry)
-                if islink(path) or not isdir(path):
-                    fnames.append(dentry)
-                else:
+                dentries.append(dentry)
+
+                if not islink(path) and isdir(path):
                     for val in _walk(path):
                         yield val
 
-            yield dir, fnames
+            yield dir, dentries
 
         for path in includes:
             if islink(path) or not isdir(path):
                 continue
 
-            for dpath, fnames in _walk(path):
-                for fname in fnames:
-                    path = join(dpath, fname)
+            for dpath, dentries in _walk(path):
+                for dentry in dentries:
+                    path = join(dpath, dentry)
 
                     if self._included(path, excludes):
                         continue
@@ -145,9 +146,11 @@ class DirIndex(dict):
 
         for path in paths_in_both:
             if not attrs_equal(('size', 'mtime'), self[path], other[path]):
-                paths_edited.append(path)
+                if not stat.S_ISDIR(other[path].mod):
+                    paths_edited.append(path)
+                    continue
 
-            elif not attrs_equal(('mod', 'uid', 'gid'), self[path], other[path]):
+            if not attrs_equal(('mod', 'uid', 'gid'), self[path], other[path]):
                 paths_stat.append(path)
         
         return paths_new, paths_edited, paths_stat
