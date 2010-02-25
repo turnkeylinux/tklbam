@@ -1,7 +1,6 @@
 #!/usr/bin/python
 """Merge passwd and group files and print uid and gid maps"""
 import sys
-import os
 
 def usage(e=None):
     if e:
@@ -10,17 +9,6 @@ def usage(e=None):
     print >> sys.stderr, "Syntax: %s old-passwd old-group new-passwd new-group merged-passwd merged-group" % sys.argv[0]
     print >> sys.stderr, __doc__.strip()
     sys.exit(1)
-
-def fatal(s):
-    print >> sys.stderr, "error: " + str(s)
-    sys.exit(1)
-
-def parse_passwd(path):
-    users = {}
-    for line in file(path).readlines():
-        vals = line.strip().split(':')
-        username = vals[0]
-        users[username] = vals[1:]
 
 class Error(Exception):
     pass
