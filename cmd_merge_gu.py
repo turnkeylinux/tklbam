@@ -1,5 +1,5 @@
 #!/usr/bin/python
-"""Merge group and passwd files and print uid and gid maps"""
+"""Merge passwd and group files and print uid and gid maps"""
 import sys
 import os
 
@@ -7,7 +7,7 @@ def usage(e=None):
     if e:
         print >> sys.stderr, e
 
-    print >> sys.stderr, "Syntax: %s old-group old-passwd new-group new-passwd merged-group merged-passwd" % sys.argv[0]
+    print >> sys.stderr, "Syntax: %s old-passwd old-group new-passwd new-group merged-passwd merged-group" % sys.argv[0]
     print >> sys.stderr, __doc__.strip()
     sys.exit(1)
 
@@ -136,9 +136,9 @@ def main():
     if len(args) != 6:
         usage()
 
-    old_group, old_passwd = args[:2]
-    new_group, new_passwd = args[2:4]
-    merged_group, merged_passwd = args[4:6]
+    old_passwd, old_group = args[:2]
+    new_passwd, new_group = args[2:4]
+    merged_passwd, merged_group = args[4:6]
 
     g1 = EtcGroup(file(old_group).read())
     g2 = EtcGroup(file(new_group).read())
