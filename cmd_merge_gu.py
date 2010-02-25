@@ -119,17 +119,11 @@ class EtcPasswd(Base):
                 return int(self[3])
         gid = property(gid, gid)
 
-    @classmethod
-    def merge(cls, old, new, gidmap=None):
-        merged, uidmap = Base.merge.im_func(cls, old, new)
-
-        if gidmap:
-            for user in merged:
-                oldgid = merged[user].gid
-                if oldgid in gidmap:
-                    merged[user].gid = gidmap[oldgid]
-
-        return merged, uidmap
+    def fixgids(self, gidmap):
+        for name in self:
+            oldgid = self[name].gid
+            if oldgid in gidmap:
+                self[name].gid = gidmap[oldgid]
 
 def main():
     args = sys.argv[1:]
@@ -148,7 +142,8 @@ def main():
     p1 = EtcPasswd(file(old_passwd).read())
     p2 = EtcPasswd(file(new_passwd).read())
 
-    p3, uidmap = EtcPasswd.merge(p1, p2, gidmap)
+    p3, uidmap = EtcPasswd.merge(p1, p2)
+    p3.fixgids(gidmap)
 
     print >> file(merged_group, "w"), g3
     print >> file(merged_passwd, "w"), p3
