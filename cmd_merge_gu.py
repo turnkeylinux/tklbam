@@ -25,88 +25,111 @@ def parse_passwd(path):
 class Error(Exception):
     pass
 
-class EtcGroup(dict):
+class Base(dict):
     class Ent(list):
-        def gid(self, val=None):
+        def id(self, val=None):
             if val:
                 self[2] = str(val)
             else:
                 return int(self[2])
-        gid = property(gid, gid)
+        id = property(id, id)
 
-    def __init__(self, buf=None):
-        if not buf:
+    def __init__(self, arg=None):
+        if not arg:
             return
 
-        for line in buf.strip().split('\n'):
-            vals = line.split(':')
-            if len(vals) != 4:
-                raise Error("bad line in group '%s'" % line)
+        if isinstance(arg, str):
+            for line in arg.strip().split('\n'):
+                vals = line.split(':')
+                name = vals[0]
+                self[name] = self.Ent(vals)
 
-            name = vals[0]
-            self[name] = EtcGroup.Ent(vals)
+        elif isinstance(arg, dict):
+            dict.__init__(self, arg)
 
     def __str__(self):
         arr = [ self[name] for name in self ]
-        # order by gid ascending
-        arr.sort(lambda x,y: cmp(x.gid, y.gid))
+        # order by id ascending
+        arr.sort(lambda x,y: cmp(x.id, y.id))
         return "\n".join([ ':'.join(ent) for ent in arr ])
 
-    def gids(self):
-        return [ self[name].gid for name in self ]
-    gids = property(gids)
+    def ids(self):
+        return [ self[name].id for name in self ]
+    ids = property(ids)
 
-    def new_gid(self, old_gid=1000):
-        """find first new gid in the same number range as old gid"""
-        gids = set(self.gids)
+    def new_id(self, old_id=1000):
+        """find first new id in the same number range as old id"""
+        ids = set(self.ids)
 
         _range = None
-        if old_gid < 100:
+        if old_id < 100:
             _range = (1, 100)
-        elif old_gid < 1000:
+        elif old_id < 1000:
             _range = (100, 1000)
 
         if _range:
-            for gid in range(*_range):
-                if gid not in gids:
-                    return gid
+            for id in range(*_range):
+                if id not in ids:
+                    return id
 
-        for gid in range(1000, 65534):
-            if gid not in gids:
-                return gid
+        for id in range(1000, 65534):
+            if id not in ids:
+                return id
 
-        raise Error("can't find slot for new gid")
+        raise Error("can't find slot for new id")
 
     @classmethod
     def merge(cls, old, new):
 
-        merged = EtcGroup()
-        gidmap = {}
+        merged = cls()
+        idmap = {}
 
         names = set(old) | set(new)
         for name in names:
 
             if name in old and name in new:
-                merged[name] = EtcGroup.Ent(old[name])
-                merged[name].gid = new[name].gid
+                merged[name] = cls.Ent(old[name])
+                merged[name].id = new[name].id
 
-                if old[name].gid != new[name].gid:
-                    gidmap[old[name].gid] = new[name].gid
+                if old[name].id != new[name].id:
+                    idmap[old[name].id] = new[name].id
 
             elif name in new:
-                merged[name] = EtcGroup.Ent(new[name])
+                merged[name] = cls.Ent(new[name])
 
             elif name in old:
-                merged[name] = EtcGroup.Ent(old[name])
-                if old[name].gid in new.gids:
-                    merged[name].gid = new.new_gid()
-                    gidmap[old[name].gid] = merged[name].gid
+                merged[name] = cls.Ent(old[name])
+                if old[name].id in new.ids:
+                    merged[name].id = new.new_id()
+                    idmap[old[name].id] = merged[name].id
 
-        return merged, gidmap
+        return merged, idmap
 
-def parse_group(path):
-    groups = {}
-    return groups
+class EtcGroup(Base):
+    class Ent(Base.Ent):
+        gid = Base.Ent.id
+
+class EtcPasswd(Base):
+    class Ent(Base.Ent):
+        uid = Base.Ent.id
+        def gid(self, val=None):
+            if val:
+                self[3] = str(val)
+            else:
+                return int(self[3])
+        gid = property(gid, gid)
+
+    @classmethod
+    def merge(cls, old, new, gidmap=None):
+        merged, uidmap = Base.merge.im_func(cls, old, new)
+
+        if gidmap:
+            for user in merged:
+                oldgid = merged[user].gid
+                if oldgid in gidmap:
+                    merged[user].gid = gidmap[oldgid]
+
+        return merged, uidmap
 
 def main():
     args = sys.argv[1:]
@@ -122,12 +145,19 @@ def main():
 
     g3, gidmap = EtcGroup.merge(g1, g2)
 
-    #p1 = EtcPasswd(file(old_passwd).read())
-    #p2 = EtcPasswd(file(new_passwd).read())
+    p1 = EtcPasswd(file(old_passwd).read())
+    p2 = EtcPasswd(file(new_passwd).read())
 
-    #p3, uidmap = EtcPasswd.merge(p1, p2, gidmap)
+    p3, uidmap = EtcPasswd.merge(p1, p2, gidmap)
 
-    print g3
+    print >> file(merged_group, "w"), g3
+    print >> file(merged_passwd, "w"), p3
+
+    def strmap(m):
+         return ":".join([ "%d,%d" % (key, val) for key,val in m.items() ])
+
+    print strmap(uidmap)
+    print strmap(gidmap)
 
 if __name__=="__main__":
     main()
