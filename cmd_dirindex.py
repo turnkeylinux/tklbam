@@ -1,5 +1,6 @@
 #!/usr/bin/python
-"""Print a list of files that have changed
+"""
+Print a list of files that have changed
 
 Options:
     -i --input=PATH     Read a list of paths frmo a file (- for stdin)
