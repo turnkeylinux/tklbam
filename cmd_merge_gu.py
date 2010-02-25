@@ -27,6 +27,8 @@ class Error(Exception):
 
 class Base(dict):
     class Ent(list):
+        LEN = None
+
         def id(self, val=None):
             if val:
                 self[2] = str(val)
@@ -41,6 +43,10 @@ class Base(dict):
         if isinstance(arg, str):
             for line in arg.strip().split('\n'):
                 vals = line.split(':')
+                if self.Ent.LEN:
+                    if len(vals) != self.Ent.LEN:
+                        raise Error("line with incorrect field count (%d != %d) '%s'" % (len(vals), self.Ent.LEN, line))
+
                 name = vals[0]
                 self[name] = self.Ent(vals)
 
@@ -107,10 +113,12 @@ class Base(dict):
 
 class EtcGroup(Base):
     class Ent(Base.Ent):
+        LEN = 4
         gid = Base.Ent.id
 
 class EtcPasswd(Base):
     class Ent(Base.Ent):
+        LEN = 7
         uid = Base.Ent.id
         def gid(self, val=None):
             if val:
