@@ -40,8 +40,8 @@ def parse_input(inputfile):
 
 def main():
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], 'i:cdh', 
-                                       ['deleted', 'create', 'input='])
+        opts, args = getopt.gnu_getopt(sys.argv[1:], 'i:ch', 
+                                       ['create', 'input='])
     except getopt.GetoptError, e:
         usage(e)
 
