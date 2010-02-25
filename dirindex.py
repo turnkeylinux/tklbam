@@ -235,10 +235,6 @@ def usage(e=None):
     print >> sys.stderr, __doc__.strip()
     sys.exit(1)
 
-def fatal(s):
-    print >> sys.stderr, "error: " + str(s)
-    sys.exit(1)
-
 def parse_input(inputfile):
     paths = []
     
