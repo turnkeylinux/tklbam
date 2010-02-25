@@ -2,14 +2,6 @@
 """Merge passwd and group files and print uid and gid maps"""
 import sys
 
-def usage(e=None):
-    if e:
-        print >> sys.stderr, e
-
-    print >> sys.stderr, "Syntax: %s old-passwd old-group new-passwd new-group merged-passwd merged-group" % sys.argv[0]
-    print >> sys.stderr, __doc__.strip()
-    sys.exit(1)
-
 class Error(Exception):
     pass
 
@@ -121,6 +113,28 @@ class EtcPasswd(Base):
             if oldgid in gidmap:
                 self[name].gid = gidmap[oldgid]
 
+def merge(old_passwd, old_group, new_passwd, new_group):
+    g1 = EtcGroup(old_group)
+    g2 = EtcGroup(new_group)
+
+    group, gidmap = EtcGroup.merge(g1, g2)
+
+    p1 = EtcPasswd(old_passwd)
+    p2 = EtcPasswd(new_passwd)
+
+    passwd, uidmap = EtcPasswd.merge(p1, p2)
+    passwd.fixgids(gidmap)
+
+    return passwd, group, uidmap, gidmap
+
+def usage(e=None):
+    if e:
+        print >> sys.stderr, e
+
+    print >> sys.stderr, "Syntax: %s old-passwd old-group new-passwd new-group merged-passwd merged-group" % sys.argv[0]
+    print >> sys.stderr, __doc__.strip()
+    sys.exit(1)
+
 def main():
     args = sys.argv[1:]
     if len(args) != 6:
@@ -130,19 +144,14 @@ def main():
     new_passwd, new_group = args[2:4]
     merged_passwd, merged_group = args[4:6]
 
-    g1 = EtcGroup(file(old_group).read())
-    g2 = EtcGroup(file(new_group).read())
+    def r(path):
+        return file(path).read()
 
-    g3, gidmap = EtcGroup.merge(g1, g2)
+    passwd, group, uidmap, gidmap = merge(r(old_passwd), r(old_group),
+                                          r(new_passwd), r(new_group))
 
-    p1 = EtcPasswd(file(old_passwd).read())
-    p2 = EtcPasswd(file(new_passwd).read())
-
-    p3, uidmap = EtcPasswd.merge(p1, p2)
-    p3.fixgids(gidmap)
-
-    print >> file(merged_group, "w"), g3
-    print >> file(merged_passwd, "w"), p3
+    print >> file(merged_passwd, "w"), passwd
+    print >> file(merged_group, "w"), group
 
     def strmap(m):
          return ":".join([ "%d,%d" % (key, val) for key,val in m.items() ])
@@ -152,4 +161,3 @@ def main():
 
 if __name__=="__main__":
     main()
-
