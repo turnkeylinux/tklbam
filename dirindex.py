@@ -3,6 +3,7 @@ import stat
 from os.path import *
 
 import glob
+import types
 
 class Error(Exception):
     pass
@@ -182,22 +183,75 @@ def create(path_index, paths):
     di.save(path_index)
 
 class Change:
-    def __init__(self, path):
-        self.path = path
+    class Base:
+        OP = None
+        def __init__(self, path):
+            self.path = path
+            self._stat = None
 
-class ChangeDeleted(Change):
-    def fmt(self):
-        return "d\t" + self.path
+        def stat(self):
+            if not self._stat:
+                self._stat = os.lstat(self.path)
 
-class ChangeOverwrite(Change):
-    def fmt(self):
-        st = os.stat(self.path)
-        return "o\t%s\t%d\t%d" % (self.path, st.st_uid, st.st_gid)
+            return self._stat
+        stat = property(stat)
 
-class ChangeStat(Change):
-    def fmt(self):
-        st = os.stat(self.path)
-        return "s\t%s\t%d\t%d\t%s" % (self.path, st.st_uid, st.st_gid, oct(st.st_mode))
+        def fmt(self, *args):
+            return "\t".join([self.OP, self.path] + map(str, args))
+
+        def __str__(self):
+            return self.fmt()
+
+        @classmethod
+        def fromline(cls, line):
+            args = line.split('\t')
+            return cls(*args)
+
+    class Deleted(Base):
+        OP = 'd'
+
+    class Overwrite(Base):
+        OP = 'o'
+        def __init__(self, path, uid=None, gid=None):
+            Change.Base.__init__(self, path)
+
+            if uid is None:
+                self.uid = self.stat.st_uid
+            else:
+                self.uid = int(uid)
+
+            if gid is None:
+                self.gid = self.stat.st_gid
+            else:
+                self.gid = int(gid)
+
+        def __str__(self):
+            return self.fmt(self.uid, self.gid)
+
+    class Stat(Overwrite):
+        OP = 's'
+        def __init__(self, path, uid=None, gid=None, mode=None):
+            Change.Overwrite.__init__(self, path, uid, gid)
+            if mode is None:
+                self.mode = self.stat.st_mode
+            else:
+                if isinstance(mode, int):
+                    self.mode = mode
+                else:
+                    self.mode = int(mode, 8)
+
+        def __str__(self):
+            return self.fmt(self.uid, self.gid, oct(self.mode))
+
+    @classmethod
+    def parse(cls, line):
+        op2class = dict((val.OP, val) for val in cls.__dict__.values() 
+                        if isinstance(val, types.ClassType))
+        op = line[0]
+        if op not in op2class:
+            raise Error("illegal change line: " + line)
+
+        return op2class[op].fromline(line[2:])
 
 def whatchanged(path_index, paths):
     di_saved = DirIndex(path_index)
@@ -205,13 +259,13 @@ def whatchanged(path_index, paths):
     di_fs.walk(*paths)
 
     new, edited, stat = di_saved.diff(di_fs)
-    changes = [ ChangeOverwrite(path) for path in new + edited ]
+    changes = [ Change.Overwrite(path) for path in new + edited ]
 
-    changes += [ ChangeStat(path) for path in stat ]
+    changes += [ Change.Stat(path) for path in stat ]
 
     di_saved.prune(*paths)
     deleted = set(di_saved) - set(di_fs)
-    changes += [ ChangeDeleted(path) for path in deleted ]
+    changes += [ Change.Deleted(path) for path in deleted ]
 
     return changes
 

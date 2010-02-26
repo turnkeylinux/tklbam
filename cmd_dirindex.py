@@ -72,7 +72,7 @@ def main():
         return
 
     for change in dirindex.whatchanged(path_index, paths):
-        print change.fmt()
+        print change
 
 if __name__=="__main__":
     main()
