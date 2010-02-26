@@ -42,9 +42,9 @@ def fixstat(changes, uidmap, gidmap):
         if change.OP == 'd':
             continue
         
+        # optimization: if not remapped we can skip 'o' changes
         if change.OP == 'o' and \
-           (change.uid == 0 or change.uid not in uidmap) and \
-           (change.gid == 0 or change.gid not in gidmap):
+           change.uid not in uidmap and change.gid not in gidmap:
             continue
 
         st = os.lstat(change.path)
