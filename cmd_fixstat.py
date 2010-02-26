@@ -36,23 +36,27 @@ class IdMap(dict):
 
 def fixstat(changes, uidmap, gidmap):
     for change in changes:
-        if change.OP == 'o':
+        if not exists(change.path):
+            continue
 
-            if (change.uid != 0 and change.uid in uidmap) or \
-               (change.gid != 0 and change.gid in gidmap):
+        if change.OP == 'd':
+            continue
+        
+        if change.OP == 'o' and \
+           (change.uid == 0 or change.uid not in uidmap) and \
+           (change.gid == 0 or change.gid not in gidmap):
+            continue
+
+        st = os.lstat(change.path)
+        if change.OP in ('s', 'o'):
+            if st.st_uid != uidmap[change.uid] or \
+               st.st_gid != gidmap[change.gid]:
                 yield os.chown, (change.path, 
                                  uidmap[change.uid], gidmap[change.gid])
-        elif change.OP == 's':
 
-            if exists(change.path):
-                st = os.lstat(change.path)
-                if st.st_uid != uidmap[change.uid] or \
-                   st.st_gid != gidmap[change.gid]:
-                    yield os.chown, (change.path, 
-                                     uidmap[change.uid], gidmap[change.gid])
-                
-                if st.st_mode != change.mode:
-                    yield os.chmod, (change.path, change.mode)
+        if change.OP == 's':
+            if st.st_mode != change.mode:
+                yield os.chmod, (change.path, change.mode)
 
 def usage(e=None):
     if e:
