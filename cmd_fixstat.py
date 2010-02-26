@@ -11,8 +11,13 @@ Options:
     <mapspec> := <key>,<val>[:<key>,<val> ...]
 """
 
+import os
 import sys
 import getopt
+import dirindex
+
+def fixstat(changes, uidmap, gidmap):
+    return [ (os.chmod, ('/path/to/foo', 1234)) ]
 
 def usage(e=None):
     if e:
@@ -21,6 +26,13 @@ def usage(e=None):
     print >> sys.stderr, "Syntax: %s [-options] delta|- [path ...]" % sys.argv[0]
     print >> sys.stderr, __doc__.strip()
     sys.exit(1)
+
+def parse_delta(path):
+    if path == '-':
+        fh = sys.stdin
+    else:
+        fh = file(path)
+    return [ dirindex.Change.parse(line) for line in fh.readlines() ]
 
 def main():
     try:
@@ -49,6 +61,19 @@ def main():
     paths = args[1:]
 
     print `(uidmap, gidmap, delta, paths, simulate)`
+
+    def parse_map(line):
+        return dict([ map(int, val.split(',', 1)) for val in line.split(':') ])
+
+    if uidmap:
+        uidmap = parse_map(uidmap)
+
+    if gidmap:
+        gidmap = parse_map(gidmap)
+
+    changes = parse_delta(delta)
+    for method, args in fixstat(changes, uidmap, gidmap):
+        print method.__name__ + `args`
 
 if __name__=="__main__":
     main()
