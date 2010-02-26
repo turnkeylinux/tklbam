@@ -98,6 +98,12 @@ def main():
     print `(uidmap, gidmap, delta, paths, simulate)`
 
     changes = parse_delta(delta)
+    
+    if paths:
+        pathmap = dirindex.PathMap(paths)
+        changes = [ change for change in parse_delta(delta) 
+                    if pathmap.is_included(change.path) ]
+
     for method, args in fixstat(changes, uidmap, gidmap):
         print method.__name__ + `args`
 
