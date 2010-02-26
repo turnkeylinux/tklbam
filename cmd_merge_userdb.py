@@ -29,11 +29,11 @@ def main():
     print >> file(merged_passwd, "w"), passwd
     print >> file(merged_group, "w"), group
 
-    def strmap(m):
+    def fmt_map(m):
          return ":".join([ "%d,%d" % (key, val) for key,val in m.items() ])
 
-    print strmap(uidmap)
-    print strmap(gidmap)
+    print fmt_map(uidmap)
+    print fmt_map(gidmap)
 
 if __name__=="__main__":
     main()
