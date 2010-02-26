@@ -12,12 +12,46 @@ Options:
 """
 
 import os
+from os.path import *
+
 import sys
 import getopt
 import dirindex
 
+class IdMap(dict):
+    """
+    Implements mapping of ids with transparent fallback.
+    If no mapping exists, the original id is returned.
+    """
+    @classmethod
+    def fromline(cls, line):
+        d = ([ map(int, val.split(',', 1)) for val in line.split(':') ])
+        return cls(d)
+
+    def __getitem__(self, key):
+        if key in self:
+            return dict.__getitem__(self, key)
+        return key
+
 def fixstat(changes, uidmap, gidmap):
-    return [ (os.chmod, ('/path/to/foo', 1234)) ]
+    for change in changes:
+        if change.OP == 'o':
+
+            if (change.uid != 0 and change.uid in uidmap) or \
+               (change.gid != 0 and change.gid in gidmap):
+                yield os.chown, (change.path, 
+                                 uidmap[change.uid], gidmap[change.gid])
+        elif change.OP == 's':
+
+            if exists(change.path):
+                st = os.lstat(change.path)
+                if st.st_uid != uidmap[change.uid] or \
+                   st.st_gid != gidmap[change.gid]:
+                    yield os.chown, (change.path, 
+                                     uidmap[change.uid], gidmap[change.gid])
+                
+                if st.st_mode != change.mode:
+                    yield os.chmod, (change.path, change.mode)
 
 def usage(e=None):
     if e:
@@ -33,7 +67,7 @@ def parse_delta(path):
     else:
         fh = file(path)
     return [ dirindex.Change.parse(line) for line in fh.readlines() ]
-
+                                                     
 def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'u:g:sh', 
@@ -42,13 +76,14 @@ def main():
         usage(e)
 
     simulate = False
-    uidmap = None
-    gidmap = None
+
+    uidmap = IdMap()
+    gidmap = IdMap()
     for opt, val in opts:
         if opt in ('-u', '--uid-map'):
-            uidmap = val
+            uidmap = IdMap.fromline(val)
         elif opt in ('-g', '--gid-map'):
-            gidmap = val
+            gidmap = IdMap.fromline(val)
         elif opt in ('-s', '--simulate'):
             simulate = True
         else:
@@ -61,15 +96,6 @@ def main():
     paths = args[1:]
 
     print `(uidmap, gidmap, delta, paths, simulate)`
-
-    def parse_map(line):
-        return dict([ map(int, val.split(',', 1)) for val in line.split(':') ])
-
-    if uidmap:
-        uidmap = parse_map(uidmap)
-
-    if gidmap:
-        gidmap = parse_map(gidmap)
 
     changes = parse_delta(delta)
     for method, args in fixstat(changes, uidmap, gidmap):
