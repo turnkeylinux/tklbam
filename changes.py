@@ -144,7 +144,8 @@ class Changes(list):
                                      uidmap[change.uid], gidmap[change.gid])
 
             if change.OP == 's':
-                if stat.S_IMODE(st.st_mode) != change.mode:
+                if not islink(change.path) and \
+                   stat.S_IMODE(st.st_mode) != change.mode:
                     yield os.chmod, (change.path, change.mode)
 
 def whatchanged(di_path, paths):
