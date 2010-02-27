@@ -83,6 +83,8 @@ class DirIndex(dict):
             yield dir, dentries
 
         for path in pathmap.includes:
+            if not exists(path):
+                continue
 
             self._add_path(path)
 
