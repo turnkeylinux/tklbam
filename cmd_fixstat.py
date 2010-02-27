@@ -26,13 +26,6 @@ def usage(e=None):
     print >> sys.stderr, __doc__.strip()
     sys.exit(1)
 
-def parse_delta(path):
-    if path == '-':
-        fh = sys.stdin
-    else:
-        fh = file(path)
-    return [ dirindex.Change.parse(line) for line in fh.readlines() ]
-                                                     
 def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'u:g:svh', 
@@ -63,11 +56,13 @@ def main():
     delta = args[0]
     paths = args[1:]
 
-    changes = parse_delta(delta)
+    delta_fh = file(delta) if delta != '-' else sys.stdin
+    changes = [ dirindex.Change.parse(line) 
+                for line in delta_fh.readlines() ]
     
     if paths:
         pathmap = dirindex.PathMap(paths)
-        changes = [ change for change in parse_delta(delta) 
+        changes = [ change for change in changes
                     if pathmap.is_included(change.path) ]
 
     if simulate:
