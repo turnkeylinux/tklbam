@@ -6,6 +6,8 @@ import types
 from dirindex import DirIndex
 from pathmap import PathMap
 
+import stat
+
 class Change:
     class Base:
         OP = None
@@ -63,6 +65,8 @@ class Change:
                     self.mode = mode
                 else:
                     self.mode = int(mode, 8)
+
+            self.mode = stat.S_IMODE(self.mode)
 
         def __str__(self):
             return self.fmt(self.uid, self.gid, oct(self.mode))
@@ -140,7 +144,7 @@ class Changes(list):
                                      uidmap[change.uid], gidmap[change.gid])
 
             if change.OP == 's':
-                if st.st_mode != change.mode:
+                if stat.S_IMODE(st.st_mode) != change.mode:
                     yield os.chmod, (change.path, change.mode)
 
 def whatchanged(di_path, paths):
