@@ -125,7 +125,7 @@ class Changes(list):
         gidmap = TransparentMap(gidmap)
 
         for change in self:
-            if not os.path.exists(change.path):
+            if not exists(change.path):
                 continue
 
             if change.OP == 'd':
