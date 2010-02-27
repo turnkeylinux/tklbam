@@ -12,6 +12,7 @@ import sys
 import getopt
 
 import dirindex
+import changes
 
 def usage(e=None):
     if e:
@@ -71,7 +72,7 @@ def main():
         dirindex.create(path_index, paths)
         return
 
-    for change in dirindex.whatchanged(path_index, paths):
+    for change in changes.whatchanged(path_index, paths):
         print change
 
 if __name__=="__main__":

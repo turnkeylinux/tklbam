@@ -12,7 +12,7 @@ from os.path import *
 
 import sys
 import getopt
-import dirindex
+from changes import Changes
 
 def usage(e=None):
     if e:
@@ -21,19 +21,6 @@ def usage(e=None):
     print >> sys.stderr, "Syntax: %s [-options] delta|- [path ...]" % sys.argv[0]
     print >> sys.stderr, __doc__.strip()
     sys.exit(1)
-
-def deletelist(changes):
-    for change in changes:
-        if change.OP != 'd':
-            continue
-
-        if not exists(change.path):
-            continue
-
-        if not islink(change.path) and isdir(change.path):
-            continue
-
-        yield change.path
 
 def main():
     try:
@@ -58,19 +45,11 @@ def main():
     delta = args[0]
     paths = args[1:]
 
-    delta_fh = file(delta) if delta != '-' else sys.stdin
-    changes = [ dirindex.Change.parse(line) 
-                for line in delta_fh.readlines() ]
-    
-    if paths:
-        pathmap = dirindex.PathMap(paths)
-        changes = [ change for change in changes
-                    if pathmap.is_included(change.path) ]
-
+    changes = Changes.fromfile(delta, paths)
     if simulate:
         verbose = True
 
-    for path in deletelist(changes):
+    for path in changes.deleted():
         if verbose:
             print "rm " + path
 

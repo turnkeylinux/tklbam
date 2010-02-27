@@ -14,9 +14,8 @@ Options:
 
 import sys
 import getopt
-import dirindex
 
-from fixstat import fixstat, IdMap
+from changes import Changes
 
 def usage(e=None):
     if e:
@@ -36,13 +35,17 @@ def main():
     verbose = False
     simulate = False
 
-    uidmap = IdMap()
-    gidmap = IdMap()
+    uidmap = {}
+    gidmap = {}
+
+    def parse_idmap(line):
+        return dict([ map(int, val.split(',', 1)) for val in line.split(':') ])
+
     for opt, val in opts:
         if opt in ('-u', '--uid-map'):
-            uidmap = IdMap.fromline(val)
+            uidmap = parse_idmap(val)
         elif opt in ('-g', '--gid-map'):
-            gidmap = IdMap.fromline(val)
+            gidmap = parse_idmap(val)
         elif opt in ('-s', '--simulate'):
             simulate = True
         elif opt in ('-v', '--verbose'):
@@ -56,19 +59,11 @@ def main():
     delta = args[0]
     paths = args[1:]
 
-    delta_fh = file(delta) if delta != '-' else sys.stdin
-    changes = [ dirindex.Change.parse(line) 
-                for line in delta_fh.readlines() ]
-    
-    if paths:
-        pathmap = dirindex.PathMap(paths)
-        changes = [ change for change in changes
-                    if pathmap.is_included(change.path) ]
-
+    changes = Changes.fromfile(delta, paths)
     if simulate:
         verbose = True
 
-    for method, args in fixstat(changes, uidmap, gidmap):
+    for method, args in changes.fixstat(uidmap, gidmap):
         if verbose:
             print method.__name__ + `args`
 

@@ -2,57 +2,10 @@ import os
 import stat
 from os.path import *
 
-import glob
-import types
+from pathmap import PathMap
 
 class Error(Exception):
     pass
-
-class PathMap(dict):
-    @staticmethod
-    def _expand(path):
-        def needsglob(path):
-            for c in ('*?[]'):
-                if c in path:
-                    return True
-            return False
-
-        path = abspath(path)
-        if needsglob(path):
-            return glob.glob(path)
-        else:
-            return [ path ]
-
-    def __init__(self, paths):
-        for path in paths:
-            if path[0] == '-':
-                path = path[1:]
-                sign = False
-            else:
-                sign = True
-
-            for expanded in self._expand(path):
-                self[expanded] = sign
-
-    def includes(self):
-        for path in self:
-            if self[path]:
-                yield path
-    includes = property(includes)
-
-    def excludes(self):
-        for path in self:
-            if not self[path]:
-                yield path
-    excludes = property(excludes)
-
-    def is_included(self, path):
-        while path not in ('', '/'):
-            if path in self:
-                return self[path]
-            path = dirname(path)
-
-        return False
 
 class DirIndex(dict):
     class Record:
@@ -86,6 +39,15 @@ class DirIndex(dict):
         def __repr__(self):
             return "DirIndex.Record(%s, mod=%s, uid=%d, gid=%d, size=%d, mtime=%d)" % \
                     (`self.path`, oct(self.mod), self.uid, self.gid, self.size, self.mtime)
+
+    @classmethod
+    def create(cls, path_index, paths):
+        """create index from paths"""
+        di = cls()
+        di.walk(*paths)
+        di.save(path_index)
+        
+        return di
 
     def __init__(self, fromfile=None):
         if fromfile:
@@ -176,96 +138,4 @@ class DirIndex(dict):
         
         return paths_new, paths_edited, paths_stat
 
-def create(path_index, paths):
-    """create index from paths"""
-    di = DirIndex()
-    di.walk(*paths)
-    di.save(path_index)
-
-class Change:
-    class Base:
-        OP = None
-        def __init__(self, path):
-            self.path = path
-            self._stat = None
-
-        def stat(self):
-            if not self._stat:
-                self._stat = os.lstat(self.path)
-
-            return self._stat
-        stat = property(stat)
-
-        def fmt(self, *args):
-            return "\t".join([self.OP, self.path] + map(str, args))
-
-        def __str__(self):
-            return self.fmt()
-
-        @classmethod
-        def fromline(cls, line):
-            args = line.rstrip().split('\t')
-            return cls(*args)
-
-    class Deleted(Base):
-        OP = 'd'
-
-    class Overwrite(Base):
-        OP = 'o'
-        def __init__(self, path, uid=None, gid=None):
-            Change.Base.__init__(self, path)
-
-            if uid is None:
-                self.uid = self.stat.st_uid
-            else:
-                self.uid = int(uid)
-
-            if gid is None:
-                self.gid = self.stat.st_gid
-            else:
-                self.gid = int(gid)
-
-        def __str__(self):
-            return self.fmt(self.uid, self.gid)
-
-    class Stat(Overwrite):
-        OP = 's'
-        def __init__(self, path, uid=None, gid=None, mode=None):
-            Change.Overwrite.__init__(self, path, uid, gid)
-            if mode is None:
-                self.mode = self.stat.st_mode
-            else:
-                if isinstance(mode, int):
-                    self.mode = mode
-                else:
-                    self.mode = int(mode, 8)
-
-        def __str__(self):
-            return self.fmt(self.uid, self.gid, oct(self.mode))
-
-    @classmethod
-    def parse(cls, line):
-        op2class = dict((val.OP, val) for val in cls.__dict__.values() 
-                        if isinstance(val, types.ClassType))
-        op = line[0]
-        if op not in op2class:
-            raise Error("illegal change line: " + line)
-
-        return op2class[op].fromline(line[2:])
-
-def whatchanged(path_index, paths):
-    di_saved = DirIndex(path_index)
-    di_fs = DirIndex()
-    di_fs.walk(*paths)
-
-    new, edited, stat = di_saved.diff(di_fs)
-    changes = [ Change.Overwrite(path) for path in new + edited ]
-
-    changes += [ Change.Stat(path) for path in stat ]
-
-    di_saved.prune(*paths)
-    deleted = set(di_saved) - set(di_fs)
-    changes += [ Change.Deleted(path) for path in deleted ]
-
-    return changes
-
+create = DirIndex.create
