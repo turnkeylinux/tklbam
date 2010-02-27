@@ -140,8 +140,8 @@ class Changes(list):
             if change.OP in ('s', 'o'):
                 if st.st_uid != uidmap[change.uid] or \
                    st.st_gid != gidmap[change.gid]:
-                    yield os.chown, (change.path, 
-                                     uidmap[change.uid], gidmap[change.gid])
+                    yield os.lchown, (change.path, 
+                                      uidmap[change.uid], gidmap[change.gid])
 
             if change.OP == 's':
                 if not islink(change.path) and \

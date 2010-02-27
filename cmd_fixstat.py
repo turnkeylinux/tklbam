@@ -27,9 +27,9 @@ def usage(e=None):
     sys.exit(1)
 
 def fmt_op(method, *args):
-    if method is os.chown:
+    if method is os.lchown:
         path, uid, gid = args
-        return "chown %d:%d %s" % (uid, gid, path)
+        return "chown -h %d:%d %s" % (uid, gid, path)
     elif method is os.chmod:
         path, mode = args
         return "chmod %s %s" % (oct(mode), path)
