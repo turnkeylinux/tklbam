@@ -12,6 +12,7 @@ Options:
     <mapspec> := <key>,<val>[:<key>,<val> ...]
 """
 
+import os
 import sys
 import getopt
 
@@ -24,6 +25,14 @@ def usage(e=None):
     print >> sys.stderr, "Syntax: %s [-options] delta|- [path ...]" % sys.argv[0]
     print >> sys.stderr, __doc__.strip()
     sys.exit(1)
+
+def fmt_op(method, *args):
+    if method is os.chown:
+        path, uid, gid = args
+        return "chown %d:%d %s" % (uid, gid, path)
+    elif method is os.chmod:
+        path, mode = args
+        return "chmod %s %s" % (oct(mode), path)
 
 def main():
     try:
@@ -65,7 +74,7 @@ def main():
 
     for method, args in changes.fixstat(uidmap, gidmap):
         if verbose:
-            print method.__name__ + `args`
+            print fmt_op(method, *args)
 
         if not simulate:
             method(*args)
