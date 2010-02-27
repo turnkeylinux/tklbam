@@ -114,7 +114,7 @@ class Changes(list):
 
             yield change.path
     
-    def fixstat(self, uidmap={}, gidmap={}):
+    def statfixes(self, uidmap={}, gidmap={}):
         class TransparentMap(dict):
             def __getitem__(self, key):
                 if key in self:

@@ -72,7 +72,7 @@ def main():
     if simulate:
         verbose = True
 
-    for method, args in changes.fixstat(uidmap, gidmap):
+    for method, args in changes.statfixes(uidmap, gidmap):
         if verbose:
             print fmt_op(method, *args)
 
