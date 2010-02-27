@@ -204,7 +204,7 @@ class Change:
 
         @classmethod
         def fromline(cls, line):
-            args = line.split('\t')
+            args = line.rstrip().split('\t')
             return cls(*args)
 
     class Deleted(Base):
