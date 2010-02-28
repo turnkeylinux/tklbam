@@ -18,7 +18,7 @@ def usage(e=None):
     if e:
         print >> sys.stderr, e
 
-    print >> sys.stderr, "Syntax: %s index path1 ... pathN" % sys.argv[0]
+    print >> sys.stderr, "Syntax: %s [-options] index path1 ... pathN" % sys.argv[0]
     print >> sys.stderr, __doc__.strip()
     sys.exit(1)
 
