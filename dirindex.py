@@ -116,12 +116,17 @@ class DirIndex(dict):
         a = set(self)
         b = set(other)
 
-        paths_new = list(b - a)
-        paths_in_both = b & a
-
-        paths_edited = []
+        files_new = []
         paths_stat = []
 
+        for path in (b - a):
+            if stat.S_ISDIR(other[path].mod):
+                paths_stat.append(path)
+            else:
+                files_new.append(path)
+
+        paths_in_both = b & a
+        files_edited = []
         def attrs_equal(attrs, a, b):
             for attr in attrs:
                 if getattr(a, attr) != getattr(b, attr):
@@ -132,12 +137,12 @@ class DirIndex(dict):
         for path in paths_in_both:
             if not attrs_equal(('size', 'mtime'), self[path], other[path]):
                 if not stat.S_ISDIR(other[path].mod):
-                    paths_edited.append(path)
+                    files_edited.append(path)
                     continue
 
             if not attrs_equal(('mod', 'uid', 'gid'), self[path], other[path]):
                 paths_stat.append(path)
         
-        return paths_new, paths_edited, paths_stat
+        return files_new, files_edited, paths_stat
 
 create = DirIndex.create
