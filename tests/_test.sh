@@ -1,7 +1,24 @@
-#!/bin/bash
+#!/bin/bash -e
 
-set ${BIN:=..}
-set ${REF:=ref}
+[ -z "$BIN" ] && BIN=".."
+[ -z "$REF" ] && REF="ref"
+
+usage() {
+    1>&2 cat<<EOF
+Syntax: $0 [ --options ]
+Regression test.
+Options:
+    --create    Internal command which re-creates reference files in REF.
+
+Environment variables:
+
+    BIN         Path to tklbam source (default: $BIN)
+    REF         Path to test reference (default: $REF)
+    DEBUG       Turn on debugging. Increases verbosity.
+    
+EOF
+    exit 1
+}
 
 echoerr()
 {
@@ -21,8 +38,10 @@ cmd() {
 }
 
 diff() {
-    if ! $(which diff) $@; then
-        fatal "ERROR: unexpected diff output"
+    if [ -z "$create" ]; then
+        $(which diff) -u $@ || fatal "ERROR: unexpected diff output"
+    else
+        cp $2 $1;
     fi
 }
 
@@ -30,18 +49,33 @@ mkrelative() {
     sed -i "s|$(/bin/pwd)/||" $1
 }
 
-set -ex
+if [ "$1" = "-h" ]; then
+    usage
+fi
+
+for arg; do
+    case "$arg" in
+        --create)
+            create=yes
+            ;;
+
+        *)
+            usage
+    esac
+done
+
+[ -n "$DEBUG" ] && set -x
 rm -rf ./testdir && rsync -a $REF/testdir ./
 
 # test index creation
 cmd dirindex --create index testdir
 mkrelative ./index
-diff -u $REF/index ./index
+diff $REF/index ./index
 
 # test index creation with limitation
 cmd dirindex --create index -- ./testdir/ -testdir/subdir/ testdir/subdir/subsubdir
 mkrelative ./index
-diff -u $REF/index-without-subdir ./index
+diff $REF/index-without-subdir ./index
 
 # test dirindex comparison
 cmd dirindex --create index testdir
@@ -67,14 +101,14 @@ cd ../
 
 cmd dirindex ./index testdir/ > delta
 mkrelative delta
-diff -u $REF/delta1 ./delta
+diff $REF/delta1 ./delta
 
 cmd dirindex ./index -- testdir/subdir/ -testdir/subdir/subsubdir > delta
 mkrelative delta
 
-diff -u $REF/delta2 ./delta
+diff $REF/delta2 ./delta
 
 cmd dirindex ./index -- testdir/ -testdir/subdir testdir/subdir/subsubdir > delta
 mkrelative delta
 
-diff -u $REF/delta3 ./delta
+diff $REF/delta3 ./delta
