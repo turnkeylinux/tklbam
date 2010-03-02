@@ -17,14 +17,11 @@ dist: clean
 	-mkdir -p $(PATH_DIST)
 
 	-cp -a .git .gitignore $(PATH_DIST)
-	-cp -a *.sh *.c *.py Makefile pylib/ libexec* $(PATH_DIST)
+	-cp -a *.sh *.c *.py Makefile libexec* $(PATH_DIST)
 
 	tar jcvf $(PATH_DIST).tar.bz2 $(PATH_DIST)
 	rm -rf $(PATH_DIST)
 
-### Extendable targets
-
-# target: help
 help:
 	@echo '=== Targets:'
 	@echo 'install   [ prefix=path/to/usr ] # default: prefix=$(value prefix)'
@@ -55,7 +52,6 @@ define with-py-executables
 	fi;
 endef
 
-# target: install
 install:
 	@echo
 	@echo \*\* CONFIG: prefix = $(prefix) \*\*
@@ -65,17 +61,15 @@ install:
 	cp *.py $(PATH_INSTALL_LIB)
 
 	$(call with-py-executables, \
-	       ln -fs $(call libpath, $$module) $(PATH_BIN)/$(progname), \
-		   ln -fs $(call libpath, $$module) $(PATH_BIN)/$(call subcommand, $$module))
+	  ln -fs $(call libpath, $$module) $(PATH_BIN)/$(progname), \
+	  ln -fs $(call libpath, $$module) $(PATH_BIN)/$(call subcommand, $$module))
 
-# target: uninstall
 uninstall:
 	rm -rf $(PATH_INSTALL_LIB)
 
 	$(call with-py-executables, \
-		   rm -f $(PATH_BIN)/$(progname), \
-		   rm -f $(PATH_BIN)/$(call subcommand, $$module))
+	  rm -f $(PATH_BIN)/$(progname), \
+	  rm -f $(PATH_BIN)/$(call subcommand, $$module))
 
-# target: clean
 clean:
-	rm -f *.pyc *.pyo _$(progname)
+	rm -f *.pyc *.pyo
