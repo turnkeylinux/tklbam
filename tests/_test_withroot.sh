@@ -27,7 +27,13 @@ diff() {
 }
 
 rm -rf ./testdir && rsync -a $REF/testdir ./
+
+# test index creation
 cmd dirindex --create index testdir
 sed -i "s|^$(/bin/pwd)/||" ./index
-
 diff -u $REF/index ./index
+
+# test index creation with limitation
+cmd dirindex --create index -- ./testdir/ -testdir/subdir/ testdir/subdir/subsubdir
+sed -i "s|^$(/bin/pwd)/||" ./index
+diff -u $REF/index-without-subdir ./index
