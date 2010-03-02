@@ -1,4 +1,7 @@
-testdir	41ed	0	0	90	4b8d363a
+testdir	41ed	0	0	e0	4b8d58cc
+testdir/chmod	81a4	0	0	0	4b8d58c9
+testdir/chown	81a4	0	0	0	4b8d58cc
+testdir/donttouchme	81a4	0	0	6	4b8d58ab
 testdir/emptydir	41ed	0	0	30	4b8d361c
 testdir/file	81a4	0	0	6	4b8d35bd
 testdir/link	a1ff	0	0	4	4b8d362e
