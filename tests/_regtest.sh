@@ -1,7 +1,6 @@
 #!/bin/bash -e
 
-[ -z "$BIN" ] && BIN=".."
-[ -z "$REF" ] && REF="ref"
+cd $(dirname $0)
 
 usage() {
     1>&2 cat<<EOF
@@ -20,42 +19,10 @@ EOF
     exit 1
 }
 
-error()
-{
-    echo "$*" >& 2
-    false
-}
+[ -z "$BIN" ] && BIN=".."
+[ -z "$REF" ] && REF="ref"
 
-cmd() {
-    name=$1
-    shift;
-    $BIN/cmd_$name.py $@
-}
-
-clean() {
-    rm -rf testdir
-    rm -f index index.orig delta fixstat
-}
-
-test_count=1
-testresult() {
-    file=$1
-    testdesc=$2
-
-    result="$REF/results/${test_count}:$(basename $file):$(echo $testdesc | sed 's/[^0-9a-zA-Z \.]//g; s/ \+/_/g')"
-
-    # make relative
-    sed -i "s|$(/bin/pwd)/||" $file
-    if [ -z "$createrefs" ]; then
-        $(which diff) -u $result $file || error "FAIL: $test_count - $testdesc"
-    else
-        cp $file $result;
-    fi
-    if [ -z "$createrefs" ]; then
-        echo "OK: $test_count - $testdesc"
-    fi
-    test_count=$((test_count+1))
-}
+. functions.sh
 
 if [ "$1" = "-h" ]; then
     usage
@@ -86,26 +53,24 @@ testresult ./index "index creation with limitation"
 
 # test dirindex comparison
 cd testdir/
+    mv {file,file-renamed}
+    ln -sf file-renamed link
+    mv emptydir emptydir-renamed
+    echo changed >> subdir/file2
+    chgrp 666 subdir/file2
+    echo foo > subdir/subsubdir/file4
+    chown 666 subdir/subsubdir/file4
+    rm subdir/subsubdir/file3
+    mkdir new
+    touch new/empty
 
-mv {file,file-renamed}
-ln -sf file-renamed link
-mv emptydir emptydir-renamed
-echo changed >> subdir/file2
-chgrp 666 subdir/file2
-echo foo > subdir/subsubdir/file4
-chown 666 subdir/subsubdir/file4
-rm subdir/subsubdir/file3
-mkdir new
-touch new/empty
+    chown 666 chown
+    chgrp 666 chgrp
+    chmod 000 chmod
 
-chown 666 chown
-chgrp 666 chgrp
-chmod 000 chmod
+    chown 666:666 subdir
 
-chown 666:666 subdir
-
-chmod 750 subdir/subsubdir
-
+    chmod 750 subdir/subsubdir
 cd ../
 
 cmd dirindex ./index.orig testdir/ > delta
@@ -113,12 +78,11 @@ cp delta delta.orig
 testresult ./delta "index comparison"
 
 cd testdir/
-chmod 700 subdir/
-chown 0 chown
-chmod 644 chmod
-chown 1:1 subdir/subsubdir
-rm subdir/subsubdir/file4
-
+    chmod 700 subdir/
+    chown 0 chown
+    chmod 644 chmod
+    chown 1:1 subdir/subsubdir
+    rm subdir/subsubdir/file4
 cd ../
 
 cmd fixstat -s ./delta.orig > ./fixstat
@@ -142,4 +106,8 @@ testresult ./delta "index comparison with limitation"
 cmd dirindex ./index.orig -- testdir/ -testdir/subdir testdir/subdir/subsubdir > delta
 testresult ./delta "index comparison with inverted limitation"
 
-clean
+# clean
+
+rm -rf testdir
+rm -f index index.orig delta delta.orig fixstat
+
