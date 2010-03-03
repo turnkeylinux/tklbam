@@ -11,15 +11,9 @@ cmd() {
 }
 
 test_count=1
-testresult() {
+testresult-exact() {
     file=$1
     testdesc=$2
-
-    # make relative
-    tmp=$(tempfile)
-    sed "s|$(/bin/pwd)/||" $file | sort > $tmp
-    cat $tmp > $file
-    rm $tmp
 
     result="$REF/results/${test_count}:$(basename $file):$(echo $testdesc | sed 's/[^0-9a-zA-Z \.]//g; s/ \+/_/g')"
 
@@ -32,5 +26,18 @@ testresult() {
         echo "OK: $test_count - $testdesc"
     fi
     test_count=$((test_count+1))
+}
+
+testresult() {
+    file=$1
+    testdesc=$2
+
+    # make relative
+    tmp=$(tempfile)
+    sed "s|$(/bin/pwd)/||" $file | sort > $tmp
+    cat $tmp > $file
+    rm $tmp
+
+    testresult-exact $1 "$2"
 }
 

@@ -124,8 +124,13 @@ testresult ./delete "delete"
 cmd delete -v ./delta.orig > delete
 testresult ./delete "delete repeated - nothing to do"
 
-# clean
-
 rm -rf testdir
-rm -f index index.orig delta delta.orig fixstat
+rm -f index index.orig delta delta.orig fixstat delete
 
+cmd merge_userdb $REF/old-passwd $REF/old-group $REF/new-passwd $REF/new-group merged-passwd merged-group > merge-maps
+
+testresult-exact merged-passwd "merge-userdb passwd"
+testresult-exact merged-group "merge-userdb group"
+testresult-exact merge-maps "merge-userdb output maps"
+
+rm -f merged-passwd merged-group merge-maps
