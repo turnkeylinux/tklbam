@@ -46,11 +46,11 @@ rm -rf ./testdir && rsync -a $REF/testdir ./
 # test index creation
 cmd dirindex --create index testdir
 cp ./index ./index.orig
-testresult ./index "index creation"
+testresult ./index "dirindex creation"
 
 # test index creation with limitation
 cmd dirindex --create index -- ./testdir/ -testdir/subdir/ testdir/subdir/subsubdir
-testresult ./index "index creation with limitation"
+testresult ./index "dirindex creation with limitation"
 
 # test dirindex comparison
 cd testdir/
@@ -76,7 +76,7 @@ cd ../
 
 cmd dirindex ./index.orig testdir/ > delta
 cp delta delta.orig
-testresult ./delta "index comparison"
+testresult ./delta "dirindex comparison"
 
 cd testdir/
     chmod 700 subdir/
@@ -102,10 +102,10 @@ cmd fixstat -u 666,777:111,222 -g 666,777:111,222 -v ./delta.orig > ./fixstat
 testresult ./fixstat "fixstat repeated - nothing to do"
 
 cmd dirindex ./index.orig -- testdir/subdir/ -testdir/subdir/subsubdir > delta
-testresult ./delta "index comparison with limitation"
+testresult ./delta "dirindex comparison with limitation"
 
 cmd dirindex ./index.orig -- testdir/ -testdir/subdir testdir/subdir/subsubdir > delta
-testresult ./delta "index comparison with inverted limitation"
+testresult ./delta "dirindex comparison with inverted limitation"
 
 cd testdir
     touch file
