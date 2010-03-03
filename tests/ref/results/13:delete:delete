@@ -1,0 +1,2 @@
+rm testdir/file
+rm testdir/subdir/subsubdir/file3

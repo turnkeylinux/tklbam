@@ -106,6 +106,23 @@ testresult ./delta "index comparison with limitation"
 cmd dirindex ./index.orig -- testdir/ -testdir/subdir testdir/subdir/subsubdir > delta
 testresult ./delta "index comparison with inverted limitation"
 
+cd testdir
+    touch file
+    touch subdir/subsubdir/file3
+cd ../
+
+cmd delete -s ./delta.orig > delete
+testresult ./delete "delete simulation"
+
+cmd delete -s ./delta.orig testdir/subdir > delete
+testresult ./delete "delete simulation with limitation"
+
+cmd delete -v ./delta.orig > delete
+testresult ./delete "delete"
+
+cmd delete -v ./delta.orig > delete
+testresult ./delete "delete repeated - nothing to do"
+
 # clean
 
 rm -rf testdir
