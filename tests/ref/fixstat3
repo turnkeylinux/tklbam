@@ -1,2 +1,0 @@
-chown -h 666:0 testdir/chown
-chmod 0 testdir/chmod
