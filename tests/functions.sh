@@ -15,10 +15,14 @@ testresult() {
     file=$1
     testdesc=$2
 
+    # make relative
+    tmp=$(tempfile)
+    sed "s|$(/bin/pwd)/||" $file | sort > $tmp
+    cat $tmp > $file
+    rm $tmp
+
     result="$REF/results/${test_count}:$(basename $file):$(echo $testdesc | sed 's/[^0-9a-zA-Z \.]//g; s/ \+/_/g')"
 
-    # make relative
-    sed -i "s|$(/bin/pwd)/||" $file
     if [ -z "$createrefs" ]; then
         $(which diff) -u $result $file || error "FAIL: $test_count - $testdesc"
     else
