@@ -51,7 +51,7 @@ mkrelative() {
 
 clean() {
     rm -rf testdir
-    rm -f index delta
+    rm -f index delta fixstat
 }
 
 test_count=1
@@ -101,7 +101,9 @@ mv {file,file-renamed}
 ln -sf file-renamed link
 mv emptydir emptydir-renamed
 echo changed >> subdir/file2
+chgrp 666 subdir/file2
 echo foo > subdir/subsubdir/file4
+chown 666 subdir/subsubdir/file4
 rm subdir/subsubdir/file3
 mkdir new
 touch new/empty
@@ -121,6 +123,42 @@ mkrelative delta
 diff $REF/delta1 ./delta
 passed "index comparison"
 
+cmd dirindex ./index testdir/ > delta
+
+cd testdir/
+chmod 700 subdir/
+chown 0 chown
+chmod 644 chmod
+chown 1:1 subdir/subsubdir
+rm subdir/subsubdir/file4
+
+cd ../
+
+cmd fixstat -s ./delta > ./fixstat
+mkrelative fixstat
+diff $REF/fixstat1 ./fixstat
+passed "fixstat simulation"
+
+cmd fixstat -s ./delta testdir/subdir > ./fixstat
+mkrelative fixstat
+diff $REF/fixstat2 ./fixstat
+passed "fixstat simulation with limitation"
+
+cmd fixstat -s ./delta -- testdir -testdir/subdir > fixstat
+mkrelative fixstat
+diff $REF/fixstat3 ./fixstat
+passed "fixstat simulation with exclusion"
+
+cmd fixstat -u 666,777:111,222 -g 666,777:111,222 -v ./delta > ./fixstat
+mkrelative fixstat
+diff $REF/fixstat4 ./fixstat
+passed "fixstat with uid and gid mapping"
+
+cmd fixstat -u 666,777:111,222 -g 666,777:111,222 -v ./delta > ./fixstat
+mkrelative fixstat
+diff $REF/fixstat5 ./fixstat
+passed "fixstat repeated - nothing to do"
+
 cmd dirindex ./index -- testdir/subdir/ -testdir/subdir/subsubdir > delta
 mkrelative delta
 
@@ -133,5 +171,4 @@ mkrelative delta
 diff $REF/delta3 ./delta
 passed "index comparison with inverted limitation"
 
-#clean
-/bin/bash
+clean

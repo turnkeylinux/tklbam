@@ -1,2 +1,2 @@
-o	testdir/subdir/file2	0	0
-s	testdir/subdir	666	666	0755
+o	testdir/subdir/file2	0	777
+s	testdir/subdir	777	777	0755

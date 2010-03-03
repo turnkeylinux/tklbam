@@ -1,0 +1,2 @@
+chmod 0755 testdir/subdir
+chown -h 0:0 testdir/subdir/subsubdir
