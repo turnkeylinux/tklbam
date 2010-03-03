@@ -1,0 +1,15 @@
+o	testdir/subdir/subsubdir/file4	666	0
+o	testdir/new/empty	0	0
+o	testdir/file-renamed	0	0
+o	testdir/subdir/file2	0	666
+o	testdir/link	0	0
+s	testdir/new	0	0	0755
+s	testdir/emptydir-renamed	0	0	0755
+s	testdir/chgrp	0	666	0644
+s	testdir/chown	666	0	0644
+s	testdir/subdir	666	666	0755
+s	testdir/chmod	0	0	0
+s	testdir/subdir/subsubdir	0	0	0750
+d	testdir/file
+d	testdir/emptydir
+d	testdir/subdir/subsubdir/file3

@@ -34,7 +34,7 @@ cmd() {
 
 clean() {
     rm -rf testdir
-    rm -f index delta fixstat
+    rm -f index index.orig delta fixstat
 }
 
 test_count=1
@@ -77,6 +77,7 @@ rm -rf ./testdir && rsync -a $REF/testdir ./
 
 # test index creation
 cmd dirindex --create index testdir
+cp ./index ./index.orig
 testresult ./index "index creation"
 
 # test index creation with limitation
@@ -107,8 +108,8 @@ chmod 750 subdir/subsubdir
 
 cd ../
 
-cmd dirindex --create index testdir
-cmd dirindex ./index testdir/ > delta
+cmd dirindex ./index.orig testdir/ > delta
+cp delta delta.orig
 testresult ./delta "index comparison"
 
 cd testdir/
@@ -120,26 +121,25 @@ rm subdir/subsubdir/file4
 
 cd ../
 
-cmd dirindex ./index testdir/ > delta
-cmd fixstat -s ./delta > ./fixstat
+cmd fixstat -s ./delta.orig > ./fixstat
 testresult ./fixstat "fixstat simulation"
 
-cmd fixstat -s ./delta testdir/subdir > ./fixstat
+cmd fixstat -s ./delta.orig testdir/subdir > ./fixstat
 testresult ./fixstat "fixstat simulation with limitation"
 
-cmd fixstat -s ./delta -- testdir -testdir/subdir > fixstat
+cmd fixstat -s ./delta.orig -- testdir -testdir/subdir > fixstat
 testresult ./fixstat "fixstat simulation with exclusion"
 
-cmd fixstat -u 666,777:111,222 -g 666,777:111,222 -v ./delta > ./fixstat
+cmd fixstat -u 666,777:111,222 -g 666,777:111,222 -v ./delta.orig > ./fixstat
 testresult ./fixstat "fixstat with uid and gid mapping"
 
-cmd fixstat -u 666,777:111,222 -g 666,777:111,222 -v ./delta > ./fixstat
+cmd fixstat -u 666,777:111,222 -g 666,777:111,222 -v ./delta.orig > ./fixstat
 testresult ./fixstat "fixstat repeated - nothing to do"
 
-cmd dirindex ./index -- testdir/subdir/ -testdir/subdir/subsubdir > delta
+cmd dirindex ./index.orig -- testdir/subdir/ -testdir/subdir/subsubdir > delta
 testresult ./delta "index comparison with limitation"
 
-cmd dirindex ./index -- testdir/ -testdir/subdir testdir/subdir/subsubdir > delta
+cmd dirindex ./index.orig -- testdir/ -testdir/subdir testdir/subdir/subsubdir > delta
 testresult ./delta "index comparison with inverted limitation"
 
 clean
