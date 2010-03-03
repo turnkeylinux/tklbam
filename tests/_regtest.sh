@@ -32,6 +32,7 @@ for arg; do
     case "$arg" in
         --createrefs)
             createrefs=yes
+            rm -f $REF/results/*
             ;;
 
         *)
