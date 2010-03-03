@@ -49,6 +49,11 @@ mkrelative() {
     sed -i "s|$(/bin/pwd)/||" $1
 }
 
+clean() {
+    rm -rf testdir
+    rm -f index delta
+}
+
 test_count=1
 passed() {
     if [ -z "$create" ]; then
@@ -125,3 +130,5 @@ mkrelative delta
 
 diff $REF/delta3 ./delta
 passed "index comparison with inverted limitation"
+
+clean
