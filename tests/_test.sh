@@ -49,6 +49,10 @@ mkrelative() {
     sed -i "s|$(/bin/pwd)/||" $1
 }
 
+passed() {
+    [ -z "$create" ] && echo "OK: $@"
+}
+
 if [ "$1" = "-h" ]; then
     usage
 fi
@@ -71,11 +75,13 @@ rm -rf ./testdir && rsync -a $REF/testdir ./
 cmd dirindex --create index testdir
 mkrelative ./index
 diff $REF/index ./index
+passed "1 - index creation"
 
 # test index creation with limitation
 cmd dirindex --create index -- ./testdir/ -testdir/subdir/ testdir/subdir/subsubdir
 mkrelative ./index
 diff $REF/index-without-subdir ./index
+passed "2 - index creation with limitation"
 
 # test dirindex comparison
 cmd dirindex --create index testdir
@@ -102,13 +108,16 @@ cd ../
 cmd dirindex ./index testdir/ > delta
 mkrelative delta
 diff $REF/delta1 ./delta
+passed "3 - index comparison"
 
 cmd dirindex ./index -- testdir/subdir/ -testdir/subdir/subsubdir > delta
 mkrelative delta
 
 diff $REF/delta2 ./delta
+passed "4 - index comparison with limitation"
 
 cmd dirindex ./index -- testdir/ -testdir/subdir testdir/subdir/subsubdir > delta
 mkrelative delta
 
 diff $REF/delta3 ./delta
+passed "5 - index comparison with inverted limitation"
