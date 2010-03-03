@@ -107,9 +107,11 @@ mkdir new
 touch new/empty
 
 chown 666 chown
+chgrp 666 chgrp
 chmod 000 chmod
 
-chown 666 subdir
+chown 666:666 subdir
+
 chmod 750 subdir/subsubdir
 
 cd ../
@@ -131,4 +133,5 @@ mkrelative delta
 diff $REF/delta3 ./delta
 passed "index comparison with inverted limitation"
 
-clean
+#clean
+/bin/bash
