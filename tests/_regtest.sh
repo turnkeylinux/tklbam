@@ -20,15 +20,10 @@ EOF
     exit 1
 }
 
-echoerr()
+error()
 {
     echo "$*" >& 2
-}
-
-fatal()
-{
-    echoerr "$@"
-    exit 1
+    false
 }
 
 cmd() {
@@ -47,12 +42,12 @@ testresult() {
     file=$1
     testdesc=$2
 
-    result="$REF/results/${test_count}-$(basename $file)"
+    result="$REF/results/${test_count}:$(basename $file):$(echo $testdesc | sed 's/ /_/g')"
 
     # make relative
     sed -i "s|$(/bin/pwd)/||" $file
     if [ -z "$createrefs" ]; then
-        $(which diff) -u $result $file || fatal "ERROR: unexpected diff output"
+        $(which diff) -u $result $file || error "FAIL: $test_count - $testdesc"
     else
         cp $file $result;
     fi

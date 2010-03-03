@@ -1,0 +1,1 @@
+chown -h 777:777 testdir/subdir

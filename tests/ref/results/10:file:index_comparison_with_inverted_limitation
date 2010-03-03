@@ -1,0 +1,4 @@
+s	testdir/subdir/subsubdir	1	1	0750
+s	testdir/chown	0	0	0644
+s	testdir/chmod	0	0	0644
+d	testdir/subdir/subsubdir/file4
