@@ -42,7 +42,7 @@ testresult() {
     file=$1
     testdesc=$2
 
-    result="$REF/results/${test_count}:$(basename $file):$(echo $testdesc | sed 's/ /_/g')"
+    result="$REF/results/${test_count}:$(basename $file):$(echo $testdesc | sed 's/[^0-9a-zA-Z \.]//g; s/ \+/_/g')"
 
     # make relative
     sed -i "s|$(/bin/pwd)/||" $file
