@@ -22,7 +22,7 @@ class DpkgSelections(set):
     def _parse(buf):
         for line in buf.strip().split('\n'):
             package, state = re.split(r'\t+', line)
-            if state == 'deinstall':
+            if state in ('deinstall', 'purge'):
                 continue
             yield package
 
