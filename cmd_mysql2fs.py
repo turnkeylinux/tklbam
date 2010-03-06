@@ -38,7 +38,7 @@ class Database:
         mkdir(path)
 
         path_init = join(path, "init")
-        file(path_init, "w").write(sql)
+        print >> file(path_init, "w"), sql
 
         self.path = path
 
@@ -50,7 +50,7 @@ class Table:
         mkdir(path, True)
 
         path_init = join(path, "init")
-        file(path_init, "w").write(sql)
+        print >> file(path_init, "w"), sql
 
         self.rows = file(join(path, "rows"), "w")
         self.path = path
@@ -60,7 +60,7 @@ class Table:
         name = _get_name(sql)
         if name != self.name:
             raise Error("row name (%s) != table name (%s)" % (name, self.name))
-        print >> self.rows, sql
+        print >> self.rows, re.sub(r'.*?VALUES \((.*)\);', '\\1', sql)
 
 def statements(fh):
     statement = ""
