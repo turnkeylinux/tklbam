@@ -3,7 +3,9 @@
 Map a MySQL dump to a filesystem path.
 
 Options:
-    -D --delete              Delete contents of output dir
+    -D --delete             Delete contents of output dir
+    --fromfile=PATH         Read mysqldump output from file (- for STDIN)
+                            Requires: --all-databases --skip-extended-insert
 
 Supports the following subset of mysqldump(1) options:
 
@@ -171,15 +173,18 @@ def usage(e=None):
 def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'Du:p:', 
-                                       ['delete', 
+                                       ['delete', 'fromfile=',
                                         'user=', 'password=', 'defaults-file=', 'hostname='])
     except getopt.GetoptError, e:
         usage(e)
 
+    opt_fromfile = None
     opt_delete = False
     conf = {}
-    for opt,val in opts:
-        if opt in ('-D', "--delete"):
+    for opt, val in opts:
+        if opt == '--fromfile':
+            opt_fromfile = val
+        elif opt in ('-D', "--delete"):
             opt_delete = True
         elif opt in ('-u', '--user'):
             conf['user'] = val
@@ -202,8 +207,10 @@ def main():
         shutil.rmtree(outdir)
 
     mkdir(outdir)
+    if opt_fromfile:
+        mysql_fh = file(opt_fromfile)
 
-    mysql2fs(file("sql"), outdir, limits)
+    mysql2fs(mysql_fh, outdir, limits)
 
 if __name__ == "__main__":
     main()
