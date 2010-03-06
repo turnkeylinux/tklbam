@@ -23,13 +23,19 @@ def _get_name(sql):
     name = sql.split()[2]
     return re.sub(r'`(.*)`', '\\1', name)
 
+def mkdir(path, parents=False):
+    if not exists(path):
+        if parents:
+            os.makedirs(path)
+        else:
+            os.mkdir(path)
+
 class Database:
     def __init__(self, outdir, sql):
         name = _get_name(sql)
         
         path = join(outdir, name)
-        if not exists(path):
-            os.mkdir(path)
+        mkdir(path)
 
         path_init = join(path, "init")
         file(path_init, "w").write(sql)
@@ -40,9 +46,8 @@ class Table:
     def __init__(self, database, sql):
         name = _get_name(sql)
 
-        path = join(database.path, name)
-        if not exists(path):
-            os.mkdir(path)
+        path = join(database.path, "tables", name)
+        mkdir(path, True)
 
         path_init = join(path, "init")
         file(path_init, "w").write(sql)
@@ -111,6 +116,8 @@ def main():
         usage()
 
     outdir = args[0]
+    mkdir(outdir)
+
     mysql2fs(file("sql"), outdir)
 
 if __name__ == "__main__":
