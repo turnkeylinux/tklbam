@@ -172,7 +172,7 @@ def usage(e=None):
     print >> sys.stderr, __doc__.strip()
     sys.exit(1)
 
-def mysqldump(**conf):
+def mysqldump(defaults_file=None, **conf):
     def isreadable(path):
         try:
             file(path)
@@ -180,13 +180,18 @@ def mysqldump(**conf):
         except:
             return False
 
-    if 'defaults_file' not in conf:
+    if not defaults_file:
         debian_cnf = "/etc/mysql/debian.cnf"
         if isreadable(debian_cnf):
-            conf['defaults_file'] = debian_cnf
+            defaults_file = debian_cnf
 
-    opts = [ "all-databases", "skip-extended-insert", "single-transaction", 
-             "compact", "quick" ]
+    opts = []
+
+    if defaults_file:
+        opts.append("defaults-file=" + defaults_file)
+
+    opts += [ "all-databases", "skip-extended-insert", "single-transaction", 
+              "compact", "quick" ]
 
     for opt, val in conf.items():
         opts.append(opt.replace("_", "-") + "=" + val)
