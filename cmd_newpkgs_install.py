@@ -8,9 +8,13 @@ Options:
     -s --simulate           Don't execute apt-get
 """
 
+import os
 import re
 import sys
 import getopt
+import commands
+
+from cmd_newpkgs import DpkgSelections
 
 def usage(e=None):
     if e:
@@ -36,6 +40,41 @@ def parse_input(inputfile):
         packages.append(line)
 
     return packages
+
+class AptCache(set):
+    class Error(Exception):
+        pass
+
+    def __init__(self, packages):
+        command = "apt-cache show " + " ".join(packages)
+        status, output = commands.getstatusoutput(command)
+        status = os.WEXITSTATUS(status)
+        if status not in (0, 100):
+            raise self.Error("execution failed (%d): %s\n%s" % (status, command, output))
+        
+        cached = [ line.split()[1] 
+                   for line in output.split("\n") if
+                   line.startswith("Package: ") ]
+
+        set.__init__(self, cached)
+
+def installable(packages):
+    selections = DpkgSelections()
+    aptcache = AptCache(packages)
+
+    installable = []
+    skipped = []
+    for package in set(packages):
+        if package in selections:
+            continue
+
+        if package not in aptcache:
+            skipped.append(package)
+            continue
+
+        installable.append(package)
+
+    return installable, skipped
 
 def main():
     try:
@@ -70,9 +109,18 @@ def main():
     if opt_input:
         packages += parse_input(opt_input)
 
-    print `(opt_verbose, opt_simulate)`
-    print `packages`
+    installing, skipping = installable(packages)
+    installing.sort()
+    skipping.sort()
+
+    command = "apt-get install " + " ".join(installing)
+    if opt_verbose:
+        print "# SKIPPING: " + " ".join(skipping)
+        print command
+
+    if not opt_simulate:
+        errno = os.system(command)
+        os.exit(errno)
 
 if __name__=="__main__":
     main()
-
