@@ -10,8 +10,74 @@ Supports the following subset of mysqldump(1) options:
            --hostname=HOST
 
 """
+import os
+from os.path import *
+
 import sys
 import getopt
+
+import re
+
+def _get_name(sql):
+    sql = re.sub(r'/\*.*?\*/', "", sql)
+    name = sql.split()[2]
+    return re.sub(r'`(.*)`', '\\1', name)
+
+class Database:
+    def __init__(self, outdir, sql):
+        name = _get_name(sql)
+        
+        path = join(outdir, name)
+        if not exists(path):
+            os.mkdir(path)
+
+        path_init = join(path, "init")
+        file(path_init, "w").write(sql)
+
+        self.path = path
+
+class Table:
+    def __init__(self, database, sql):
+        name = _get_name(sql)
+
+        path = join(database.path, name)
+        if not exists(path):
+            os.mkdir(path)
+
+        path_init = join(path, "init")
+        file(path_init, "w").write(sql)
+
+        self.rows = file(join(path, "rows"), "w")
+        self.path = path
+        self.name = name
+
+    def addrow(self, sql):
+        name = _get_name(sql)
+        if name != self.name:
+            raise Error("row name (%s) != table name (%s)" % (name, self.name))
+        print >> self.rows, sql
+
+def statements(fh):
+    statement = ""
+    for line in fh.xreadlines():
+        statement += line
+        if statement.strip().endswith(";"):
+            yield statement.strip()
+            statement = ""
+
+def mysql2fs(fh, outdir):
+    database = None
+    table = None
+
+    for statement in statements(fh):
+        if statement.startswith("CREATE DATABASE"):
+            database = Database(outdir, statement)
+        
+        elif statement.startswith("CREATE TABLE"):
+            table = Table(database, statement)
+
+        elif statement.startswith("INSERT INTO"):
+            table.addrow(statement)
 
 def usage(e=None):
     if e:
@@ -44,9 +110,9 @@ def main():
     if not args:
         usage()
 
-    output = args[0]
-    print `conf`
-    print `output`
+    outdir = args[0]
+    mysql2fs(file("sql"), outdir)
 
 if __name__ == "__main__":
     main()
+
