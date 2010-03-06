@@ -79,10 +79,13 @@ def main():
 
     command = "apt-get install " + " ".join(installing)
     if opt_verbose:
-        print "# SKIPPING: " + " ".join(skipping)
-        print command
+        if skipping:
+            print "# SKIPPING: " + " ".join(skipping)
 
-    if not opt_simulate:
+        if installing:
+            print command
+
+    if not opt_simulate and installing:
         errno = os.system(command)
         os.exit(errno)
 
