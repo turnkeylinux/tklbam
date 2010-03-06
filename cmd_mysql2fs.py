@@ -240,7 +240,10 @@ def main():
 
     mkdir(outdir)
     if opt_fromfile:
-        mysql_fh = file(opt_fromfile)
+        if opt_fromfile == '-':
+            mysql_fh = sys.stdin
+        else:
+            mysql_fh = file(opt_fromfile)
     else:
         mysql_fh = mysqldump(**myconf)
 
