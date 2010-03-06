@@ -134,3 +134,8 @@ testresult-exact merged-group "merge-userdb group"
 testresult-exact merge-maps "merge-userdb output maps"
 
 rm -f merged-passwd merged-group merge-maps
+
+cmd newpkgs $REF/base-selections $REF/old-selections | sort > delta-selections
+testresult-exact ./delta-selections "newpkgs"
+
+rm -f delta-selections
