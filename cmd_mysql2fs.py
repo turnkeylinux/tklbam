@@ -25,11 +25,6 @@ import shutil
 
 from paths import Paths
 
-def _get_name(sql):
-    sql = re.sub(r'/\*.*?\*/', "", sql)
-    name = sql.split()[2]
-    return re.sub(r'`(.*)`', '\\1', name)
-
 def mkdir(path, parents=False):
     if not exists(path):
         if parents:
@@ -41,19 +36,18 @@ class Database:
     class Paths(Paths):
         files = [ 'init', 'tables' ]
 
-    def __init__(self, outdir, sql):
-        name = _get_name(sql)
+    def __init__(self, outdir, name, sql):
         self.paths = self.Paths(join(outdir, name))
         mkdir(self.paths.path)
 
         print >> file(self.paths.init, "w"), sql
+        self.name = name
 
 class Table:
     class Paths(Paths):
         files = [ 'init', 'rows' ]
 
-    def __init__(self, database, sql):
-        name = _get_name(sql)
+    def __init__(self, database, name, sql):
         self.paths = self.Paths(join(database.paths.tables, name))
         mkdir(self.paths.path, True)
 
@@ -63,9 +57,6 @@ class Table:
         self.name = name
 
     def addrow(self, sql):
-        name = _get_name(sql)
-        if name != self.name:
-            raise Error("row name (%s) != table name (%s)" % (name, self.name))
         print >> self.rows_fh, re.sub(r'.*?VALUES \((.*)\);', '\\1', sql)
 
 def statements(fh):
@@ -76,25 +67,104 @@ def statements(fh):
             yield statement.strip()
             statement = ""
 
-def mysql2fs(fh, outdir):
+class DatabaseLimits:
+    def __init__(self, limits):
+        self.default = True
+        self.databases = []
+
+        d = {}
+        for limit in limits:
+            if limit[0] == '-':
+                limit = limit[1:]
+                sign = False
+            else:
+                sign = True
+                self.default = False
+
+            if '/' in limit:
+                database, table = limit.split('/')
+                d[(database, table)] = sign
+            else:
+                database = limit
+                d[database] = sign
+
+            self.databases.append(database)
+
+        self.d = d
+
+    def __contains__(self, val):
+        """Tests if <val> is within the defined Database limits
+
+        <val> can be:
+
+            1) a (database, table) tuple
+            2) a database string
+            3) database/table
+
+        """
+        if '/' in val:
+            database, table = val.split('/')
+            val = (database, table)
+
+        if isinstance(val, type(())):
+            database, table = val
+            if (database, table) in self.d:
+                return self.d[(database, table)]
+
+            if database in self.d:
+                return self.d[database]
+
+            return self.default
+
+        else:
+            database = val
+            if database in self.databases:
+                return True
+            
+            return self.default
+
+def mysql2fs(fh, outdir, limits=[]):
     database = None
     table = None
 
+    limits = DatabaseLimits(limits)
+
+    def match_name(sql):
+        sql = re.sub(r'/\*.*?\*/', "", sql)
+        name = sql.split()[2]
+        return re.sub(r'`(.*)`', '\\1', name)
+
     for statement in statements(fh):
         if statement.startswith("CREATE DATABASE"):
-            database = Database(outdir, statement)
+            database_name = match_name(statement)
+
+            if database_name in limits:
+                database = Database(outdir, database_name, statement)
+            else:
+                database = None
         
         elif statement.startswith("CREATE TABLE"):
-            table = Table(database, statement)
+            if not database:
+                continue
+
+            table_name = match_name(statement)
+            if (database.name, table_name) in limits:
+                table = Table(database, table_name, statement)
+            else:
+                table = None
 
         elif statement.startswith("INSERT INTO"):
+            if not table:
+                continue
+
+            assert match_name(statement) == table.name
             table.addrow(statement)
 
 def usage(e=None):
     if e:
         print >> sys.stderr, e
 
-    print >> sys.stderr, "Syntax: %s [-options] path/to/output" % sys.argv[0]
+    print >> sys.stderr, "Syntax: %s [-options] path/to/output [ -?database/table ... ] " % sys.argv[0]
     print >> sys.stderr, __doc__.strip()
     sys.exit(1)
 
@@ -126,12 +196,14 @@ def main():
         usage()
 
     outdir = args[0]
+    limits = args[1:]
+
     if opt_delete and isdir(outdir):
         shutil.rmtree(outdir)
 
     mkdir(outdir)
 
-    mysql2fs(file("sql"), outdir)
+    mysql2fs(file("sql"), outdir, limits)
 
 if __name__ == "__main__":
     main()
