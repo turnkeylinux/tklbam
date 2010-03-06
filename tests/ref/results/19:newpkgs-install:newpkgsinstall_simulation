@@ -1,0 +1,2 @@
+# SKIPPING: fobarbar foofoobar
+apt-get install aspell-fa aspell-hy

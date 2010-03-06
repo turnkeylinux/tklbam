@@ -137,5 +137,8 @@ rm -f merged-passwd merged-group merge-maps
 
 cmd newpkgs $REF/base-selections $REF/old-selections | sort > delta-selections
 testresult-exact ./delta-selections "newpkgs"
-
 rm -f delta-selections
+
+cmd newpkgs_install -s -i $REF/newpkgs_install > newpkgs-install
+testresult-exact ./newpkgs-install "newpkgs-install simulation"
+rm -f newpkgs-install

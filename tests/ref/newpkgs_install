@@ -1,0 +1,11 @@
+# don't exist, should be skipped
+foofoobar  
+fobarbar
+
+# already installed (essentially), should be silently ignored
+dpkg
+base-files 
+
+# not installed, apt-get install these
+aspell-fa 
+aspell-hy
