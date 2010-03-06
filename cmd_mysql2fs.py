@@ -7,6 +7,8 @@ Options:
     --fromfile=PATH         Read mysqldump output from file (- for STDIN)
                             Requires: --all-databases --skip-extended-insert
 
+    -v --verbose            Turn on verbosity
+
 Supports the following subset of mysqldump(1) options:
 
     -u --user=USER 
@@ -194,17 +196,20 @@ def mysqldump(**conf):
 
 def main():
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], 'Du:p:', 
-                                       ['delete', 'fromfile=',
+        opts, args = getopt.gnu_getopt(sys.argv[1:], 'Du:p:v', 
+                                       ['verbose', 'delete', 'fromfile=',
                                         'user=', 'password=', 'defaults-file=', 'host='])
     except getopt.GetoptError, e:
         usage(e)
 
+    opt_verbose = False
     opt_fromfile = None
     opt_delete = False
     myconf = {}
     for opt, val in opts:
-        if opt == '--fromfile':
+        if opt in ('-v', '--verbose'):
+            opt_verbose = True
+        elif opt == '--fromfile':
             opt_fromfile = val
         elif opt in ('-D', "--delete"):
             opt_delete = True
@@ -233,6 +238,9 @@ def main():
         mysql_fh = file(opt_fromfile)
     else:
         mysql_fh = mysqldump(**myconf)
+
+    if opt_verbose:
+        print "SOURCE: " + mysql_fh.name
 
     mysql2fs(mysql_fh, outdir, limits)
 
