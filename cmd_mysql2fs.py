@@ -3,11 +3,12 @@
 Map a MySQL dump to a filesystem path.
 
 Supports the following subset of mysqldump(1) options:
-        -u --user=USER 
-        -p --password=PASS
 
-           --defaults-file=PATH
-           --hostname=HOST
+    -u --user=USER 
+    -p --password=PASS
+
+       --defaults-file=PATH
+       --hostname=HOST
 
 """
 import os
