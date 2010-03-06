@@ -2,6 +2,9 @@
 """
 Map a MySQL dump to a filesystem path.
 
+Options:
+    -D --delete              Delete contents of output dir
+
 Supports the following subset of mysqldump(1) options:
 
     -u --user=USER 
@@ -18,6 +21,7 @@ import sys
 import getopt
 
 import re
+import shutil
 
 def _get_name(sql):
     sql = re.sub(r'/\*.*?\*/', "", sql)
@@ -95,14 +99,18 @@ def usage(e=None):
 
 def main():
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], 'u:p:', 
-                                       ['user=', 'password=', 'defaults-file=', 'hostname='])
+        opts, args = getopt.gnu_getopt(sys.argv[1:], 'Du:p:', 
+                                       ['delete', 
+                                        'user=', 'password=', 'defaults-file=', 'hostname='])
     except getopt.GetoptError, e:
         usage(e)
 
+    opt_delete = False
     conf = {}
     for opt,val in opts:
-        if opt in ('-u', '--user'):
+        if opt in ('-D', "--delete"):
+            opt_delete = True
+        elif opt in ('-u', '--user'):
             conf['user'] = val
         elif opt in ('-p', '--password'):
             conf['password'] = val
@@ -117,6 +125,9 @@ def main():
         usage()
 
     outdir = args[0]
+    if opt_delete and isdir(outdir):
+        shutil.rmtree(outdir)
+
     mkdir(outdir)
 
     mysql2fs(file("sql"), outdir)
