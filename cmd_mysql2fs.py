@@ -23,6 +23,8 @@ import getopt
 import re
 import shutil
 
+from paths import Paths
+
 def _get_name(sql):
     sql = re.sub(r'/\*.*?\*/', "", sql)
     name = sql.split()[2]
@@ -36,36 +38,35 @@ def mkdir(path, parents=False):
             os.mkdir(path)
 
 class Database:
+    class Paths(Paths):
+        files = [ 'init', 'tables' ]
+
     def __init__(self, outdir, sql):
         name = _get_name(sql)
-        
-        path = join(outdir, name)
-        mkdir(path)
+        self.paths = self.Paths(join(outdir, name))
+        mkdir(self.paths.path)
 
-        path_init = join(path, "init")
-        print >> file(path_init, "w"), sql
-
-        self.path = path
+        print >> file(self.paths.init, "w"), sql
 
 class Table:
+    class Paths(Paths):
+        files = [ 'init', 'rows' ]
+
     def __init__(self, database, sql):
         name = _get_name(sql)
+        self.paths = self.Paths(join(database.paths.tables, name))
+        mkdir(self.paths.path, True)
 
-        path = join(database.path, "tables", name)
-        mkdir(path, True)
+        print >> file(self.paths.init, "w"), sql
 
-        path_init = join(path, "init")
-        print >> file(path_init, "w"), sql
-
-        self.rows = file(join(path, "rows"), "w")
-        self.path = path
+        self.rows_fh = file(self.paths.rows, "w")
         self.name = name
 
     def addrow(self, sql):
         name = _get_name(sql)
         if name != self.name:
             raise Error("row name (%s) != table name (%s)" % (name, self.name))
-        print >> self.rows, re.sub(r'.*?VALUES \((.*)\);', '\\1', sql)
+        print >> self.rows_fh, re.sub(r'.*?VALUES \((.*)\);', '\\1', sql)
 
 def statements(fh):
     statement = ""
