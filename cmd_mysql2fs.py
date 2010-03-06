@@ -13,7 +13,7 @@ Supports the following subset of mysqldump(1) options:
     -p --password=PASS
 
        --defaults-file=PATH
-       --hostname=HOST
+       --host=HOST
 
 """
 import os
@@ -125,7 +125,7 @@ class DatabaseLimits:
             
             return self.default
 
-def mysql2fs(fh, outdir, limits=[]):
+def mysql2fs(mysql_fh, outdir, limits=[]):
     database = None
     table = None
 
@@ -136,7 +136,7 @@ def mysql2fs(fh, outdir, limits=[]):
         name = sql.split()[2]
         return re.sub(r'`(.*)`', '\\1', name)
 
-    for statement in statements(fh):
+    for statement in statements(mysql_fh):
         if statement.startswith("CREATE DATABASE"):
             database_name = match_name(statement)
 
@@ -170,30 +170,52 @@ def usage(e=None):
     print >> sys.stderr, __doc__.strip()
     sys.exit(1)
 
+def mysqldump(**conf):
+    def isreadable(path):
+        try:
+            file(path)
+            return True
+        except:
+            return False
+
+    if 'defaults_file' not in conf:
+        debian_cnf = "/etc/mysql/debian.cnf"
+        if isreadable(debian_cnf):
+            conf['defaults_file'] = debian_cnf
+
+    opts = [ "all-databases", "skip-extended-insert", "single-transaction", 
+             "compact", "quick" ]
+
+    for opt, val in conf.items():
+        opts.append(opt.replace("_", "-") + "=" + val)
+
+    command = "mysqldump " + " ".join([ "--" + opt for opt in opts ])
+    return os.popen(command)
+
 def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'Du:p:', 
                                        ['delete', 'fromfile=',
-                                        'user=', 'password=', 'defaults-file=', 'hostname='])
+                                        'user=', 'password=', 'defaults-file=', 'host='])
     except getopt.GetoptError, e:
         usage(e)
 
     opt_fromfile = None
     opt_delete = False
-    conf = {}
+    myconf = {}
     for opt, val in opts:
         if opt == '--fromfile':
             opt_fromfile = val
         elif opt in ('-D', "--delete"):
             opt_delete = True
         elif opt in ('-u', '--user'):
-            conf['user'] = val
+            myconf['user'] = val
         elif opt in ('-p', '--password'):
-            conf['password'] = val
+            myconf['password'] = val
         elif opt == "--defaults-file":
-            conf['defaults-file'] = val
-        elif opt == "--hostname":
-            conf['hostname'] = val
+            myconf['defaults_file'] = val
+        elif opt == "--host":
+            myconf['host'] = val
         else:
             usage()
 
@@ -209,6 +231,8 @@ def main():
     mkdir(outdir)
     if opt_fromfile:
         mysql_fh = file(opt_fromfile)
+    else:
+        mysql_fh = mysqldump(**myconf)
 
     mysql2fs(mysql_fh, outdir, limits)
 
