@@ -67,7 +67,6 @@ def main():
     limits = args[1:]
 
     #print "opt_verbose, opt_tofile = " + `opt_verbose, opt_tofile`
-    #print "limits: " + `limits`
     #print "myconf: " + `myconf`
 
     if opt_tofile:
@@ -85,10 +84,11 @@ class MyFS:
         Paths = mysql.DatabasePaths
         class Table:
             Paths = mysql.TablePaths
-            def __init__(self, path):
-                self.paths = self.Paths(path)
+            def __init__(self, database, fname):
+                self.paths = self.Paths(join(database.paths.tables, fname))
                 self.sql = file(self.paths.init).read()
                 self.name = mysql.match_name(self.sql)
+                self.database = database
 
             def __repr__(self):
                 return "Table(%s)" % `self.paths.path`
@@ -121,17 +121,18 @@ class MyFS:
                     print >> fh, "/*!40000 ALTER TABLE `%s` ENABLE KEYS */;" % self.name
                     print >> fh, "UNLOCK TABLES;"
 
-        def __init__(self, path):
-            self.paths = self.Paths(path)
+        def __init__(self, myfs, fname):
+            self.paths = self.Paths(join(myfs.path, fname))
             self.sql = file(self.paths.init).read()
             self.name = mysql.match_name(self.sql)
+            self.myfs = myfs
 
         def __repr__(self):
             return "Database(%s)" % `self.paths.path`
 
         def tables(self):
             for fname in os.listdir(self.paths.tables):
-                yield self.Table(join(self.paths.tables, fname))
+                yield self.Table(self, fname)
         tables = property(tables)
 
         def tofile(self, fh):
@@ -146,7 +147,7 @@ class MyFS:
 
     def __iter__(self):
         for fname in os.listdir(self.path):
-            yield self.Database(join(self.path, fname))
+            yield self.Database(self, fname)
 
     def tofile(self, fh):
         for database in self:
