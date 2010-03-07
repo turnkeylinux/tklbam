@@ -63,14 +63,61 @@ def main():
     if not args:
         usage()
 
-    outdir = args[0]
+    myfs = args[0]
     limits = args[1:]
 
-    print "opt_verbose, opt_tofile = " + `opt_verbose, opt_tofile`
+    #print "opt_verbose, opt_tofile = " + `opt_verbose, opt_tofile`
+    #print "limits: " + `limits`
+    #print "myconf: " + `myconf`
 
-    print "outdir: " + `outdir`
-    print "limits: " + `limits`
-    print "myconf: " + `myconf`
+    fs2mysql(myfs)
+
+class MyFS:
+    class Database:
+        class Table:
+            def __init__(self, path):
+                self.path = path
+
+            def __str__(self):
+                return file(join(self.path, "init")).read()
+
+            def __repr__(self):
+                return "Table(%s)" % `self.path`
+
+            def rows(self):
+                for line in file(join(self.path, "rows")).xreadlines():
+                    yield line
+
+            rows = property(rows)
+
+        def __init__(self, path):
+            self.path = path
+
+        def __str__(self):
+            return file(join(self.path, "init")).read()
+
+        def __repr__(self):
+            return "Database(%s)" % `self.path`
+
+        def tables(self):
+            for fname in os.listdir(join(self.path, "tables")):
+                yield self.Table(join(self.path, "tables", fname))
+        tables = property(tables)
+
+    def __init__(self, path):
+        self.path = path
+
+    def __iter__(self):
+        for fname in os.listdir(self.path):
+            yield self.Database(join(self.path, fname))
+
+def fs2mysql(myfs):
+    for database in MyFS(myfs):
+        print database
+        for table in database.tables:
+            print table
+            for row in table.rows:
+                print row
 
 if __name__ == "__main__":
     main()
