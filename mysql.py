@@ -110,7 +110,7 @@ class Table:
 
 def match_name(sql):
     sql = re.sub(r'/\*.*?\*/', "", sql)
-    name = sql.split()[2]
+    name = sql.split(None, 3)[2]
     return re.sub(r'`(.*)`', '\\1', name)
 
 def mysql2fs(mysql_fh, outdir, limits=[], callback=None):
