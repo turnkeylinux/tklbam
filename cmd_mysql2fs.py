@@ -28,6 +28,10 @@ import shutil
 
 import mysql
 
+def fatal(e):
+    print >> sys.stderr, "fatal: " + str(e)
+    sys.exit(1)
+
 def usage(e=None):
     if e:
         print >> sys.stderr, e
@@ -71,6 +75,9 @@ def main():
 
     outdir = args[0]
     limits = args[1:]
+
+    if opt_fromfile and myconf:
+        fatal("--fromfile incompatible with mysqldump options")
 
     if opt_delete and isdir(outdir):
         shutil.rmtree(outdir)
