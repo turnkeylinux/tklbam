@@ -74,34 +74,36 @@ def main():
 
 class MyFS:
     class Database:
+        Paths = mysql.DatabasePaths
         class Table:
+            Paths = mysql.TablePaths
             def __init__(self, path):
-                self.path = path
+                self.paths = self.Paths(path)
 
             def __str__(self):
-                return file(join(self.path, "init")).read()
+                return file(self.paths.init).read()
 
             def __repr__(self):
-                return "Table(%s)" % `self.path`
+                return "Table(%s)" % `self.paths.path`
 
             def rows(self):
-                for line in file(join(self.path, "rows")).xreadlines():
+                for line in file(self.paths.rows).xreadlines():
                     yield line
 
             rows = property(rows)
 
         def __init__(self, path):
-            self.path = path
+            self.paths = self.Paths(path)
 
         def __str__(self):
-            return file(join(self.path, "init")).read()
+            return file(self.paths.init).read()
 
         def __repr__(self):
-            return "Database(%s)" % `self.path`
+            return "Database(%s)" % `self.paths.path`
 
         def tables(self):
-            for fname in os.listdir(join(self.path, "tables")):
-                yield self.Table(join(self.path, "tables", fname))
+            for fname in os.listdir(self.paths.tables):
+                yield self.Table(join(self.paths.tables, fname))
         tables = property(tables)
 
     def __init__(self, path):
@@ -118,7 +120,6 @@ def fs2mysql(myfs):
             print table
             for row in table.rows:
                 print row
-
 if __name__ == "__main__":
     main()
 
