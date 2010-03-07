@@ -98,13 +98,20 @@ class MyFS:
                 print >> fh, self.sql
                 print >> fh, "SET character_set_client = @saved_cs_client;"
 
-                print >> fh, "LOCK TABLES `%s` WRITE;" % self.name
-                print >> fh, "/*!40000 ALTER TABLE `%s` DISABLE KEYS */;" % self.name
-                for row in self.rows:
-                    print >> fh, "INSERT INTO `%s` VALUES (%s);" % (self.name, row)
-                print >> fh, "/*!40000 ALTER TABLE `%s` ENABLE KEYS */;" % self.name
-                print >> fh, "UNLOCK TABLES;"
+                index = None
+                for index, row in enumerate(self.rows):
+                    if index == 0:
+                        print >> fh, "LOCK TABLES `%s` WRITE;" % self.name
+                        print >> fh, "/*!40000 ALTER TABLE `%s` DISABLE KEYS */;" % self.name
+                        print >> fh, "INSERT INTO `%s` VALUES " % self.name
+                    else:
+                        fh.write(",\n")
+                    fh.write("(%s)" % row)
 
+                if index is not None:
+                    print >> fh, ";"
+                    print >> fh, "/*!40000 ALTER TABLE `%s` ENABLE KEYS */;" % self.name
+                    print >> fh, "UNLOCK TABLES;"
 
         def __init__(self, path):
             self.paths = self.Paths(path)
