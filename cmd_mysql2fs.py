@@ -59,6 +59,7 @@ class Table:
 
         self.rows_fh = file(self.paths.rows, "w")
         self.name = name
+        self.database = database
 
     def addrow(self, sql):
         print >> self.rows_fh, re.sub(r'.*?VALUES \((.*)\);', '\\1', sql)
@@ -127,7 +128,7 @@ class DatabaseLimits:
             
             return self.default
 
-def mysql2fs(mysql_fh, outdir, limits=[]):
+def mysql2fs(mysql_fh, outdir, limits=[], callback=None):
     database = None
     table = None
 
@@ -144,6 +145,8 @@ def mysql2fs(mysql_fh, outdir, limits=[]):
 
             if database_name in limits:
                 database = Database(outdir, database_name, statement)
+                if callback:
+                    callback(database)
             else:
                 database = None
         
@@ -154,6 +157,8 @@ def mysql2fs(mysql_fh, outdir, limits=[]):
             table_name = match_name(statement)
             if (database.name, table_name) in limits:
                 table = Table(database, table_name, statement)
+                if callback:
+                    callback(table)
             else:
                 table = None
 
@@ -248,9 +253,18 @@ def main():
         mysql_fh = mysqldump(**myconf)
 
     if opt_verbose:
-        print "SOURCE: " + mysql_fh.name
+        print "source " + mysql_fh.name
 
-    mysql2fs(mysql_fh, outdir, limits)
+    def cb(val):
+        if opt_verbose:
+            if isinstance(val, Database):
+                database = val
+                print "database " + database.name
+            elif isinstance(val, Table):
+                table = val
+                print "table " + join(table.database.name, table.name)
+
+    mysql2fs(mysql_fh, outdir, limits, cb)
 
 if __name__ == "__main__":
     main()
