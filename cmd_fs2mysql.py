@@ -98,8 +98,13 @@ class MyFS:
                 print >> fh, self.sql
                 print >> fh, "SET character_set_client = @saved_cs_client;"
 
+                print >> fh, "LOCK TABLES `%s` WRITE;" % self.name
+                print >> fh, "/*!40000 ALTER TABLE `%s` DISABLE KEYS */;" % self.name
                 for row in self.rows:
                     print >> fh, "INSERT INTO `%s` VALUES (%s);" % (self.name, row)
+                print >> fh, "/*!40000 ALTER TABLE `%s` ENABLE KEYS */;" % self.name
+                print >> fh, "UNLOCK TABLES;"
+
 
         def __init__(self, path):
             self.paths = self.Paths(path)
@@ -134,7 +139,6 @@ class MyFS:
 
 def fs2mysql(myfs):
     MyFS(myfs).tofile(sys.stdout)
-
 
 if __name__ == "__main__":
     main()
