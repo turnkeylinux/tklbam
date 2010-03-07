@@ -87,15 +87,15 @@ def main():
 
     if opt_fromfile:
         if opt_fromfile == '-':
-            mysql_fh = sys.stdin
+            mysqldump_fh = sys.stdin
         else:
-            mysql_fh = file(opt_fromfile)
+            mysqldump_fh = file(opt_fromfile)
     else:
-        mysql_fh = mysql.mysqldump(**myconf)
+        mysqldump_fh = mysql.mysqldump(**myconf)
 
     callback = None
     if opt_verbose:
-        print "source: " + mysql_fh.name
+        print "source: " + mysqldump_fh.name
 
         def callback(val):
             if isinstance(val, mysql.Database):
@@ -105,7 +105,7 @@ def main():
                 table = val
                 print "table: " + join(table.database.name, table.name)
 
-    mysql.mysql2fs(mysql_fh, outdir, limits, callback)
+    mysql.mysql2fs(mysqldump_fh, outdir, limits, callback)
 
 if __name__ == "__main__":
     main()
