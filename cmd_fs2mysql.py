@@ -70,7 +70,15 @@ def main():
     #print "limits: " + `limits`
     #print "myconf: " + `myconf`
 
-    fs2mysql(myfs)
+    if opt_tofile:
+        if opt_tofile == '-':
+            fh = sys.stdout
+        else:
+            fh = file(opt_tofile, "w")
+    else:
+        fh = mysql.mysql(**myconf)
+
+    fs2mysql(fh, myfs)
 
 class MyFS:
     class Database:
@@ -144,8 +152,8 @@ class MyFS:
         for database in self:
             database.tofile(fh)
 
-def fs2mysql(myfs):
-    MyFS(myfs).tofile(sys.stdout)
+def fs2mysql(fh, myfs):
+    MyFS(myfs).tofile(fh)
 
 if __name__ == "__main__":
     main()
