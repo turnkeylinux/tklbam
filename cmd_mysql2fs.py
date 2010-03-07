@@ -86,11 +86,11 @@ def main():
     else:
         mysql_fh = mysql.mysqldump(**myconf)
 
+    callback = None
     if opt_verbose:
         print "source: " + mysql_fh.name
 
-    def cb(val):
-        if opt_verbose:
+        def callback(val):
             if isinstance(val, mysql.Database):
                 database = val
                 print "database: " + database.name
@@ -98,7 +98,7 @@ def main():
                 table = val
                 print "table: " + join(table.database.name, table.name)
 
-    mysql.mysql2fs(mysql_fh, outdir, limits, cb)
+    mysql.mysql2fs(mysql_fh, outdir, limits, callback)
 
 if __name__ == "__main__":
     main()
