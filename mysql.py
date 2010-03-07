@@ -138,7 +138,7 @@ def mysql2fs(mysql_fh, outdir, limits=[], callback=None):
                 table = None
 
         elif statement.startswith("INSERT INTO"):
-            if not table:
+            if not database or not table:
                 continue
 
             assert match_name(statement) == table.name
