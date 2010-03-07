@@ -176,7 +176,7 @@ def mysqldump(defaults_file=None, **conf):
     command = "mysqldump " + " ".join([ "--" + opt for opt in opts ])
     return os.popen(command)
 
-class MyFS:
+class MyFS_Reader:
     class Database:
         Paths = DatabasePaths
         class Table:
@@ -256,5 +256,4 @@ class MyFS:
             database.tofile(fh)
 
 def fs2mysql(fh, myfs, limits=[]):
-    MyFS(myfs, limits).tofile(fh)
-
+    MyFS_Reader(myfs, limits).tofile(fh)
