@@ -77,7 +77,7 @@ def main():
     else:
         fh = mysql.mysql(**myconf)
 
-    fs2mysql(fh, myfs)
+    fs2mysql(fh, myfs, limits)
 
 class MyFS:
     class Database:
@@ -132,7 +132,9 @@ class MyFS:
 
         def tables(self):
             for fname in os.listdir(self.paths.tables):
-                yield self.Table(self, fname)
+                table = self.Table(self, fname)
+                if (self.name, table.name) in self.myfs.limits:
+                    yield table
         tables = property(tables)
 
         def tofile(self, fh):
@@ -142,19 +144,22 @@ class MyFS:
             for table in self.tables:
                 table.tofile(fh)
 
-    def __init__(self, path):
+    def __init__(self, path, limits=[]):
         self.path = path
+        self.limits = mysql.DatabaseLimits(limits)
 
     def __iter__(self):
         for fname in os.listdir(self.path):
-            yield self.Database(self, fname)
+            database = self.Database(self, fname)
+            if database.name in self.limits:
+                yield database
 
     def tofile(self, fh):
         for database in self:
             database.tofile(fh)
 
-def fs2mysql(fh, myfs):
-    MyFS(myfs).tofile(fh)
+def fs2mysql(fh, myfs, limits=[]):
+    MyFS(myfs, limits).tofile(fh)
 
 if __name__ == "__main__":
     main()
