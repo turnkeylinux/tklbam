@@ -108,16 +108,16 @@ class Table:
     def addrow(self, sql):
         print >> self.rows_fh, re.sub(r'.*?VALUES \((.*)\);', '\\1', sql)
 
+def match_name(sql):
+    sql = re.sub(r'/\*.*?\*/', "", sql)
+    name = sql.split()[2]
+    return re.sub(r'`(.*)`', '\\1', name)
+
 def mysql2fs(mysql_fh, outdir, limits=[], callback=None):
     database = None
     table = None
 
     limits = DatabaseLimits(limits)
-
-    def match_name(sql):
-        sql = re.sub(r'/\*.*?\*/', "", sql)
-        name = sql.split()[2]
-        return re.sub(r'`(.*)`', '\\1', name)
 
     for statement in statements(mysql_fh):
         if statement.startswith("CREATE DATABASE"):
