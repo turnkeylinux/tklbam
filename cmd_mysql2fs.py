@@ -87,16 +87,16 @@ def main():
         mysql_fh = mysql.mysqldump(**myconf)
 
     if opt_verbose:
-        print "source " + mysql_fh.name
+        print "source: " + mysql_fh.name
 
     def cb(val):
         if opt_verbose:
             if isinstance(val, mysql.Database):
                 database = val
-                print "database " + database.name
+                print "database: " + database.name
             elif isinstance(val, mysql.Table):
                 table = val
-                print "table " + join(table.database.name, table.name)
+                print "table: " + join(table.database.name, table.name)
 
     mysql.mysql2fs(mysql_fh, outdir, limits, cb)
 
