@@ -75,10 +75,17 @@ class DatabaseLimits:
             
             return self.default
 
-class Database:
-    class Paths(Paths):
-        files = [ 'init', 'tables' ]
+class BasePaths(Paths):
+    files = [ 'init' ]
 
+class DatabasePaths(BasePaths):
+    files = [ 'tables' ]
+
+class TablePaths(BasePaths):
+    files = [ 'rows' ]
+
+class Database:
+    Paths = DatabasePaths
     def __init__(self, outdir, name, sql):
         self.paths = self.Paths(join(outdir, name))
         mkdir(self.paths.path)
@@ -87,9 +94,7 @@ class Database:
         self.name = name
 
 class Table:
-    class Paths(Paths):
-        files = [ 'init', 'rows' ]
-
+    Paths = TablePaths
     def __init__(self, database, name, sql):
         self.paths = self.Paths(join(database.paths.tables, name))
         mkdir(self.paths.path, True)
