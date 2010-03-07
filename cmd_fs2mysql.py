@@ -79,24 +79,36 @@ class MyFS:
             Paths = mysql.TablePaths
             def __init__(self, path):
                 self.paths = self.Paths(path)
+                self.sql = file(self.paths.init).read()
+                self.name = mysql.match_name(self.sql)
+
 
             def __str__(self):
-                return file(self.paths.init).read()
+                tpl =  "DROP TABLE IF EXISTS `%s`;\n"
+                tpl += "SET @saved_cs_client     = @@character_set_client;\n"
+                tpl += "SET character_set_client = utf8;\n"
+                tpl += self.sql
+                tpl += "SET character_set_client = @saved_cs_client;\n"
+
+                tpl = tpl % self.name
+                return tpl 
 
             def __repr__(self):
                 return "Table(%s)" % `self.paths.path`
 
             def rows(self):
                 for line in file(self.paths.rows).xreadlines():
-                    yield line
+                    yield "INSERT INTO `%s` VALUES (%s);" % (self.name, line.strip())
 
             rows = property(rows)
 
         def __init__(self, path):
             self.paths = self.Paths(path)
+            self.sql = file(self.paths.init).read()
+            self.name = mysql.match_name(self.sql)
 
         def __str__(self):
-            return file(self.paths.init).read()
+            return self.sql + "USE `%s`;" % (self.name)
 
         def __repr__(self):
             return "Database(%s)" % `self.paths.path`
@@ -120,6 +132,6 @@ def fs2mysql(myfs):
             print table
             for row in table.rows:
                 print row
+
 if __name__ == "__main__":
     main()
-
