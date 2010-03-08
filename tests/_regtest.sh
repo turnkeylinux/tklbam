@@ -142,3 +142,5 @@ rm -f delta-selections
 cmd newpkgs_install -s -i $REF/newpkgs_install > newpkgs-install
 testresult-exact ./newpkgs-install "newpkgs-install simulation"
 rm -f newpkgs-install
+
+
