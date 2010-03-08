@@ -143,4 +143,12 @@ cmd newpkgs_install -s -i $REF/newpkgs_install > newpkgs-install
 testresult-exact ./newpkgs-install "newpkgs-install simulation"
 rm -f newpkgs-install
 
+cmd mysql2fs --fromfile $REF/testsql -D myfs -v > mysql2fs-output
+testresult-exact mysql2fs-output "mysql2fs verbose output"
+rm -f mysql2fs-output
 
+tar cf myfs.tar myfs
+md5sum myfs.tar > myfs-md5
+testresult-exact myfs-md5 "mysql2fs myfs.tar md5sum"
+
+rm -rf myfs myfs.tar myfs-md5
