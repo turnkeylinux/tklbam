@@ -11,7 +11,7 @@ def mkdir(path, parents=False):
         else:
             os.mkdir(path)
 
-def mysqldump(defaults_file=None, **conf):
+def _mysql_opts(opts=[], defaults_file=None, **conf):
     def isreadable(path):
         try:
             file(path)
@@ -24,19 +24,24 @@ def mysqldump(defaults_file=None, **conf):
         if isreadable(debian_cnf):
             defaults_file = debian_cnf
 
-    opts = []
-
     if defaults_file:
-        opts.append("defaults-file=" + defaults_file)
-
-    opts += [ "all-databases", "skip-extended-insert", "single-transaction", 
-              "compact", "quick" ]
+        opts.insert(0, "defaults-file=" + defaults_file)
 
     for opt, val in conf.items():
         opts.append(opt.replace("_", "-") + "=" + val)
 
-    command = "mysqldump " + " ".join([ "--" + opt for opt in opts ])
+    return " ".join([ "--" + opt for opt in opts ])
+
+def mysqldump(**conf):
+    opts = [ "all-databases", "skip-extended-insert", "single-transaction", 
+             "compact", "quick" ]
+
+    command = "mysqldump " + _mysql_opts(opts, **conf)
     return os.popen(command)
+
+def mysql(**conf):
+    command = "mysql " + _mysql_opts(**conf)
+    return os.popen(command, "w")
 
 class MyFS:
     class Limits:
