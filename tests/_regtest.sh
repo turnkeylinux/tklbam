@@ -151,4 +151,8 @@ tar cf myfs.tar myfs
 md5sum myfs.tar > myfs-md5
 testresult-exact myfs-md5 "mysql2fs myfs.tar md5sum"
 
-rm -rf myfs myfs.tar myfs-md5
+cmd fs2mysql -v --tofile=sql ./myfs > fs2mysql-output
+testresult-exact fs2mysql-output "fs2mysql verbose output"
+testresult-exact sql "fs2mysql tofile=sql"
+
+rm -rf myfs myfs.tar myfs-md5 fs2mysql-output sql
