@@ -6,6 +6,8 @@ Options:
     --tofile=PATH           Write mysqldump output to file (- for STDOUT)
     -v --verbose            Turn on verbosity
 
+    --skip-extended-insert  Skip extended insert (useful in debugging)
+
 Supports the following subset of mysql(1) options:
 
     -u --user=USER 
@@ -32,18 +34,22 @@ def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'u:p:v', 
                                        ['verbose', 'tofile=',
+                                        'skip-extended-insert',
                                         'user=', 'password=', 'defaults-file=', 'host='])
     except getopt.GetoptError, e:
         usage(e)
 
     opt_verbose = False
     opt_tofile = None
+    opt_skip_extended_insert = False
     myconf = {}
     for opt, val in opts:
         if opt in ('-v', '--verbose'):
             opt_verbose = True
         elif opt == '--tofile':
             opt_tofile = val
+        elif opt == '--skip-extended-insert':
+            opt_skip_extended_insert = True
         elif opt in ('-u', '--user'):
             myconf['user'] = val
         elif opt in ('-p', '--password'):
@@ -77,7 +83,7 @@ def main():
     if opt_verbose:
         pass
 
-    mysql.fs2mysql(fh, myfs, limits, callback)
+    mysql.fs2mysql(fh, myfs, limits, callback, opt_skip_extended_insert)
 
 if __name__ == "__main__":
     main()

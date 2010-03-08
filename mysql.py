@@ -254,6 +254,8 @@ UNLOCK TABLES;
         rows = property(rows)
 
         def tofile(self, fh):
+            skip_extended_insert = self.database.myfs.skip_extended_insert
+
             tpl = Template(self.TPL_CREATE)
             print >> fh, tpl.substitute(name=self.name, init=self.sql_init)
 
@@ -262,19 +264,28 @@ UNLOCK TABLES;
                 if index == 0:
                     tpl = Template(self.TPL_INSERT_PRE)
                     print >> fh, tpl.substitute(name=self.name)
-                    print >> fh, "INSERT INTO `%s` VALUES" % self.name
+
+                if skip_extended_insert:
+                    print >> fh, "INSERT INTO `%s` VALUES (%s);" % (self.name, row)
+
                 else:
-                    fh.write(",\n")
-                fh.write("(%s)" % row)
+                    if index == 0:
+                        print >> fh, "INSERT INTO `%s` VALUES" % self.name
+                    else:
+                        fh.write(",\n")
+                    fh.write("(%s)" % row)
 
             if index is not None:
-                print >> fh, ";"
+                if not skip_extended_insert:
+                    print >> fh, ";"
+
                 tpl = Template(self.TPL_INSERT_POST)
                 print >> fh, tpl.substitute(name=self.name)
 
-    def __init__(self, path, limits=[]):
+    def __init__(self, path, limits=[], skip_extended_insert=False):
         self.path = path
         self.limits = self.Limits(limits)
+        self.skip_extended_insert = skip_extended_insert
 
     def __iter__(self):
         for fname in os.listdir(self.path):
@@ -286,8 +297,8 @@ UNLOCK TABLES;
         for database in self:
             database.tofile(fh, callback)
 
-def fs2mysql(fh, myfs, limits=[], callback=None):
-    MyFS_Reader(myfs, limits).tofile(fh, callback)
+def fs2mysql(fh, myfs, limits=[], callback=None, skip_extended_insert=False):
+    MyFS_Reader(myfs, limits, skip_extended_insert).tofile(fh, callback)
 
 def cb_print(val):
     if isinstance(val, MyFS.Database):
