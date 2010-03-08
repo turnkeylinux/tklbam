@@ -20,6 +20,9 @@ testresult-exact() {
     if [ -z "$createrefs" ]; then
         $(which diff) -u $result $file || error "FAIL: $test_count - $testdesc"
     else
+        echo "# $testdesc"
+        echo "cp $file $result"
+        echo
         cp $file $result;
     fi
     if [ -z "$createrefs" ]; then
