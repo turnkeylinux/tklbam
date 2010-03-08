@@ -96,14 +96,7 @@ def main():
     callback = None
     if opt_verbose:
         print "source: " + mysqldump_fh.name
-
-        def callback(val):
-            if isinstance(val, mysql.MyFS.Database):
-                database = val
-                print "database: " + database.name
-            elif isinstance(val, mysql.MyFS.Table):
-                table = val
-                print "table: " + join(table.database.name, table.name)
+        callback = mysql.cb_print
 
     mysql.mysql2fs(mysqldump_fh, outdir, limits, callback)
 

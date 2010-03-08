@@ -72,7 +72,15 @@ def main():
     else:
         fh = mysql.mysql(**myconf)
 
-    mysql.fs2mysql(fh, myfs, limits)
+    callback = None
+    if opt_verbose:
+        print "destination: " + fh.name
+        callback = mysql.cb_print
+
+    if opt_verbose:
+        pass
+
+    mysql.fs2mysql(fh, myfs, limits, callback)
 
 if __name__ == "__main__":
     main()

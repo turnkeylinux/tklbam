@@ -205,11 +205,15 @@ class MyFS_Reader(MyFS):
                     yield table
         tables = property(tables)
 
-        def tofile(self, fh):
+        def tofile(self, fh, callback=None):
+            if callback:
+                callback(self)
             print >> fh, self.sql,
             print >> fh, "USE `%s`;" % self.name
 
             for table in self.tables:
+                if callback:
+                    callback(table)
                 table.tofile(fh)
 
     class Table(MyFS.Table):
@@ -260,9 +264,17 @@ class MyFS_Reader(MyFS):
             if database.name in self.limits:
                 yield database
 
-    def tofile(self, fh):
+    def tofile(self, fh, callback=None):
         for database in self:
-            database.tofile(fh)
+            database.tofile(fh, callback)
 
-def fs2mysql(fh, myfs, limits=[]):
-    MyFS_Reader(myfs, limits).tofile(fh)
+def fs2mysql(fh, myfs, limits=[], callback=None):
+    MyFS_Reader(myfs, limits).tofile(fh, callback)
+
+def cb_print(val):
+    if isinstance(val, MyFS.Database):
+        database = val
+        print "database: " + database.name
+    elif isinstance(val, MyFS.Table):
+        table = val
+        print "table: " + join(table.database.name, table.name)
