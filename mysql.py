@@ -4,6 +4,8 @@ from os.path import *
 import re
 from paths import Paths
 
+from string import Template
+
 def mkdir(path, parents=False):
     if not exists(path):
         if parents:
@@ -191,8 +193,8 @@ class MyFS_Reader(MyFS):
     class Database(MyFS.Database):
         def __init__(self, myfs, fname):
             self.paths = self.Paths(join(myfs.path, fname))
-            self.sql = file(self.paths.init).read()
-            self.name = _match_name(self.sql)
+            self.sql_init = file(self.paths.init).read()
+            self.name = _match_name(self.sql_init)
             self.myfs = myfs
 
         def __repr__(self):
@@ -208,7 +210,8 @@ class MyFS_Reader(MyFS):
         def tofile(self, fh, callback=None):
             if callback:
                 callback(self)
-            print >> fh, self.sql,
+
+            print >> fh, self.sql_init,
             print >> fh, "USE `%s`;" % self.name
 
             for table in self.tables:
@@ -217,10 +220,28 @@ class MyFS_Reader(MyFS):
                 table.tofile(fh)
 
     class Table(MyFS.Table):
+        TPL_CREATE = """\
+DROP TABLE IF EXISTS `$name`;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+$init
+SET character_set_client = @saved_cs_client;
+"""
+
+        TPL_INSERT_PRE = """\
+LOCK TABLES `$name` WRITE;
+/*!40000 ALTER TABLE `$name` DISABLE KEYS */;
+"""
+
+        TPL_INSERT_POST = """\
+/*!40000 ALTER TABLE `$name` ENABLE KEYS */;
+UNLOCK TABLES;
+"""
+
         def __init__(self, database, fname):
             self.paths = self.Paths(join(database.paths.tables, fname))
-            self.sql = file(self.paths.init).read()
-            self.name = _match_name(self.sql)
+            self.sql_init = file(self.paths.init).read()
+            self.name = _match_name(self.sql_init)
             self.database = database
 
         def __repr__(self):
@@ -233,26 +254,23 @@ class MyFS_Reader(MyFS):
         rows = property(rows)
 
         def tofile(self, fh):
-            print >> fh, "DROP TABLE IF EXISTS `%s`;" % self.name
-            print >> fh, "SET @saved_cs_client     = @@character_set_client;"
-            print >> fh, "SET character_set_client = utf8;"
-            print >> fh, self.sql
-            print >> fh, "SET character_set_client = @saved_cs_client;"
+            tpl = Template(self.TPL_CREATE)
+            print >> fh, tpl.substitute(name=self.name, init=self.sql_init)
 
             index = None
             for index, row in enumerate(self.rows):
                 if index == 0:
-                    print >> fh, "LOCK TABLES `%s` WRITE;" % self.name
-                    print >> fh, "/*!40000 ALTER TABLE `%s` DISABLE KEYS */;" % self.name
-                    print >> fh, "INSERT INTO `%s` VALUES " % self.name
+                    tpl = Template(self.TPL_INSERT_PRE)
+                    print >> fh, tpl.substitute(name=self.name)
+                    print >> fh, "INSERT INTO `%s` VALUES" % self.name
                 else:
                     fh.write(",\n")
                 fh.write("(%s)" % row)
 
             if index is not None:
                 print >> fh, ";"
-                print >> fh, "/*!40000 ALTER TABLE `%s` ENABLE KEYS */;" % self.name
-                print >> fh, "UNLOCK TABLES;"
+                tpl = Template(self.TPL_INSERT_POST)
+                print >> fh, tpl.substitute(name=self.name)
 
     def __init__(self, path, limits=[]):
         self.path = path
