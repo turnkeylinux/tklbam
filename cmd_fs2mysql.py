@@ -61,9 +61,6 @@ def main():
     myfs = args[0]
     limits = args[1:]
 
-    #print "opt_verbose, opt_tofile = " + `opt_verbose, opt_tofile`
-    #print "myconf: " + `myconf`
-
     if opt_tofile:
         if opt_tofile == '-':
             fh = sys.stdout
