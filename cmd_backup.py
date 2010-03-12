@@ -125,13 +125,13 @@ def main():
 
     conf = Conf()
 
-    opt_keyfile = False
     for opt, val in opts:
         if opt == '--profile':
             conf.profile = val
         elif opt == '--keyfile':
+            if not exists(val):
+                usage("keyfile %s does not exist" % `val`)
             conf.keyfile = val
-            opt_keyfile = True
         elif opt == '--address':
             conf.address = val
         elif opt == '-h':
@@ -147,7 +147,7 @@ def main():
     print "conf.address = " + `conf.address`
     print "conf.overrides = " + `conf.overrides`
 
-    if not exists(conf.keyfile) and not opt_keyfile:
+    if not exists(conf.keyfile):
         print "generating new secret key"
         create_key(conf.keyfile)
 
