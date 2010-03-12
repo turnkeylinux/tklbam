@@ -24,12 +24,16 @@ Options:
 """
 
 import os
+from os.path import *
+
 import sys
 import getopt
 
 import re
 from string import Template
 from paths import Paths
+
+import md5
 
 class Error(Exception):
     pass
@@ -87,6 +91,18 @@ class Conf:
         self.address = self._read_address(self.paths.address)
         self.overrides = self._read_overrides(self.paths.overrides)
 
+def mcookie():
+    return md5.md5(file("/dev/random").read(16)).hexdigest()
+
+def create_key(keyfile):
+    fh = file(keyfile, "w")
+    os.chmod(keyfile, 0600)
+    print >> fh, mcookie()
+    fh.close()
+
+def read_key(keyfile):
+    return file(keyfile).read().strip()
+
 def usage(e=None):
     if e:
         print >> sys.stderr, "error: " + str(e)
@@ -109,11 +125,13 @@ def main():
 
     conf = Conf()
 
+    opt_keyfile = False
     for opt, val in opts:
         if opt == '--profile':
             conf.profile = val
         elif opt == '--keyfile':
             conf.keyfile = val
+            opt_keyfile = True
         elif opt == '--address':
             conf.address = val
         elif opt == '-h':
@@ -128,6 +146,13 @@ def main():
     print "conf.keyfile = " + `conf.keyfile`
     print "conf.address = " + `conf.address`
     print "conf.overrides = " + `conf.overrides`
+
+    if not exists(conf.keyfile) and not opt_keyfile:
+        print "generating new secret key"
+        create_key(conf.keyfile)
+
+    key = read_key(conf.keyfile)
+    print "key = " + `key`
 
 if __name__=="__main__":
     main()
