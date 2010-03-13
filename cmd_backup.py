@@ -22,6 +22,7 @@ Options:
                             default: read from $CONF_ADDRESS
 
     -v --verbose            Turn on verbosity
+    -s --simulate           Simulate operation. Don't actually backup.
 
 """
 
@@ -227,17 +228,21 @@ class Backup:
 
 def main():
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], 'vh', 
-                                       ['verbose', 'profile=', 'keyfile=', 'address='])
+        opts, args = getopt.gnu_getopt(sys.argv[1:], 'svh', 
+                                       ['simulate', 'verbose', 
+                                        'profile=', 'keyfile=', 'address='])
     except getopt.GetoptError, e:
         usage(e)
 
     conf = BackupConf()
 
+    opt_simulate = False
     opt_verbose = False
     for opt, val in opts:
         if opt in ('-v', '--verbose'):
             opt_verbose = True
+        elif opt in ('-s', '--simulate'):
+            opt_simulate = True
         elif opt == '--profile':
             conf.profile = val
         elif opt == '--keyfile':
