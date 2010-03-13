@@ -36,8 +36,9 @@ from paths import Paths
 import md5
 import shutil
 
-import changes
 import dirindex
+from changes import whatchanged
+from pkgman import DpkgSelections
 
 class Error(Exception):
     pass
@@ -167,8 +168,22 @@ class Backup:
         paths += fs_overrides
 
         fh = file(self.paths.delta, "w")
-        for change in changes.whatchanged(self.profile.dirindex, paths):
+        changes = [ str(change)
+                    for change in whatchanged(self.profile.dirindex, paths) ]
+        changes.sort()
+        for change in changes:
             print >> fh, change
+        fh.close()
+
+    def create_newpkgs(self):
+        profile_selections = DpkgSelections(self.profile.selections)
+        current_selections = DpkgSelections()
+
+        fh = file(self.paths.newpkgs, "w")
+        new_packages = list(current_selections - profile_selections)
+        new_packages.sort()
+        for package in new_packages:
+            print >> fh, package
         fh.close()
 
 def main():
@@ -208,6 +223,7 @@ def main():
 
     backup = Backup(conf.profile)
     backup.create_delta(conf.overrides.fs)
+    backup.create_newpkgs()
 
 if __name__=="__main__":
     main()
