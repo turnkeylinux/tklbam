@@ -21,6 +21,8 @@ Options:
     --address=TARGET_URL    duplicity target URL
                             default: read from $CONF_ADDRESS
 
+    -v --verbose            Turn on verbosity
+
 """
 
 import os
@@ -39,6 +41,8 @@ import shutil
 import dirindex
 from changes import whatchanged
 from pkgman import DpkgSelections
+
+import mysql
 
 class Error(Exception):
     pass
@@ -163,7 +167,7 @@ class Backup:
             shutil.rmtree(self.paths.path)
         os.mkdir(self.paths.path)
 
-    def create_delta(self, fs_overrides):
+    def create_delta(self, fs_overrides=[]):
         paths = dirindex.read_paths(file(self.profile.dirindex_conf))
         paths += fs_overrides
 
@@ -186,17 +190,37 @@ class Backup:
             print >> fh, package
         fh.close()
 
+    def create_myfs(self, db_overrides=[], callback=None):
+        limits = [ re.sub(r'^(-?)mysql:', '\\1', limit) 
+                   for limit in db_overrides 
+                   if re.match(r'^-?mysql:', limit) ]
+
+        def any_positives(limits):
+            for limit in limits:
+                if limit[0] != '-':
+                    return True
+            return False
+
+        if any_positives(limits):
+            limits.append('mysql')
+
+        os.mkdir(self.paths.myfs)
+        mysql.mysql2fs(mysql.mysqldump(), self.paths.myfs, limits, callback)
+
 def main():
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], 'h', 
-                                       ['profile=', 'keyfile=', 'address='])
+        opts, args = getopt.gnu_getopt(sys.argv[1:], 'vh', 
+                                       ['verbose', 'profile=', 'keyfile=', 'address='])
     except getopt.GetoptError, e:
         usage(e)
 
     conf = Conf()
 
+    opt_verbose = False
     for opt, val in opts:
-        if opt == '--profile':
+        if opt in ('-v', '--verbose'):
+            opt_verbose = True
+        elif opt == '--profile':
             conf.profile = val
         elif opt == '--keyfile':
             if not exists(val):
@@ -224,6 +248,10 @@ def main():
     backup = Backup(conf.profile)
     backup.create_delta(conf.overrides.fs)
     backup.create_newpkgs()
+    callback = None
+    if opt_verbose:
+        callback = mysql.cb_print
+    backup.create_myfs(conf.overrides.db, callback)
 
 if __name__=="__main__":
     main()
