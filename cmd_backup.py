@@ -101,7 +101,7 @@ class Overrides(list):
         cls = type(self)
         return cls(list.__add__(self, b))
 
-class Conf:
+class BackupConf:
     profile = "/usr/share/tklbam/profile"
 
     path = "/etc/tklbam"
@@ -157,21 +157,14 @@ class Backup:
     PATH = "/TKLBAM"
 
     class Paths(Paths):
-        files = [ 'delta', 'newpkgs', 'myfs', 'etc' ]
+        files = [ 'fsdelta', 'newpkgs', 'myfs', 'etc' ]
 
-    def __init__(self, profile_path):
-        self.profile = ProfilePaths(profile_path)
-        self.paths = self.Paths(self.PATH)
+    def _fsdelta(self, overrides=[]):
 
-        if isdir(self.paths.path):
-            shutil.rmtree(self.paths.path)
-        os.mkdir(self.paths.path)
-
-    def create_delta(self, fs_overrides=[]):
         paths = dirindex.read_paths(file(self.profile.dirindex_conf))
-        paths += fs_overrides
+        paths += overrides
 
-        fh = file(self.paths.delta, "w")
+        fh = file(self.paths.fsdelta, "w")
         changes = [ str(change)
                     for change in whatchanged(self.profile.dirindex, paths) ]
         changes.sort()
@@ -179,7 +172,7 @@ class Backup:
             print >> fh, change
         fh.close()
 
-    def create_newpkgs(self):
+    def _newpkgs(self):
         profile_selections = DpkgSelections(self.profile.selections)
         current_selections = DpkgSelections()
 
@@ -190,7 +183,7 @@ class Backup:
             print >> fh, package
         fh.close()
 
-    def create_myfs(self, db_overrides=[], callback=None):
+    def _mysql2fs(self, db_overrides=[], callback=None):
         limits = [ re.sub(r'^(-?)mysql:', '\\1', limit) 
                    for limit in db_overrides 
                    if re.match(r'^-?mysql:', limit) ]
@@ -207,6 +200,20 @@ class Backup:
         os.mkdir(self.paths.myfs)
         mysql.mysql2fs(mysql.mysqldump(), self.paths.myfs, limits, callback)
 
+    def __init__(self, conf):
+        self.profile = ProfilePaths(conf.profile)
+
+        self.paths = self.Paths(self.PATH)
+        if isdir(self.paths.path):
+            shutil.rmtree(self.paths.path)
+        os.mkdir(self.paths.path)
+
+        self.conf = conf
+
+        self._fsdelta(conf.overrides.fs)
+        self._newpkgs()
+        self._mysql2fs(conf.overrides.db)
+
 def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'vh', 
@@ -214,7 +221,7 @@ def main():
     except getopt.GetoptError, e:
         usage(e)
 
-    conf = Conf()
+    conf = BackupConf()
 
     opt_verbose = False
     for opt, val in opts:
@@ -245,13 +252,7 @@ def main():
     if not isdir(conf.profile):
         fatal("profile dir %s doesn't exist" % `conf.profile`)
 
-    backup = Backup(conf.profile)
-    backup.create_delta(conf.overrides.fs)
-    backup.create_newpkgs()
-    callback = None
-    if opt_verbose:
-        callback = mysql.cb_print
-    backup.create_myfs(conf.overrides.db, callback)
+    backup = Backup(conf)
 
 if __name__=="__main__":
     main()
