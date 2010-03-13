@@ -90,12 +90,22 @@ def main():
         backup.Key.create(conf.keyfile)
 
     key = backup.Key.read(conf.keyfile)
-    print "key = " + `key`
 
     if not isdir(conf.profile):
         fatal("profile dir %s doesn't exist" % `conf.profile`)
 
-    backup.backup(conf)
+    if opt_simulate:
+        opt_verbose = True
+
+    b = backup.Backup(conf, key)
+    if opt_verbose:
+        print "PASSPHRASE=$(cat %s) %s" % (conf.keyfile, b.command)
+
+    if not opt_simulate:
+        try:
+            b.run()
+        finally:
+            b.cleanup()
 
 if __name__=="__main__":
     main()
