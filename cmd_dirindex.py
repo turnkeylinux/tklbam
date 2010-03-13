@@ -66,7 +66,7 @@ def main():
     paths = args[1:]
     
     if opt_input:
-        paths += parse_input(opt_input)
+        paths = parse_input(opt_input) + paths
 
     if opt_create:
         dirindex.create(path_index, paths)
