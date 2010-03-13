@@ -157,7 +157,7 @@ class Backup:
     PATH = "/TKLBAM"
 
     class Paths(Paths):
-        files = [ 'fsdelta', 'newpkgs', 'myfs', 'etc' ]
+        files = [ 'fsdelta', 'newpkgs', 'myfs', 'etc', 'etc/mysql' ]
 
     def _fsdelta(self, overrides=[]):
         overrides = self.conf.overrides.fs
@@ -210,6 +210,14 @@ class Backup:
         if isdir(self.paths.path):
             shutil.rmtree(self.paths.path)
         os.mkdir(self.paths.path)
+
+        etc = str(self.paths.etc)
+        os.mkdir(etc)
+        shutil.copy("/etc/passwd", etc)
+        shutil.copy("/etc/group", etc)
+
+        os.mkdir(self.paths.etc.mysql)
+        shutil.copy("/etc/mysql/debian.cnf", self.paths.etc.mysql)
 
         self.conf = conf
 
