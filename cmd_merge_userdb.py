@@ -5,7 +5,7 @@ import userdb
 
 def usage(e=None):
     if e:
-        print >> sys.stderr, e
+        print >> sys.stderr, "error: " + str(e)
 
     print >> sys.stderr, "Syntax: %s old-passwd old-group new-passwd new-group merged-passwd merged-group" % sys.argv[0]
     print >> sys.stderr, __doc__.strip()

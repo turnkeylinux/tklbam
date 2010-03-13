@@ -17,7 +17,7 @@ from pkgman import installable
 
 def usage(e=None):
     if e:
-        print >> sys.stderr, e
+        print >> sys.stderr, "error: " + str(e)
 
     print >> sys.stderr, "Syntax: %s [ -options ] [ package-name ... ]" % sys.argv[0]
     print >> sys.stderr, __doc__.strip()

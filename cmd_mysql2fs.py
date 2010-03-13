@@ -34,7 +34,7 @@ def fatal(e):
 
 def usage(e=None):
     if e:
-        print >> sys.stderr, e
+        print >> sys.stderr, "error: " + str(e)
 
     print >> sys.stderr, "Syntax: %s [-options] path/to/output [ -?database/table ... ] " % sys.argv[0]
     print >> sys.stderr, __doc__.strip()

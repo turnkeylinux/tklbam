@@ -24,7 +24,7 @@ import mysql
 
 def usage(e=None):
     if e:
-        print >> sys.stderr, e
+        print >> sys.stderr, "error: " + str(e)
 
     print >> sys.stderr, "Syntax: %s [-options] path/to/myfs [ -?database/table ... ] " % sys.argv[0]
     print >> sys.stderr, __doc__.strip()

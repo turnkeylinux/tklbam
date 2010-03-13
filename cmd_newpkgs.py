@@ -8,7 +8,7 @@ from pkgman import DpkgSelections
 
 def usage(e=None):
     if e:
-        print >> sys.stderr, e
+        print >> sys.stderr, "error: " + str(e)
 
     print >> sys.stderr, "Syntax: %s base-selections [ selections ]" % sys.argv[0]
     print >> sys.stderr, __doc__.strip()

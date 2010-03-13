@@ -20,7 +20,7 @@ from changes import Changes
 
 def usage(e=None):
     if e:
-        print >> sys.stderr, e
+        print >> sys.stderr, "error: " + str(e)
 
     print >> sys.stderr, "Syntax: %s [-options] delta|- [path ...]" % sys.argv[0]
     print >> sys.stderr, __doc__.strip()
