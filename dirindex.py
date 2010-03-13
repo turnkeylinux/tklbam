@@ -1,3 +1,4 @@
+import re
 import os
 import stat
 from os.path import *
@@ -146,3 +147,19 @@ class DirIndex(dict):
         return files_new, files_edited, paths_stat
 
 create = DirIndex.create
+
+def read_paths(fh):
+    paths = []
+    
+    for line in fh.readlines():
+        path = re.sub(r'#.*', '', line).strip()
+        if not path:
+            continue
+
+        # only accept absolute paths
+        if not re.match(r'^-?/', path):
+            raise Error(`path` + " is not an absolute path")
+
+        paths.append(path)
+
+    return paths

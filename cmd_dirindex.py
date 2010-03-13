@@ -7,7 +7,6 @@ Options:
 
     -c --create         Create index
 """
-import re
 import sys
 import getopt
 
@@ -21,23 +20,6 @@ def usage(e=None):
     print >> sys.stderr, "Syntax: %s [-options] index path1 ... pathN" % sys.argv[0]
     print >> sys.stderr, __doc__.strip()
     sys.exit(1)
-
-def parse_input(inputfile):
-    paths = []
-    
-    if inputfile == '-':
-        fh = sys.stdin
-    else:
-        fh = file(inputfile)
-
-    for line in fh.readlines():
-        line = re.sub(r'#.*', '', line).strip()
-        if not line:
-            continue
-
-        paths.append(line)
-
-    return paths
 
 def main():
     try:
@@ -66,7 +48,8 @@ def main():
     paths = args[1:]
     
     if opt_input:
-        paths = parse_input(opt_input) + paths
+        fh = file(opt_input) if opt_input != '-' else sys.stdin
+        paths = dirindex.read_paths(fh) + paths
 
     if opt_create:
         dirindex.create(path_index, paths)
@@ -77,4 +60,3 @@ def main():
 
 if __name__=="__main__":
     main()
-
