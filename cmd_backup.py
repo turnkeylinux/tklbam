@@ -145,11 +145,31 @@ def usage(e=None):
                                         DEFAULT_PROFILE=Conf.profile)
     sys.exit(1)
 
-class BackupPaths(Paths):
-    files = [ 'delta', 'newpkgs', 'myfs', 'etc' ]
-
 class ProfilePaths(Paths):
     files = [ 'dirindex', 'dirindex.conf', 'selections' ]
+
+class Backup:
+    PATH = "/TKLBAM"
+
+    class Paths(Paths):
+        files = [ 'delta', 'newpkgs', 'myfs', 'etc' ]
+
+    def __init__(self, profile_path):
+        self.profile = ProfilePaths(profile_path)
+        self.paths = self.Paths(self.PATH)
+
+        if isdir(self.paths.path):
+            shutil.rmtree(self.paths.path)
+        os.mkdir(self.paths.path)
+
+    def create_delta(self, fs_overrides):
+        paths = dirindex.read_paths(file(self.profile.dirindex_conf))
+        paths += fs_overrides
+
+        fh = file(self.paths.delta, "w")
+        for change in changes.whatchanged(self.profile.dirindex, paths):
+            print >> fh, change
+        fh.close()
 
 def main():
     try:
@@ -186,19 +206,8 @@ def main():
     if not isdir(conf.profile):
         fatal("profile dir %s doesn't exist" % `conf.profile`)
 
-    profile_paths = ProfilePaths(conf.profile)
-    backup_paths = BackupPaths("/TKLBAM")
-    if isdir(backup_paths.path):
-        shutil.rmtree(backup_paths.path)
-    os.mkdir(backup_paths.path)
+    backup = Backup(conf.profile)
+    backup.create_delta(conf.overrides.fs)
 
-    paths = dirindex.read_paths(file(profile_paths.dirindex_conf))
-    paths += conf.overrides.fs
-
-    fh = file(backup_paths.delta, "w")
-    for change in changes.whatchanged(profile_paths.dirindex, paths):
-        print >> fh, change
-    fh.close()
-    
 if __name__=="__main__":
     main()
