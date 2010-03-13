@@ -34,9 +34,67 @@ from string import Template
 from paths import Paths
 
 import md5
+import shutil
+
+import changes
+import dirindex
 
 class Error(Exception):
     pass
+
+class Overrides(list):
+    @staticmethod
+    def is_db_override(val):
+        if re.match(r'^-?mysql:', val):
+            return True
+        else:
+            return False
+
+    @classmethod
+    def fromfile(cls, inputfile):
+        try:
+            fh = file(inputfile)
+        except:
+            return cls()
+
+        overrides = []
+        for line in fh.readlines():
+            line = re.sub(r'#.*', '', line).strip()
+            if not line:
+                continue
+
+            overrides += line.split()
+
+        def is_legal(override):
+            if cls.is_db_override(override):
+                return True
+
+            if re.match(r'^-?/', override):
+                return True
+
+            return False
+
+        for override in overrides:
+            if not is_legal(override):
+                raise Error(`override` + " is not a legal override")
+
+        return cls(overrides)
+
+    def fs(self):
+        for val in self:
+            if not self.is_db_override(val):
+                yield val
+    fs = property(fs)
+
+    def db(self):
+        for val in self:
+            if self.is_db_override(val):
+                yield val
+    db = property(db)
+
+    def __add__(self, b):
+        cls = type(self)
+        return cls(list.__add__(self, b))
 
 class Conf:
     profile = "/usr/share/tklbam/profile"
@@ -53,43 +111,10 @@ class Conf:
         except:
             return None
 
-    @staticmethod
-    def _read_overrides(inputfile):
-        overrides = []
-        
-        try:
-            fh = file(inputfile)
-        except:
-            return []
-
-        for line in fh.readlines():
-            line = re.sub(r'#.*', '', line).strip()
-            if not line:
-                continue
-
-            overrides += line.split()
-
-        def is_legal(override):
-            if override[0] == '-':
-                override = override[1:]
-
-            if ':' in override:
-                namespace, val = override.split(':', 1)
-                if namespace in ('mysql', 'pgsql'):
-                    return True
-
-            return override[0] == '/'
-
-        for override in overrides:
-            if not is_legal(override):
-                raise Error(`override` + " is not a legal override")
-
-        return overrides
-
     def __init__(self):
         self.keyfile = self.paths.key
         self.address = self._read_address(self.paths.address)
-        self.overrides = self._read_overrides(self.paths.overrides)
+        self.overrides = Overrides.fromfile(self.paths.overrides)
 
 def mcookie():
     return md5.md5(file("/dev/random").read(16)).hexdigest()
@@ -103,6 +128,10 @@ def create_key(keyfile):
 def read_key(keyfile):
     return file(keyfile).read().strip()
 
+def fatal(e):
+    print >> sys.stderr, "error: " + str(e)
+    sys.exit(1)
+
 def usage(e=None):
     if e:
         print >> sys.stderr, "error: " + str(e)
@@ -115,6 +144,12 @@ def usage(e=None):
                                         CONF_ADDRESS=Conf.paths.address,
                                         DEFAULT_PROFILE=Conf.profile)
     sys.exit(1)
+
+class BackupPaths(Paths):
+    files = [ 'delta', 'newpkgs', 'myfs', 'etc' ]
+
+class ProfilePaths(Paths):
+    files = [ 'dirindex', 'dirindex.conf', 'selections' ]
 
 def main():
     try:
@@ -137,22 +172,33 @@ def main():
         elif opt == '-h':
             usage()
 
-    if not conf.address:
-        usage("address not configured")
-
     conf.overrides += args
 
-    print "conf.profile = " + `conf.profile`
-    print "conf.keyfile = " + `conf.keyfile`
-    print "conf.address = " + `conf.address`
-    print "conf.overrides = " + `conf.overrides`
+    if not conf.address:
+        fatal("address not configured")
 
     if not exists(conf.keyfile):
         print "generating new secret key"
         create_key(conf.keyfile)
 
     key = read_key(conf.keyfile)
-    print "key = " + `key`
 
+    if not isdir(conf.profile):
+        fatal("profile dir %s doesn't exist" % `conf.profile`)
+
+    profile_paths = ProfilePaths(conf.profile)
+    backup_paths = BackupPaths("/TKLBAM")
+    if isdir(backup_paths.path):
+        shutil.rmtree(backup_paths.path)
+    os.mkdir(backup_paths.path)
+
+    paths = dirindex.read_paths(file(profile_paths.dirindex_conf))
+    paths += conf.overrides.fs
+
+    fh = file(backup_paths.delta, "w")
+    for change in changes.whatchanged(profile_paths.dirindex, paths):
+        print >> fh, change
+    fh.close()
+    
 if __name__=="__main__":
     main()
