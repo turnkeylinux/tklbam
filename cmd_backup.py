@@ -160,6 +160,7 @@ class Backup:
         files = [ 'fsdelta', 'newpkgs', 'myfs', 'etc' ]
 
     def _fsdelta(self, overrides=[]):
+        overrides = self.conf.overrides.fs
 
         paths = dirindex.read_paths(file(self.profile.dirindex_conf))
         paths += overrides
@@ -183,9 +184,11 @@ class Backup:
             print >> fh, package
         fh.close()
 
-    def _mysql2fs(self, db_overrides=[], callback=None):
+    def _mysql2fs(self, callback=None):
+        overrides = self.conf.overrides.db
+
         limits = [ re.sub(r'^(-?)mysql:', '\\1', limit) 
-                   for limit in db_overrides 
+                   for limit in overrides 
                    if re.match(r'^-?mysql:', limit) ]
 
         def any_positives(limits):
@@ -210,9 +213,9 @@ class Backup:
 
         self.conf = conf
 
-        self._fsdelta(conf.overrides.fs)
+        self._fsdelta()
         self._newpkgs()
-        self._mysql2fs(conf.overrides.db)
+        self._mysql2fs()
 
 def main():
     try:
