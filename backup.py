@@ -31,61 +31,61 @@ class Key:
     def read(keyfile):
         return file(keyfile).read().strip()
 
-class Overrides(list):
-    @staticmethod
-    def is_db_override(val):
-        if re.match(r'^-?mysql:', val):
-            return True
-        else:
-            return False
-
-    @classmethod
-    def fromfile(cls, inputfile):
-        try:
-            fh = file(inputfile)
-        except:
-            return cls()
-
-        overrides = []
-        for line in fh.readlines():
-            line = re.sub(r'#.*', '', line).strip()
-            if not line:
-                continue
-
-            overrides += line.split()
-
-        def is_legal(override):
-            if cls.is_db_override(override):
-                return True
-
-            if re.match(r'^-?/', override):
-                return True
-
-            return False
-
-        for override in overrides:
-            if not is_legal(override):
-                raise Error(`override` + " is not a legal override")
-
-        return cls(overrides)
-
-    def fs(self):
-        for val in self:
-            if not self.is_db_override(val):
-                yield val
-    fs = property(fs)
-
-    def db(self):
-        for val in self:
-            if self.is_db_override(val):
-                yield val
-    db = property(db)
-
-    def __add__(self, b):
-        cls = type(self)
-        return cls(list.__add__(self, b))
-
 class BackupConf:
+    class Overrides(list):
+        @staticmethod
+        def is_db_override(val):
+            if re.match(r'^-?mysql:', val):
+                return True
+            else:
+                return False
+
+        @classmethod
+        def fromfile(cls, inputfile):
+            try:
+                fh = file(inputfile)
+            except:
+                return cls()
+
+            overrides = []
+            for line in fh.readlines():
+                line = re.sub(r'#.*', '', line).strip()
+                if not line:
+                    continue
+
+                overrides += line.split()
+
+            def is_legal(override):
+                if cls.is_db_override(override):
+                    return True
+
+                if re.match(r'^-?/', override):
+                    return True
+
+                return False
+
+            for override in overrides:
+                if not is_legal(override):
+                    raise Error(`override` + " is not a legal override")
+
+            return cls(overrides)
+
+        def fs(self):
+            for val in self:
+                if not self.is_db_override(val):
+                    yield val
+        fs = property(fs)
+
+        def db(self):
+            for val in self:
+                if self.is_db_override(val):
+                    yield val
+        db = property(db)
+
+        def __add__(self, b):
+            cls = type(self)
+            return cls(list.__add__(self, b))
+
     profile = "/usr/share/tklbam/profile"
 
     path = "/etc/tklbam"
@@ -103,13 +103,7 @@ class BackupConf:
     def __init__(self):
         self.keyfile = self.paths.key
         self.address = self._read_address(self.paths.address)
-        self.overrides = Overrides.fromfile(self.paths.overrides)
-
-class ProfilePaths(Paths):
-    files = [ 'dirindex', 'dirindex.conf', 'selections' ]
-
-class BackupPaths(Paths):
-    files = [ 'fsdelta', 'newpkgs', 'myfs', 'etc', 'etc/mysql' ]
+        self.overrides = self.Overrides.fromfile(self.paths.overrides)
 
 def _write_new_packages(dest, base_selections):
     base_selections = DpkgSelections(base_selections)
@@ -150,6 +144,12 @@ def _write_whatchanged(dest, dirindex, dirindex_conf, overrides=[]):
     for change in changes:
         print >> fh, change
     fh.close()
+
+class ProfilePaths(Paths):
+    files = [ 'dirindex', 'dirindex.conf', 'selections' ]
+
+class BackupPaths(Paths):
+    files = [ 'fsdelta', 'newpkgs', 'myfs', 'etc', 'etc/mysql' ]
 
 def backup(conf):
     profile = ProfilePaths(conf.profile)
