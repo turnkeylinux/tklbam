@@ -56,6 +56,7 @@ def main():
     if len(args) < 2:
         usage()
 
+
     address, keyfile = args[:2]
     limits = args[2:]
 
@@ -63,5 +64,35 @@ def main():
     for var in ('address', 'keyfile', 'limits', 'skip_files', 'skip_database', 'skip_packages', 'no_rollback'):
         print "%s = %s" % (var, `locals()[var]`)
 
+import os
+import shutil
+import userdb
+
+def test():
+    path = "/var/tmp/restore"
+    os.rename(path + "/backup/TKLBAM", path + "/extras")
+
+    extras = path + "/extras"
+
+    old_passwd = extras + "/etc/passwd"
+    old_group = extras + "/etc/group"
+    new_passwd = "/etc/passwd"
+    new_group = "/etc/group"
+
+    def r(path):
+        return file(path).read()
+
+    passwd, group, uidmap, gidmap = userdb.merge(r(old_passwd), r(old_group), r(new_passwd), r(new_group))
+
+    # we don't really need to write these files
+    def w(path, s):
+        file(path, "w").write(str(s) + "\n")
+
+    w(path + "/passwd", passwd)
+    w(path + "/group", group)
+    
+    print "uidmap = " + `uidmap`
+    print "gidmap = " + `gidmap`
+
 if __name__=="__main__":
-    main()
+    test()
