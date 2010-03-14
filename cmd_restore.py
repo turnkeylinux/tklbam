@@ -68,7 +68,7 @@ import os
 import shutil
 import userdb
 
-def test():
+def test1():
     path = "/var/tmp/restore"
     os.rename(path + "/backup/TKLBAM", path + "/extras")
 
@@ -94,5 +94,53 @@ def test():
     print "uidmap = " + `uidmap`
     print "gidmap = " + `gidmap`
 
+import paths
+
+def test2():
+    def _walk(dir):
+        fnames = []
+
+        for dentry in os.listdir(dir):
+            path = join(dir, dentry)
+
+            if not islink(path) and isdir(path):
+                for val in _walk(path):
+                    yield val
+            else:
+                fnames.append(dentry)
+
+        yield dir, fnames
+
+    overlay = "/var/tmp/restore/backup"
+    for dpath, fnames in _walk(overlay):
+        root_dpath = dpath[len(overlay.rstrip('/')):]
+        if exists(root_dpath) and not isdir(root_dpath):
+            os.remove(root_dpath)
+
+        for fname in fnames:
+            overlay_path = join(dpath, fname)
+            root_path = overlay_path[len(overlay.rstrip('/')):]
+            print "root_path " + root_path
+
+            try:
+                if exists(root_path):
+                    print "rm -rf " + root_path
+                    if not islink(root_path) and isdir(root_path):
+                        shutil.rmtree(root_path)
+                    else:
+                        os.remove(root_path)
+
+                root_path_parent = dirname(root_path)
+                if not exists(root_path_parent):
+                    print "mkdir -p " + root_path_parent
+                    os.makedirs(root_path_parent)
+
+                print "mv %s %s" % (overlay_path, root_path)
+                shutil.move(overlay_path, root_path)
+            except Exception, e:
+                print "ERROR: " + str(e)
+
 if __name__=="__main__":
-    test()
+    args = sys.argv[1:]
+    funcname = args[0]
+    locals()[funcname]()
