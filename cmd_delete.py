@@ -49,12 +49,12 @@ def main():
     if simulate:
         verbose = True
 
-    for path in changes.deleted():
+    for op in changes.deleted():
         if verbose:
-            print "rm " + path
+            print op
 
         if not simulate:
-            os.remove(path)
+            op()
 
 if __name__=="__main__":
     main()

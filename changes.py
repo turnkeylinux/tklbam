@@ -81,6 +81,28 @@ class Change:
 
         return op2class[op].fromline(line[2:])
 
+class Op:
+    def __init__(self, func, *args):
+        self.func = func
+        self.args = args
+
+    def __call__(self):
+        return self.func(*self.args)
+
+    def __str__(self):
+        func = self.func
+        args = self.args
+
+        if func is os.lchown:
+            path, uid, gid = args
+            return "chown -h %d:%d %s" % (uid, gid, path)
+        elif func is os.chmod:
+            path, mode = args
+            return "chmod %s %s" % (oct(mode), path)
+        elif func is os.remove:
+            path, = args
+            return "rm " + path
+
 class Changes(list):
     def __add__(self, other):
         cls = type(self)
@@ -112,7 +134,7 @@ class Changes(list):
             if not islink(change.path) and isdir(change.path):
                 continue
 
-            yield change.path
+            yield Op(os.remove, change.path)
     
     def statfixes(self, uidmap={}, gidmap={}):
         class TransparentMap(dict):
@@ -140,13 +162,13 @@ class Changes(list):
             if change.OP in ('s', 'o'):
                 if st.st_uid != uidmap[change.uid] or \
                    st.st_gid != gidmap[change.gid]:
-                    yield os.lchown, (change.path, 
-                                      uidmap[change.uid], gidmap[change.gid])
+                    yield Op(os.lchown, change.path, 
+                                        uidmap[change.uid], gidmap[change.gid])
 
             if change.OP == 's':
                 if not islink(change.path) and \
                    stat.S_IMODE(st.st_mode) != change.mode:
-                    yield os.chmod, (change.path, change.mode)
+                    yield Op(os.chmod, change.path, change.mode)
 
 def whatchanged(di_path, paths):
     di_saved = DirIndex(di_path)
@@ -164,3 +186,4 @@ def whatchanged(di_path, paths):
     changes += [ Change.Deleted(path) for path in deleted ]
 
     return changes
+

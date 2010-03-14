@@ -26,14 +26,6 @@ def usage(e=None):
     print >> sys.stderr, __doc__.strip()
     sys.exit(1)
 
-def fmt_op(method, *args):
-    if method is os.lchown:
-        path, uid, gid = args
-        return "chown -h %d:%d %s" % (uid, gid, path)
-    elif method is os.chmod:
-        path, mode = args
-        return "chmod %s %s" % (oct(mode), path)
-
 def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'u:g:svh', 
@@ -72,12 +64,12 @@ def main():
     if simulate:
         verbose = True
 
-    for method, args in changes.statfixes(uidmap, gidmap):
+    for op in changes.statfixes(uidmap, gidmap):
         if verbose:
-            print fmt_op(method, *args)
+            print op
 
         if not simulate:
-            method(*args)
+            op()
 
 if __name__=="__main__":
     main()
