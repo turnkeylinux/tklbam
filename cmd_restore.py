@@ -11,10 +11,20 @@ Options:
 
 """
 
+import os
 from os.path import *
 
 import sys
 import getopt
+
+import shutil
+import userdb
+import tempfile
+
+from paths import Paths
+from changes import Changes
+
+import backup
 
 def fatal(e):
     print >> sys.stderr, "error: " + str(e)
@@ -27,6 +37,104 @@ def usage(e=None):
     print >> sys.stderr, "Syntax: %s [ -options ] <address> <keyfile> [ limits ... ]" % sys.argv[0]
     print >> sys.stderr, __doc__.strip()
     sys.exit(1)
+
+
+def test():
+    tmpdir = "/var/tmp/restore/backup"
+    restore(tmpdir)
+
+def restore(backup_path):
+    tmpdir = tempfile.mkdtemp(prefix="tklbam-extras-")
+    os.rename(backup_path + backup.Backup.EXTRAS_PATH, tmpdir)
+
+    try:
+        extras = backup.ExtrasPaths(tmpdir)
+        restore_files(backup_path, extras)
+    finally:
+        shutil.rmtree(tmpdir)
+
+def restore_files(backup_path, extras):
+    def userdb_merge(old_etc, new_etc):
+        old_passwd = join(old_etc, "passwd")
+        new_passwd = join(new_etc, "passwd")
+        
+        old_group = join(old_etc, "group")
+        new_group = join(new_etc, "group")
+
+        def r(path):
+            return file(path).read()
+
+        return userdb.merge(r(old_passwd), r(old_group), 
+                            r(new_passwd), r(new_group))
+
+    passwd, group, uidmap, gidmap = userdb_merge(extras.etc.path, "/etc")
+
+    def apply_overlay(overlay, root):
+        def walk(dir):
+            fnames = []
+
+            for dentry in os.listdir(dir):
+                path = join(dir, dentry)
+
+                if not islink(path) and isdir(path):
+                    for val in walk(path):
+                        yield val
+                else:
+                    fnames.append(dentry)
+
+            yield dir, fnames
+
+        class OverlayError:
+            def __init__(self, path, exc):
+                self.path = path
+                self.exc = exc
+
+            def __str__(self):
+                return "OVERLAY ERROR @ %s: %s" % (self.path, self.exc)
+
+        overlay = overlay.rstrip('/')
+        for overlay_dpath, fnames in walk(overlay):
+
+            root_dpath = root + overlay_dpath[len(overlay) + 1:]
+            if exists(root_dpath) and not isdir(root_dpath):
+                os.remove(root_dpath)
+
+            for fname in fnames:
+                overlay_fpath = join(overlay_dpath, fname)
+                root_fpath = join(root_dpath, fname)
+
+                try:
+                    if exists(root_fpath):
+                        if not islink(root_fpath) and isdir(root_fpath):
+                            shutil.rmtree(root_fpath)
+                        else:
+                            os.remove(root_fpath)
+
+                    root_fpath_parent = dirname(root_fpath)
+                    if not exists(root_fpath_parent):
+                        os.makedirs(root_fpath_parent)
+
+                    shutil.move(overlay_fpath, root_fpath)
+                    yield root_fpath
+                except Exception, e:
+                    yield OverlayError(root_fpath, e)
+
+    for val in apply_overlay(backup_path, "/"):
+        print val
+
+    limits = []
+    changes = Changes.fromfile(extras.fsdelta, limits)
+
+    for actions in (changes.statfixes(uidmap, gidmap), changes.deleted()):
+        for action in actions:
+            print action
+            action()
+
+    def w(path, s):
+        file(path, "w").write(str(s))
+
+    w("/etc/passwd", passwd)
+    w("/etc/group", group)
 
 def main():
     try:
@@ -63,82 +171,6 @@ def main():
     # debug
     for var in ('address', 'keyfile', 'limits', 'skip_files', 'skip_database', 'skip_packages', 'no_rollback'):
         print "%s = %s" % (var, `locals()[var]`)
-
-import os
-import shutil
-import userdb
-
-def test1():
-    path = "/var/tmp/restore"
-    os.rename(path + "/backup/TKLBAM", path + "/extras")
-
-    extras = path + "/extras"
-
-    old_passwd = extras + "/etc/passwd"
-    old_group = extras + "/etc/group"
-    new_passwd = "/etc/passwd"
-    new_group = "/etc/group"
-
-    def r(path):
-        return file(path).read()
-
-    passwd, group, uidmap, gidmap = userdb.merge(r(old_passwd), r(old_group), r(new_passwd), r(new_group))
-
-    # we don't really need to write these files
-    def w(path, s):
-        file(path, "w").write(str(s) + "\n")
-
-    w(path + "/passwd", passwd)
-    w(path + "/group", group)
-    
-    print "uidmap = " + `uidmap`
-    print "gidmap = " + `gidmap`
-
-import paths
-
-def test2():
-    def _walk(dir):
-        fnames = []
-
-        for dentry in os.listdir(dir):
-            path = join(dir, dentry)
-
-            if not islink(path) and isdir(path):
-                for val in _walk(path):
-                    yield val
-            else:
-                fnames.append(dentry)
-
-        yield dir, fnames
-
-    overlay = "/var/tmp/restore/backup"
-    for dpath, fnames in _walk(overlay):
-        root_dpath = dpath[len(overlay.rstrip('/')):]
-        if exists(root_dpath) and not isdir(root_dpath):
-            os.remove(root_dpath)
-
-        for fname in fnames:
-            overlay_path = join(dpath, fname)
-            root_path = overlay_path[len(overlay.rstrip('/')):]
-            print "root_path " + root_path
-
-            try:
-                if exists(root_path):
-                    print "rm -rf " + root_path
-                    if not islink(root_path) and isdir(root_path):
-                        shutil.rmtree(root_path)
-                    else:
-                        os.remove(root_path)
-
-                root_path_parent = dirname(root_path)
-                if not exists(root_path_parent):
-                    print "mkdir -p " + root_path_parent
-                    os.makedirs(root_path_parent)
-
-                print "mv %s %s" % (overlay_path, root_path)
-                shutil.move(overlay_path, root_path)
-            except Exception, e:
-                print "ERROR: " + str(e)
 
 if __name__=="__main__":
     args = sys.argv[1:]
