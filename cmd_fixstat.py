@@ -64,12 +64,12 @@ def main():
     if simulate:
         verbose = True
 
-    for op in changes.statfixes(uidmap, gidmap):
+    for action in changes.statfixes(uidmap, gidmap):
         if verbose:
-            print op
+            print action
 
         if not simulate:
-            op()
+            action()
 
 if __name__=="__main__":
     main()

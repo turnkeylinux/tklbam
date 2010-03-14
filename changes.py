@@ -81,7 +81,7 @@ class Change:
 
         return op2class[op].fromline(line[2:])
 
-class Op:
+class Action:
     def __init__(self, func, *args):
         self.func = func
         self.args = args
@@ -134,7 +134,7 @@ class Changes(list):
             if not islink(change.path) and isdir(change.path):
                 continue
 
-            yield Op(os.remove, change.path)
+            yield Action(os.remove, change.path)
     
     def statfixes(self, uidmap={}, gidmap={}):
         class TransparentMap(dict):
@@ -162,13 +162,13 @@ class Changes(list):
             if change.OP in ('s', 'o'):
                 if st.st_uid != uidmap[change.uid] or \
                    st.st_gid != gidmap[change.gid]:
-                    yield Op(os.lchown, change.path, 
+                    yield Action(os.lchown, change.path, 
                                         uidmap[change.uid], gidmap[change.gid])
 
             if change.OP == 's':
                 if not islink(change.path) and \
                    stat.S_IMODE(st.st_mode) != change.mode:
-                    yield Op(os.chmod, change.path, change.mode)
+                    yield Action(os.chmod, change.path, change.mode)
 
 def whatchanged(di_path, paths):
     di_saved = DirIndex(di_path)

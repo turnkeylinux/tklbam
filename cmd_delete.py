@@ -49,12 +49,12 @@ def main():
     if simulate:
         verbose = True
 
-    for op in changes.deleted():
+    for action in changes.deleted():
         if verbose:
-            print op
+            print action
 
         if not simulate:
-            op()
+            action()
 
 if __name__=="__main__":
     main()
