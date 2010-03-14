@@ -108,11 +108,12 @@ class BackupConf:
 class ProfilePaths(Paths):
     files = [ 'dirindex', 'dirindex.conf', 'selections' ]
 
-class BackupPaths(Paths):
+class ExtrasPaths(Paths):
     files = [ 'fsdelta', 'fsdelta-olist', 'newpkgs', 'myfs', 'etc', 'etc/mysql' ]
 
-
 class Backup:
+    EXTRAS_PATH = "/TKLBAM"
+
     @staticmethod
     def _write_new_packages(dest, base_selections):
         base_selections = DpkgSelections(base_selections)
@@ -164,7 +165,7 @@ class Backup:
 
     def __init__(self, conf, key):
         profile = ProfilePaths(conf.profile)
-        paths = BackupPaths("/TKLBAM")
+        paths = ExtrasPaths(self.EXTRAS_PATH)
 
         if isdir(paths.path):
             shutil.rmtree(paths.path)
