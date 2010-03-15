@@ -17,11 +17,13 @@ class PathMap(dict):
             return [ path ]
 
     def __init__(self, paths):
+        self.default = True
         for path in paths:
             if path[0] == '-':
                 path = path[1:]
                 sign = False
             else:
+                self.default = False
                 sign = True
 
             for expanded in self._expand(path):
@@ -45,4 +47,4 @@ class PathMap(dict):
                 return self[path]
             path = dirname(path)
 
-        return False
+        return self.default
