@@ -80,7 +80,7 @@ def restore_files(backup_path, extras, log=None):
 
     passwd, group, uidmap, gidmap = userdb_merge(extras.etc.path, "/etc")
 
-    def apply_overlay(overlay, root):
+    def iter_apply_overlay(overlay, root):
         def walk(dir):
             fnames = []
             subdirs = []
@@ -133,7 +133,7 @@ def restore_files(backup_path, extras, log=None):
                 except Exception, e:
                     yield OverlayError(root_fpath, e)
 
-    for val in apply_overlay(backup_path, "/"):
+    for val in iter_apply_overlay(backup_path, "/"):
         print >> log, val
 
     limits = []
