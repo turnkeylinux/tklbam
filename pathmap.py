@@ -41,9 +41,9 @@ class PathMap(dict):
                 yield path
     excludes = property(excludes)
 
-    def is_included(self, path):
+    def __contains__(self, path):
         while path not in ('', '/'):
-            if path in self:
+            if dict.__contains__(self, path):
                 return self[path]
             path = dirname(path)
 

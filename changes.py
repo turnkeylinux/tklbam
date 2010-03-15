@@ -119,7 +119,7 @@ class Changes(list):
         if paths:
             pathmap = PathMap(paths)
             changes = [ change for change in changes
-                        if pathmap.is_included(change.path) ]
+                        if change.path in pathmap ]
 
         return cls(changes)
 

@@ -103,7 +103,7 @@ class DirIndex(dict):
 
         pathmap = PathMap(paths)
         for path in self.keys():
-            if not pathmap.is_included(path):
+            if not path in pathmap:
                 del self[path]
 
     def save(self, tofile):
