@@ -70,15 +70,11 @@ class Limits(list):
         return cls(limits)
 
     def fs(self):
-        for val in self:
-            if not self._is_db_limit(val):
-                yield val
+        return [ val for val in self if not self._is_db_limit(val) ]
     fs = property(fs)
 
     def db(self):
-        for val in self:
-            if self._is_db_limit(val):
-                yield val
+        return [ val for val in self if self._is_db_limit(val) ]
     db = property(db)
 
     def __add__(self, b):
