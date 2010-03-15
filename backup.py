@@ -31,61 +31,61 @@ class Key:
     def read(keyfile):
         return file(keyfile).read().strip()
 
-class BackupConf:
-    class Overrides(list):
-        @staticmethod
-        def is_db_override(val):
-            if re.match(r'^-?mysql:', val):
+class Limits(list):
+    @staticmethod
+    def _is_db_limit(val):
+        if re.match(r'^-?mysql:', val):
+            return True
+        else:
+            return False
+
+    @classmethod
+    def fromfile(cls, inputfile):
+        try:
+            fh = file(inputfile)
+        except:
+            return cls()
+
+        limits = []
+        for line in fh.readlines():
+            line = re.sub(r'#.*', '', line).strip()
+            if not line:
+                continue
+
+            limits += line.split()
+
+        def is_legal(limit):
+            if cls._is_db_limit(limit):
                 return True
-            else:
-                return False
 
-        @classmethod
-        def fromfile(cls, inputfile):
-            try:
-                fh = file(inputfile)
-            except:
-                return cls()
+            if re.match(r'^-?/', limit):
+                return True
 
-            overrides = []
-            for line in fh.readlines():
-                line = re.sub(r'#.*', '', line).strip()
-                if not line:
-                    continue
+            return False
 
-                overrides += line.split()
+        for limit in limits:
+            if not is_legal(limit):
+                raise Error(`limit` + " is not a legal limit")
 
-            def is_legal(override):
-                if cls.is_db_override(override):
-                    return True
+        return cls(limits)
 
-                if re.match(r'^-?/', override):
-                    return True
+    def fs(self):
+        for val in self:
+            if not self._is_db_limit(val):
+                yield val
+    fs = property(fs)
 
-                return False
+    def db(self):
+        for val in self:
+            if self._is_db_limit(val):
+                yield val
+    db = property(db)
 
-            for override in overrides:
-                if not is_legal(override):
-                    raise Error(`override` + " is not a legal override")
+    def __add__(self, b):
+        cls = type(self)
+        return cls(list.__add__(self, b))
 
-            return cls(overrides)
-
-        def fs(self):
-            for val in self:
-                if not self.is_db_override(val):
-                    yield val
-        fs = property(fs)
-
-        def db(self):
-            for val in self:
-                if self.is_db_override(val):
-                    yield val
-        db = property(db)
-
-        def __add__(self, b):
-            cls = type(self)
-            return cls(list.__add__(self, b))
-
+class BackupConf:
     profile = "/usr/share/tklbam/profile"
 
     path = "/etc/tklbam"
@@ -103,7 +103,7 @@ class BackupConf:
     def __init__(self):
         self.keyfile = self.paths.key
         self.address = self._read_address(self.paths.address)
-        self.overrides = self.Overrides.fromfile(self.paths.overrides)
+        self.overrides = Limits.fromfile(self.paths.overrides)
 
 class ProfilePaths(Paths):
     files = [ 'dirindex', 'dirindex.conf', 'selections' ]
