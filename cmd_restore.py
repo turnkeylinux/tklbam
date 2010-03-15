@@ -72,17 +72,21 @@ def restore_files(backup_path, extras):
     def apply_overlay(overlay, root):
         def walk(dir):
             fnames = []
+            subdirs = []
 
             for dentry in os.listdir(dir):
                 path = join(dir, dentry)
 
                 if not islink(path) and isdir(path):
-                    for val in walk(path):
-                        yield val
+                    subdirs.append(path)
                 else:
                     fnames.append(dentry)
 
             yield dir, fnames
+
+            for subdir in subdirs:
+                for val in walk(subdir):
+                    yield val
 
         class OverlayError:
             def __init__(self, path, exc):
@@ -94,7 +98,6 @@ def restore_files(backup_path, extras):
 
         overlay = overlay.rstrip('/')
         for overlay_dpath, fnames in walk(overlay):
-
             root_dpath = root + overlay_dpath[len(overlay) + 1:]
             if exists(root_dpath) and not isdir(root_dpath):
                 os.remove(root_dpath)
