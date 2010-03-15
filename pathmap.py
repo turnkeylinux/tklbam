@@ -30,15 +30,11 @@ class PathMap(dict):
                 self[expanded] = sign
 
     def includes(self):
-        for path in self:
-            if self[path]:
-                yield path
+        return [ path for path in self if self[path] ]
     includes = property(includes)
 
     def excludes(self):
-        for path in self:
-            if not self[path]:
-                yield path
+        return [ path for path in self if not self[path] ]
     excludes = property(excludes)
 
     def __contains__(self, path):
