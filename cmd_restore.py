@@ -2,6 +2,9 @@
 """
 Restore backup
 
+Arguments:
+    <limit> := -?( /path/to/add/or/remove | mysql:database[/table] )
+
 Options:
     --skip-files                Don't restore filesystem
     --skip-database             Don't restore databases
@@ -23,6 +26,7 @@ import tempfile
 
 from paths import Paths
 from changes import Changes
+from pathmap import PathMap
 
 import backup
 
@@ -34,23 +38,24 @@ def usage(e=None):
     if e:
         print >> sys.stderr, "error: " + str(e)
 
-    print >> sys.stderr, "Syntax: %s [ -options ] <address> <keyfile> [ limits ... ]" % sys.argv[0]
+    print >> sys.stderr, "Syntax: %s [ -options ] <address> <keyfile> [ limit ... ]" % sys.argv[0]
     print >> sys.stderr, __doc__.strip()
     sys.exit(1)
-
 
 def test():
     tmpdir = "/var/tmp/restore/backup"
     log = sys.stdout
-    restore(tmpdir, log)
+    restore(tmpdir, log=log)
 
-def restore(backup_path, log=None):
+def restore(backup_path, limits=[], log=None):
+    limits = backup.Limits(limits)
+
     tmpdir = tempfile.mkdtemp(prefix="tklbam-extras-")
     os.rename(backup_path + backup.Backup.EXTRAS_PATH, tmpdir)
+    extras = backup.ExtrasPaths(tmpdir)
 
     try:
-        extras = backup.ExtrasPaths(tmpdir)
-        restore_files(backup_path, extras, log)
+        restore_files(backup_path, extras, limits.fs, log)
     finally:
         shutil.rmtree(tmpdir)
 
@@ -62,9 +67,8 @@ class DontWriteIfNone:
         if self.fh:
             self.fh.write(str(s))
 
-def restore_files(backup_path, extras, log=None):
+def restore_files(backup_path, extras, limits=[], log=None):
     log = DontWriteIfNone(log)
-
     def userdb_merge(old_etc, new_etc):
         old_passwd = join(old_etc, "passwd")
         new_passwd = join(new_etc, "passwd")
@@ -80,7 +84,7 @@ def restore_files(backup_path, extras, log=None):
 
     passwd, group, uidmap, gidmap = userdb_merge(extras.etc.path, "/etc")
 
-    def iter_apply_overlay(overlay, root):
+    def iter_apply_overlay(overlay, root, limits=[]):
         def walk(dir):
             fnames = []
             subdirs = []
@@ -107,6 +111,7 @@ def restore_files(backup_path, extras, log=None):
             def __str__(self):
                 return "OVERLAY ERROR @ %s: %s" % (self.path, self.exc)
 
+        pathmap = PathMap(limits)
         overlay = overlay.rstrip('/')
         for overlay_dpath, fnames in walk(overlay):
             root_dpath = root + overlay_dpath[len(overlay) + 1:]
@@ -116,6 +121,9 @@ def restore_files(backup_path, extras, log=None):
             for fname in fnames:
                 overlay_fpath = join(overlay_dpath, fname)
                 root_fpath = join(root_dpath, fname)
+
+                if root_fpath not in pathmap:
+                    continue
 
                 try:
                     if exists(root_fpath):
@@ -133,10 +141,9 @@ def restore_files(backup_path, extras, log=None):
                 except Exception, e:
                     yield OverlayError(root_fpath, e)
 
-    for val in iter_apply_overlay(backup_path, "/"):
+    for val in iter_apply_overlay(backup_path, "/", limits):
         print >> log, val
 
-    limits = []
     changes = Changes.fromfile(extras.fsdelta, limits)
 
     for actions in (changes.statfixes(uidmap, gidmap), changes.deleted()):
