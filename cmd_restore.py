@@ -41,19 +41,30 @@ def usage(e=None):
 
 def test():
     tmpdir = "/var/tmp/restore/backup"
-    restore(tmpdir)
+    log = sys.stdout
+    restore(tmpdir, log)
 
-def restore(backup_path):
+def restore(backup_path, log=None):
     tmpdir = tempfile.mkdtemp(prefix="tklbam-extras-")
     os.rename(backup_path + backup.Backup.EXTRAS_PATH, tmpdir)
 
     try:
         extras = backup.ExtrasPaths(tmpdir)
-        restore_files(backup_path, extras)
+        restore_files(backup_path, extras, log)
     finally:
         shutil.rmtree(tmpdir)
 
-def restore_files(backup_path, extras):
+class DontWriteIfNone:
+    def __init__(self, fh=None):
+        self.fh = fh
+
+    def write(self, s):
+        if self.fh:
+            self.fh.write(str(s))
+
+def restore_files(backup_path, extras, log=None):
+    log = DontWriteIfNone(log)
+
     def userdb_merge(old_etc, new_etc):
         old_passwd = join(old_etc, "passwd")
         new_passwd = join(new_etc, "passwd")
@@ -123,14 +134,14 @@ def restore_files(backup_path, extras):
                     yield OverlayError(root_fpath, e)
 
     for val in apply_overlay(backup_path, "/"):
-        print val
+        print >> log, val
 
     limits = []
     changes = Changes.fromfile(extras.fsdelta, limits)
 
     for actions in (changes.statfixes(uidmap, gidmap), changes.deleted()):
         for action in actions:
-            print action
+            print >> log, action
             action()
 
     def w(path, s):
