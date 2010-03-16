@@ -128,11 +128,6 @@ class RollbackDirectory:
 def restore_files(backup_path, extras, limits=[], log=None, rollback=True):
     log = DontWriteIfNone(log)
 
-    if rollback:
-        rbdir = RollbackDirectory("/var/backups/tklbam-rollback")
-    else:
-        rbdir = None
-
     def userdb_merge(old_etc, new_etc):
         old_passwd = join(old_etc, "passwd")
         new_passwd = join(new_etc, "passwd")
@@ -147,6 +142,20 @@ def restore_files(backup_path, extras, limits=[], log=None, rollback=True):
                             r(new_passwd), r(new_group))
 
     passwd, group, uidmap, gidmap = userdb_merge(extras.etc.path, "/etc")
+
+    changes = Changes.fromfile(extras.fsdelta, limits)
+
+    if rollback:
+        rbdir = RollbackDirectory("/var/backups/tklbam-rollback")
+
+        rbdir.copy("/etc/passwd")
+        rbdir.copy("/etc/group")
+
+        for change in changes:
+            if change.OP == 'o' and exists(change.path):
+                rbdir.move(change.path, subdir="overlay")
+    else:
+        rbdir = None
 
     def iter_apply_overlay(overlay, root, limits=[]):
         def walk(dir):
@@ -191,10 +200,7 @@ def restore_files(backup_path, extras, limits=[], log=None, rollback=True):
 
                 try:
                     if exists(root_fpath):
-                        if rbdir:
-                            rbdir.move(root_fpath, subdir="overlay")
-                        else:
-                            remove_any(root_fpath)
+                        remove_any(root_fpath)
 
                     root_fpath_parent = dirname(root_fpath)
                     if not exists(root_fpath_parent):
@@ -208,19 +214,21 @@ def restore_files(backup_path, extras, limits=[], log=None, rollback=True):
     for val in iter_apply_overlay(backup_path, "/", limits):
         print >> log, val
 
-    changes = Changes.fromfile(extras.fsdelta, limits)
+    for action in changes.statfixes(uidmap, gidmap):
+        print >> log, action
+        action()
 
-    for actions in (changes.statfixes(uidmap, gidmap), changes.deleted()):
-        for action in actions:
-            print >> log, action
+    for action in changes.deleted():
+        print >> log, action
+
+        path, = action.args
+        if rbdir:
+            rbdir.move(path, subdir="overlay")
+        else:
             action()
 
     def w(path, s):
         file(path, "w").write(str(s))
-
-    if rbdir:
-        rbdir.copy("/etc/passwd")
-        rbdir.copy("/etc/group")
 
     w("/etc/passwd", passwd)
     w("/etc/group", group)
