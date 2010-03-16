@@ -56,7 +56,8 @@ class DirIndex(dict):
                 rec = DirIndex.Record.fromline(line)
                 self[rec.path] = rec
 
-    def _add_path(self, path):
+    def add_path(self, path):
+        """add a single path to the DirIndex"""
         st = os.lstat(path)
         self[path] = DirIndex.Record(path, 
                                      st.st_mode, 
@@ -87,7 +88,7 @@ class DirIndex(dict):
             if not exists(path):
                 continue
 
-            self._add_path(path)
+            self.add_path(path)
 
             if islink(path) or not isdir(path):
                 continue
@@ -96,7 +97,7 @@ class DirIndex(dict):
                 for dentry in dentries:
                     path = join(dpath, dentry)
 
-                    self._add_path(path)
+                    self.add_path(path)
 
     def prune(self, *paths):
         """prune index down to paths that are included AND not excluded"""
