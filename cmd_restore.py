@@ -21,9 +21,9 @@ import sys
 import getopt
 
 import shutil
-import userdb
 import tempfile
 
+import userdb
 from paths import Paths
 from changes import Changes
 from pathmap import PathMap
@@ -67,8 +67,72 @@ class DontWriteIfNone:
         if self.fh:
             self.fh.write(str(s))
 
-def restore_files(backup_path, extras, limits=[], log=None):
+def remove_any(path):
+    """Remove a path whether it is a file or a directory. 
+       Return: True if removed, False if nothing to remove"""
+
+    if not exists(path):
+        return False
+
+    if not islink(path) and isdir(path):
+        shutil.rmtree(path)
+    else:
+        os.remove(path)
+
+    return True
+
+class Error(Exception):
+    pass
+
+class RollbackDirectory:
+    def __init__(self, path):
+        """deletes path if it exists and creates it if it doesn't"""
+        if exists(path):
+            shutil.rmtree(path)
+        os.makedirs(path)
+        self.path = path
+
+    def _mkdir(self, source, subdir=None):
+        dir = [ self.path, source.strip('/') ]
+        if subdir:
+            dir.insert(1, subdir.lstrip('/'))
+        dir = join(*dir)
+
+        if not exists(dirname(dir)):
+            os.makedirs(dirname(dir))
+
+        return dir
+
+    def copy(self, source, subdir=None):
+        """copies path while preserving its parent directory structure"""
+        if not exists(source):
+            raise Error("no such file or directory: " + source)
+
+        dest = self._mkdir(source, subdir)
+        if islink(source) or not isdir(source):
+            shutil.copy(source, dest)
+            shutil.copystat(source, dest)
+        else:
+            dest = abspath(dest)
+            remove_any(dest)
+            shutil.copytree(source, dest)
+
+    def move(self, source, subdir=None):
+        if not exists(source):
+            raise Error("no such file or directory: " + source)
+
+        dest = self._mkdir(source, subdir)
+        remove_any(dest)
+        shutil.move(source, dest)
+
+def restore_files(backup_path, extras, limits=[], log=None, rollback=True):
     log = DontWriteIfNone(log)
+
+    if rollback:
+        rbdir = RollbackDirectory("/var/backups/tklbam-rollback")
+    else:
+        rbdir = None
+
     def userdb_merge(old_etc, new_etc):
         old_passwd = join(old_etc, "passwd")
         new_passwd = join(new_etc, "passwd")
@@ -127,10 +191,10 @@ def restore_files(backup_path, extras, limits=[], log=None):
 
                 try:
                     if exists(root_fpath):
-                        if not islink(root_fpath) and isdir(root_fpath):
-                            shutil.rmtree(root_fpath)
+                        if rbdir:
+                            rbdir.move(root_fpath, subdir="overlay")
                         else:
-                            os.remove(root_fpath)
+                            remove_any(root_fpath)
 
                     root_fpath_parent = dirname(root_fpath)
                     if not exists(root_fpath_parent):
@@ -153,6 +217,10 @@ def restore_files(backup_path, extras, limits=[], log=None):
 
     def w(path, s):
         file(path, "w").write(str(s))
+
+    if rbdir:
+        rbdir.copy("/etc/passwd")
+        rbdir.copy("/etc/group")
 
     w("/etc/passwd", passwd)
     w("/etc/group", group)
