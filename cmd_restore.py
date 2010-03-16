@@ -27,6 +27,7 @@ import userdb
 from paths import Paths
 from changes import Changes
 from pathmap import PathMap
+from dirindex import DirIndex
 
 import backup
 
@@ -147,13 +148,19 @@ def restore_files(backup_path, extras, limits=[], log=None, rollback=True):
 
     if rollback:
         rbdir = RollbackDirectory("/var/backups/tklbam-rollback")
+        shutil.copy(extras.fsdelta, rbdir.path)
 
         rbdir.copy("/etc/passwd")
         rbdir.copy("/etc/group")
 
+        di = DirIndex()
         for change in changes:
-            if change.OP == 'o' and exists(change.path):
-                rbdir.move(change.path, subdir="overlay")
+            if exists(change.path):
+                di.add_path(change.path)
+                if change.OP == 'o':
+                    rbdir.move(change.path, subdir="overlay")
+        di.save(join(rbdir.path, "dirindex"))
+
     else:
         rbdir = None
 
