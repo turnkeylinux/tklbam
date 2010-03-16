@@ -150,14 +150,8 @@ class Backup:
         changes.sort(lambda a,b: cmp(a.path, b.path))
         olist = [ change.path for change in changes if change.OP == 'o' ]
 
-        def write(dest, vals):
-            fh = file(dest, "w")
-            for val in vals:
-                print >> fh, val
-            fh.close()
-
-        write(dest, changes)
-        write(dest_olist, olist)
+        changes.tofile(dest)
+        file(dest_olist, "w").writelines((path + "\n" for path in olist))
 
     def __init__(self, conf, key):
         profile = ProfilePaths(conf.profile)

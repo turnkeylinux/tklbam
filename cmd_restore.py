@@ -148,10 +148,11 @@ def restore_files(backup_path, extras, limits=[], log=None, rollback=True):
 
     if rollback:
         rbdir = RollbackDirectory("/var/backups/tklbam-rollback")
-        shutil.copy(extras.fsdelta, rbdir.path)
 
         rbdir.copy("/etc/passwd")
         rbdir.copy("/etc/group")
+
+        changes.tofile(join(rbdir.path, "fsdelta"))
 
         di = DirIndex()
         for change in changes:
@@ -278,5 +279,4 @@ def main():
 
 if __name__=="__main__":
     args = sys.argv[1:]
-    funcname = args[0]
-    locals()[funcname]()
+    test()
