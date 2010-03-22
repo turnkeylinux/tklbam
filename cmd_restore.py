@@ -102,6 +102,7 @@ class Rollback:
         if exists(path):
             shutil.rmtree(path)
         os.makedirs(path)
+        os.chmod(path, 0700)
         self.paths = paths = self.Paths(path)
         os.mkdir(paths.etc)
         os.mkdir(paths.overlay)
