@@ -78,7 +78,7 @@ def main():
     callback = None
     if opt_verbose:
         print "destination: " + fh.name
-        callback = mysql.cb_print
+        callback = mysql.cb_print()
 
     if opt_verbose:
         pass

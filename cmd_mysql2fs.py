@@ -96,7 +96,7 @@ def main():
     callback = None
     if opt_verbose:
         print "source: " + mysqldump_fh.name
-        callback = mysql.cb_print
+        callback = mysql.cb_print()
 
     mysql.mysql2fs(mysqldump_fh, outdir, limits, callback)
 

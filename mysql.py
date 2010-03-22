@@ -1,3 +1,5 @@
+import sys
+
 import os
 from os.path import *
 
@@ -300,10 +302,17 @@ UNLOCK TABLES;
 def fs2mysql(fh, myfs, limits=[], callback=None, skip_extended_insert=False):
     MyFS_Reader(myfs, limits, skip_extended_insert).tofile(fh, callback)
 
-def cb_print(val):
-    if isinstance(val, MyFS.Database):
-        database = val
-        print "database: " + database.name
-    elif isinstance(val, MyFS.Table):
-        table = val
-        print "table: " + join(table.database.name, table.name)
+
+def cb_print(fh=None):
+    if not fh:
+        fh = sys.stdout
+
+    def func(val):
+        if isinstance(val, MyFS.Database):
+            database = val
+            print >> fh, "database: " + database.name
+        elif isinstance(val, MyFS.Table):
+            table = val
+            print >> fh, "table: " + join(table.database.name, table.name)
+
+    return func
