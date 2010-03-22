@@ -95,7 +95,9 @@ class Rollback:
     PATH = "/var/backups/tklbam-rollback"
 
     class Paths(Paths):
-        files = [ 'etc', 'fsdelta', 'dirindex', 'overlay' ]
+        files = [ 'etc', 'etc/mysql', 
+                  'fsdelta', 'dirindex', 'overlay', 
+                  'myfs' ]
 
     def __init__(self, path=PATH):
         """deletes path if it exists and creates it if it doesn't"""
@@ -105,7 +107,9 @@ class Rollback:
         os.chmod(path, 0700)
         self.paths = paths = self.Paths(path)
         os.mkdir(paths.etc)
+        os.mkdir(paths.etc.mysql)
         os.mkdir(paths.overlay)
+        os.mkdir(paths.myfs)
 
     def move_to_overlay(self, source):
         if not exists(source):
@@ -119,6 +123,10 @@ class Rollback:
         shutil.move(source, dest)
 
 def restore_db(extras, limits=[], rollback=None, log=None):
+    if rollback:
+        mysql.mysql2fs(mysql.mysqldump(), rollback.paths.myfs)
+        shutil.copy("/etc/mysql/debian.cnf", rollback.paths.etc.mysql)
+
     if log:
         callback = mysql.cb_print(log)
     else:
@@ -145,7 +153,7 @@ def restore_fs(overlay, extras, limits=[], rollback=None, log=None):
         return userdb.merge(r(old_passwd), r(old_group), 
                             r(new_passwd), r(new_group))
 
-    passwd, group, uidmap, gidmap = userdb_merge(extras.etc.path, "/etc")
+    passwd, group, uidmap, gidmap = userdb_merge(extras.etc, "/etc")
 
     changes = Changes.fromfile(extras.fsdelta, limits)
 
