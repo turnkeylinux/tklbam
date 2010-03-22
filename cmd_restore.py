@@ -125,6 +125,9 @@ def restore_db(extras, limits=[], rollback=None, log=None):
 
     mysql.fs2mysql(mysql.mysql(), extras.myfs, limits, callback)
 
+    shutil.copy(join(extras.etc.mysql, "debian.cnf"), "/etc/mysql/debian.cnf")
+    os.system("killall -HUP mysqld > /dev/null 2>&1")
+
 def restore_fs(overlay, extras, limits=[], rollback=None, log=None):
     log = DontWriteIfNone(log)
 
