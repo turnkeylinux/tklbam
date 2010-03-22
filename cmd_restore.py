@@ -85,44 +85,29 @@ def remove_any(path):
 class Error(Exception):
     pass
 
-class RollbackDirectory:
-    def __init__(self, path):
+class Rollback:
+    PATH = "/var/backups/tklbam-rollback"
+
+    class Paths(Paths):
+        files = [ 'etc', 'fsdelta', 'dirindex', 'overlay' ]
+
+    def __init__(self, path=PATH):
         """deletes path if it exists and creates it if it doesn't"""
         if exists(path):
             shutil.rmtree(path)
         os.makedirs(path)
-        self.path = path
+        self.paths = paths = self.Paths(path)
+        os.mkdir(paths.etc)
+        os.mkdir(paths.overlay)
 
-    def _mkdir(self, source, subdir=None):
-        dir = [ self.path, source.strip('/') ]
-        if subdir:
-            dir.insert(1, subdir.lstrip('/'))
-        dir = join(*dir)
-
-        if not exists(dirname(dir)):
-            os.makedirs(dirname(dir))
-
-        return dir
-
-    def copy(self, source, subdir=None):
-        """copies path while preserving its parent directory structure"""
+    def move_to_overlay(self, source):
         if not exists(source):
             raise Error("no such file or directory: " + source)
 
-        dest = self._mkdir(source, subdir)
-        if islink(source) or not isdir(source):
-            shutil.copy(source, dest)
-            shutil.copystat(source, dest)
-        else:
-            dest = abspath(dest)
-            remove_any(dest)
-            shutil.copytree(source, dest)
+        dest = join(self.paths.overlay, source.strip('/'))
+        if not exists(dirname(dest)):
+            os.makedirs(dirname(dest))
 
-    def move(self, source, subdir=None):
-        if not exists(source):
-            raise Error("no such file or directory: " + source)
-
-        dest = self._mkdir(source, subdir)
         remove_any(dest)
         shutil.move(source, dest)
 
@@ -147,23 +132,20 @@ def restore_files(backup_path, extras, limits=[], log=None, rollback=True):
     changes = Changes.fromfile(extras.fsdelta, limits)
 
     if rollback:
-        rbdir = RollbackDirectory("/var/backups/tklbam-rollback")
+        rollback = Rollback()
 
-        rbdir.copy("/etc/passwd")
-        rbdir.copy("/etc/group")
+        shutil.copy("/etc/passwd", rollback.paths.etc)
+        shutil.copy("/etc/group", rollback.paths.etc)
 
-        changes.tofile(join(rbdir.path, "fsdelta"))
+        changes.tofile(rollback.paths.fsdelta)
 
         di = DirIndex()
         for change in changes:
             if exists(change.path):
                 di.add_path(change.path)
                 if change.OP == 'o':
-                    rbdir.move(change.path, subdir="overlay")
-        di.save(join(rbdir.path, "dirindex"))
-
-    else:
-        rbdir = None
+                    rollback.move_to_overlay(change.path)
+        di.save(rollback.paths.dirindex)
 
     def iter_apply_overlay(overlay, root, limits=[]):
         def walk(dir):
@@ -230,8 +212,8 @@ def restore_files(backup_path, extras, limits=[], log=None, rollback=True):
         print >> log, action
 
         path, = action.args
-        if rbdir:
-            rbdir.move(path, subdir="overlay")
+        if rollback:
+            rollback.move_to_overlay(path)
         else:
             action()
 
