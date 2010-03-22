@@ -118,19 +118,6 @@ class Rollback:
         shutil.move(source, dest)
 
 def restore_db(extras, limits=[], rollback=None, log=None):
-    limits = [ re.sub(r'^(-?)mysql:', '\\1', limit) 
-               for limit in limits
-               if re.match(r'^-?mysql:', limit) ]
-
-    def any_positives(limits):
-        for limit in limits:
-            if limit[0] != '-':
-                return True
-        return False
-
-    if any_positives(limits):
-        limits.append('mysql')
-
     if log:
         callback = mysql.cb_print(log)
     else:

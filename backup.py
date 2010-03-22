@@ -74,7 +74,27 @@ class Limits(list):
     fs = property(fs)
 
     def db(self):
-        return [ val for val in self if self._is_db_limit(val) ]
+        db_limits = []
+        for limit in self:
+            m = re.match(r'^-?mysql:(.*)', limit)
+            if not m:
+                continue
+
+            db_limit = '-' if limit[0] == '-' else ''
+            db_limit += m.group(1)
+
+            db_limits.append(db_limit)
+
+        def any_positives(limits):
+            for limit in limits:
+                if limit[0] != '-':
+                    return True
+            return False
+
+        if any_positives(db_limits):
+            db_limits.append('mysql')
+
+        return db_limits
     db = property(db)
 
     def __add__(self, b):
@@ -123,24 +143,6 @@ class Backup:
         fh.close()
 
     @staticmethod
-    def _mysql2fs(outdir, overrides=[], callback=None):
-        limits = [ re.sub(r'^(-?)mysql:', '\\1', limit) 
-                   for limit in overrides 
-                   if re.match(r'^-?mysql:', limit) ]
-
-        def any_positives(limits):
-            for limit in limits:
-                if limit[0] != '-':
-                    return True
-            return False
-
-        if any_positives(limits):
-            limits.append('mysql')
-
-        os.mkdir(outdir)
-        mysql.mysql2fs(mysql.mysqldump(), outdir, limits, callback)
-
-    @staticmethod
     def _write_whatchanged(dest, dest_olist, dirindex, dirindex_conf, 
                            overrides=[]):
         paths = read_paths(file(dirindex_conf))
@@ -174,7 +176,9 @@ class Backup:
                                 conf.overrides.fs)
 
         self._write_new_packages(paths.newpkgs, profile.selections)
-        self._mysql2fs(paths.myfs, conf.overrides.db)
+
+        os.mkdir(paths.myfs)
+        mysql.mysql2fs(mysql.mysqldump(), paths.myfs, conf.overrides.db)
 
         args = ['--volsize 50',
                 '--include ' + paths.path,
