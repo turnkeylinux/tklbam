@@ -30,6 +30,7 @@ from pathmap import PathMap
 from dirindex import DirIndex
 
 import backup
+import mysql
 
 def fatal(e):
     print >> sys.stderr, "error: " + str(e)
@@ -53,10 +54,15 @@ def restore(backup_path, limits=[], log=None):
 
     tmpdir = tempfile.mkdtemp(prefix="tklbam-extras-")
     os.rename(backup_path + backup.Backup.EXTRAS_PATH, tmpdir)
+
+    overlay = backup_path
     extras = backup.ExtrasPaths(tmpdir)
 
+    rollback = Rollback()
+
     try:
-        restore_files(backup_path, extras, limits.fs, log)
+        restore_fs(overlay, extras, limits.fs, rollback, log)
+        restore_db(extras, limits.db, rollback, log)
     finally:
         shutil.rmtree(tmpdir)
 
@@ -111,7 +117,28 @@ class Rollback:
         remove_any(dest)
         shutil.move(source, dest)
 
-def restore_files(backup_path, extras, limits=[], log=None, rollback=True):
+def restore_db(extras, limits=[], rollback=None, log=None):
+    limits = [ re.sub(r'^(-?)mysql:', '\\1', limit) 
+               for limit in limits
+               if re.match(r'^-?mysql:', limit) ]
+
+    def any_positives(limits):
+        for limit in limits:
+            if limit[0] != '-':
+                return True
+        return False
+
+    if any_positives(limits):
+        limits.append('mysql')
+
+    if log:
+        callback = mysql.cb_print(log)
+    else:
+        callback = None
+
+    mysql.fs2mysql(mysql.mysql(), extras.myfs, limits, callback)
+
+def restore_fs(overlay, extras, limits=[], rollback=None, log=None):
     log = DontWriteIfNone(log)
 
     def userdb_merge(old_etc, new_etc):
@@ -132,8 +159,6 @@ def restore_files(backup_path, extras, limits=[], log=None, rollback=True):
     changes = Changes.fromfile(extras.fsdelta, limits)
 
     if rollback:
-        rollback = Rollback()
-
         shutil.copy("/etc/passwd", rollback.paths.etc)
         shutil.copy("/etc/group", rollback.paths.etc)
 
@@ -201,7 +226,7 @@ def restore_files(backup_path, extras, limits=[], log=None, rollback=True):
                 except Exception, e:
                     yield OverlayError(root_fpath, e)
 
-    for val in iter_apply_overlay(backup_path, "/", limits):
+    for val in iter_apply_overlay(overlay, "/", limits):
         print >> log, val
 
     for action in changes.statfixes(uidmap, gidmap):
