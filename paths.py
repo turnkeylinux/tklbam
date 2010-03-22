@@ -54,10 +54,13 @@ def make_relative(base, path):
         base = dirname(base).rstrip('/')
         up_count += 1
 
-class Paths:
+class Paths(str):
     make_relative = staticmethod(make_relative)
     
     files = []
+    def __new__(cls, path, files=[]):
+        return str.__new__(cls, path)
+
     def __init__(self, path, files=[]):
         self.path = path
         self.files = {}
@@ -101,12 +104,6 @@ class Paths:
             attr = self._fname2attr(filename)
             self.files[attr] = filename
 
-    def __str__(self):
-        return self.path
-
-    def __repr__(self):
-        return "Paths('%s')" % self.path
-
 def subdir(dir, files):
     return [ os.path.join(dir, file) for file in files ]
 
@@ -122,6 +119,8 @@ def test():
     print paths.sub_dir
     print paths.sub_dir.sub_file
     print paths.sub_dir2.sub_file2
+
+    return paths
 
 if __name__ == "__main__":
     test()
