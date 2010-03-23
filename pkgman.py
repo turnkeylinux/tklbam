@@ -77,7 +77,7 @@ class Installer:
     """
     Interface::
         installer.command       Command executed
-        installer.installing    List of packages to be installed
+        installer.installable   List of packages to be installed
         installer.skipping      List of packages we're skipping
                                 (e.g., because we couldn't find them in the apt-cache)
 
@@ -85,28 +85,25 @@ class Installer:
                                 By default noninteractive...
     """
     def __init__(self, packages):
-        self.installing, self.skipping = installable(packages)
+        self.installable, self.skipping = installable(packages)
 
-        self.installing.sort()
+        self.installable.sort()
         self.skipping.sort()
 
-        self.command = None
-
-        if self.installing:
-            self.command = "apt-get install " + " ".join(self.installing)
+        if self.installable:
+            self.command = "apt-get install " + " ".join(self.installable)
+        else:
+            self.command = None
 
     def __call__(self, interactive=False):
-        """Install packages.
-        If no packages are to be installed:
-            return None 
-        Else:
-            return exitcode from execution of installation of command
+        """Install packages. Return (exitcode, output) from execution of installation command
         """
-        if not self.command:
-            return None
+        if not self.installable:
+            raise Error("no installable packages")
 
         command = self.command
         if not interactive:
             command = "DEBIAN_FRONTEND=noninteractive " + command
 
-        return os.system(command)
+        status, output = commands.getstatusoutput(command)
+        return (status, output)

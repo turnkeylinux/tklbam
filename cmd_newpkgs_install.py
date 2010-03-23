@@ -83,9 +83,10 @@ def main():
             print installer.command
 
     if not opt_simulate:
-        errno = installer(interactive=False)
-        if errno is not None:
-            os.exit(errno)
+        errno, output = installer(interactive=False)
+        if opt_verbose:
+            print output
+        os.exit(errno)
 
 if __name__=="__main__":
     main()
