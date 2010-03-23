@@ -71,13 +71,15 @@ def remove_any(path):
 class Error(Exception):
     pass
 
-class Rollback:
+class Rollback(Paths):
     PATH = "/var/backups/tklbam-rollback"
 
-    class Paths(Paths):
-        files = [ 'etc', 'etc/mysql', 
-                  'fsdelta', 'dirindex', 'overlay', 
-                  'newpkgs', 'myfs' ]
+    files = [ 'etc', 'etc/mysql', 
+              'fsdelta', 'dirindex', 'overlay', 
+              'newpkgs', 'myfs' ]
+
+    def __new__(cls, path=PATH):
+        return Paths.__new__(cls, path)
 
     def __init__(self, path=PATH):
         """deletes path if it exists and creates it if it doesn't"""
@@ -85,17 +87,19 @@ class Rollback:
             shutil.rmtree(path)
         os.makedirs(path)
         os.chmod(path, 0700)
-        self.paths = paths = self.Paths(path)
-        os.mkdir(paths.etc)
-        os.mkdir(paths.etc.mysql)
-        os.mkdir(paths.overlay)
-        os.mkdir(paths.myfs)
+
+        Paths.__init__(self, path)
+
+        os.mkdir(self.etc)
+        os.mkdir(self.etc.mysql)
+        os.mkdir(self.overlay)
+        os.mkdir(self.myfs)
 
     def move_to_overlay(self, source):
         if not exists(source):
             raise Error("no such file or directory: " + source)
 
-        dest = join(self.paths.overlay, source.strip('/'))
+        dest = join(self.overlay, source.strip('/'))
         if not exists(dirname(dest)):
             os.makedirs(dirname(dest))
 
@@ -221,7 +225,7 @@ class Restore:
 
     def packages(self):
         newpkgs_file = self.extras.newpkgs
-        rollback_file = (self.rollback.paths.newpkgs if self.rollback 
+        rollback_file = (self.rollback.newpkgs if self.rollback 
                          else None)
         log = self.log
 
@@ -279,10 +283,10 @@ class Restore:
         changes = Changes.fromfile(extras.fsdelta, limits)
 
         if rollback:
-            shutil.copy("/etc/passwd", rollback.paths.etc)
-            shutil.copy("/etc/group", rollback.paths.etc)
+            shutil.copy("/etc/passwd", rollback.etc)
+            shutil.copy("/etc/group", rollback.etc)
 
-            changes.tofile(rollback.paths.fsdelta)
+            changes.tofile(rollback.fsdelta)
 
             di = DirIndex()
             for change in changes:
@@ -290,7 +294,7 @@ class Restore:
                     di.add_path(change.path)
                     if change.OP == 'o':
                         rollback.move_to_overlay(change.path)
-            di.save(rollback.paths.dirindex)
+            di.save(rollback.dirindex)
 
         print >> log, "\nAPPLY OVERLAY\n"
 
@@ -321,8 +325,8 @@ class Restore:
         print >> self.log, "\n" + section_title("Restoring databases")
 
         if self.rollback:
-            mysql.mysql2fs(mysql.mysqldump(), self.rollback.paths.myfs)
-            shutil.copy("/etc/mysql/debian.cnf", self.rollback.paths.etc.mysql)
+            mysql.mysql2fs(mysql.mysqldump(), self.rollback.myfs)
+            shutil.copy("/etc/mysql/debian.cnf", self.rollback.etc.mysql)
 
         mysql.fs2mysql(mysql.mysql(), self.extras.myfs, self.limits.db, mysql.cb_print(self.log))
 
