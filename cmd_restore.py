@@ -134,7 +134,7 @@ def indent_lines(s, indent):
 
 def restore_newpkgs(newpkgs_file, rollback=None, log=None):
     log = DontWriteIfNone(log)
-    print >> log, section_title("Restoring newpkgs")
+    print >> log, section_title("Restoring new packages")
 
     # apt-get update, otherwise installer may skip everything
     print >> log, "apt-get update"
@@ -170,23 +170,20 @@ def restore_newpkgs(newpkgs_file, rollback=None, log=None):
 
 def restore_db(extras, limits=[], rollback=None, log=None):
     log = DontWriteIfNone(log)
+    print >> log, "\n" + section_title("Restoring databases")
 
     if rollback:
         mysql.mysql2fs(mysql.mysqldump(), rollback.paths.myfs)
         shutil.copy("/etc/mysql/debian.cnf", rollback.paths.etc.mysql)
 
-    if log:
-        callback = mysql.cb_print(log)
-    else:
-        callback = None
-
-    mysql.fs2mysql(mysql.mysql(), extras.myfs, limits, callback)
+    mysql.fs2mysql(mysql.mysql(), extras.myfs, limits, mysql.cb_print(log))
 
     shutil.copy(join(extras.etc.mysql, "debian.cnf"), "/etc/mysql/debian.cnf")
     os.system("killall -HUP mysqld > /dev/null 2>&1")
 
 def restore_fs(overlay, extras, limits=[], rollback=None, log=None):
     log = DontWriteIfNone(log)
+    print >> log, "\n" + section_title("Restoring filesystem")
 
     def userdb_merge(old_etc, new_etc):
         old_passwd = join(old_etc, "passwd")
@@ -201,7 +198,13 @@ def restore_fs(overlay, extras, limits=[], rollback=None, log=None):
         return userdb.merge(r(old_passwd), r(old_group), 
                             r(new_passwd), r(new_group))
 
+    print >> log, "MERGING USERS AND GROUPS\n"
     passwd, group, uidmap, gidmap = userdb_merge(extras.etc, "/etc")
+
+    for olduid in uidmap:
+        print >> log, "UID %d => %d" % (olduid, uidmap[olduid])
+    for oldgid in gidmap:
+        print >> log, "GID %d => %d" % (oldgid, gidmap[oldgid])
 
     changes = Changes.fromfile(extras.fsdelta, limits)
 
@@ -273,9 +276,12 @@ def restore_fs(overlay, extras, limits=[], rollback=None, log=None):
                 except Exception, e:
                     yield OverlayError(root_fpath, e)
 
+    print >> log, "\nAPPLY OVERLAY\n"
+
     for val in iter_apply_overlay(overlay, "/", limits):
         print >> log, val
 
+    print >> log, "\nAPPLYING POST-OVERLAY FIXES\n"
     for action in changes.statfixes(uidmap, gidmap):
         print >> log, action
         action()
