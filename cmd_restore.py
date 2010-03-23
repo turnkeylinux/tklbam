@@ -133,17 +133,17 @@ def indent_lines(s, indent):
                        for line in str(s).splitlines() ])
 
 def restore_newpkgs(newpkgs_file, rollback=None, log=None):
-    packages = file(newpkgs_file).read().strip().split('\n')
+    log = DontWriteIfNone(log)
+    print >> log, section_title("Restoring newpkgs")
 
     # apt-get update, otherwise installer may skip everything
+    print >> log, "apt-get update"
     output = commands.getoutput("apt-get update")
-    if log:
-        print >> log, section_title("Restoring newpkgs")
 
-        print >> log, "apt-get update"
-        print >> log, indent_lines(output, 4)
-        print >> log
+    print >> log, indent_lines(output, 4)
+    print >> log
 
+    packages = file(newpkgs_file).read().strip().split('\n')
     installer = Installer(packages)
 
     if rollback:
@@ -152,27 +152,26 @@ def restore_newpkgs(newpkgs_file, rollback=None, log=None):
             print >> fh, package
         fh.close()
 
-    if log:
-        if installer.skipping:
-            print >> log, "SKIPPING: " + " ".join(installer.skipping)
-            print >> log
+    if installer.skipping:
+        print >> log, "SKIPPING: " + " ".join(installer.skipping)
+        print >> log
 
-        if installer.command:
-            print >> log, installer.command
-        else:
-            print >> log, "NO NEW INSTALLABLE PACKAGES"
+    if installer.command:
+        print >> log, installer.command
+    else:
+        print >> log, "NO NEW INSTALLABLE PACKAGES"
 
     try:
         exitcode, output = installer()
-        if log:
-            print >> log, indent_lines(output, 4)
-            if exitcode != 0:
-                print >> log, "# WARNING: non-zero exitcode (%d)" % exitcode
+        print >> log, indent_lines(output, 4)
+        if exitcode != 0:
+            print >> log, "# WARNING: non-zero exitcode (%d)" % exitcode
 
     except installer.Error:
         pass
 
 def restore_db(extras, limits=[], rollback=None, log=None):
+    log = DontWriteIfNone(log)
     if rollback:
         mysql.mysql2fs(mysql.mysqldump(), rollback.paths.myfs)
         shutil.copy("/etc/mysql/debian.cnf", rollback.paths.etc.mysql)
