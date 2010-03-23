@@ -72,3 +72,41 @@ def installable(packages):
         installable.append(package)
 
     return installable, skipped
+
+class Installer:
+    """
+    Interface::
+        installer.command       Command executed
+        installer.installing    List of packages to be installed
+        installer.skipping      List of packages we're skipping
+                                (e.g., because we couldn't find them in the apt-cache)
+
+        installer.install()     Run command and return an error code
+                                By default noninteractive...
+    """
+    def __init__(self, packages):
+        self.installing, self.skipping = installable(packages)
+
+        self.installing.sort()
+        self.skipping.sort()
+
+        self.command = None
+
+        if self.installing:
+            self.command = "apt-get install " + " ".join(self.installing)
+
+    def install(self, interactive=False):
+        """Install packages.
+        If no packages are to be installed:
+            return None 
+        Else:
+            return exitcode from execution of installation of command
+        """
+        if not self.command:
+            return None
+
+        command = self.command
+        if not interactive:
+            command = "DEBIAN_FRONTEND=noninteractive " + command
+
+        return os.system(command)

@@ -13,7 +13,7 @@ import re
 import sys
 import getopt
 
-from pkgman import installable
+from pkgman import Installer
 
 def usage(e=None):
     if e:
@@ -73,22 +73,19 @@ def main():
     if opt_input:
         packages += parse_input(opt_input)
 
-    installing, skipping = installable(packages)
-    installing.sort()
-    skipping.sort()
+    installer = Installer(packages)
 
-    command = "apt-get install " + " ".join(installing)
     if opt_verbose:
-        if skipping:
-            print "# SKIPPING: " + " ".join(skipping)
+        if installer.skipping:
+            print "# SKIPPING: " + " ".join(installer.skipping)
 
-        if installing:
-            print command
+        if installer.command:
+            print installer.command
 
-    if not opt_simulate and installing:
-        os.environ['DEBIAN_FRONTEND'] = 'noninteractive'
-        errno = os.system(command)
-        os.exit(errno)
+    if not opt_simulate:
+        errno = installer.install()
+        if errno is not None:
+            os.exit(errno)
 
 if __name__=="__main__":
     main()
