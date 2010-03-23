@@ -81,7 +81,7 @@ class Installer:
         installer.skipping      List of packages we're skipping
                                 (e.g., because we couldn't find them in the apt-cache)
 
-        installer.install()     Run command and return an error code
+        installer()             Run installation command and return an error code
                                 By default noninteractive...
     """
     def __init__(self, packages):
@@ -95,7 +95,7 @@ class Installer:
         if self.installing:
             self.command = "apt-get install " + " ".join(self.installing)
 
-    def install(self, interactive=False):
+    def __call__(self, interactive=False):
         """Install packages.
         If no packages are to be installed:
             return None 
