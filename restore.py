@@ -18,14 +18,6 @@ import mysql
 class Error(Exception):
     pass
 
-class DontWriteIfNone:
-    def __init__(self, fh=None):
-        self.fh = fh
-
-    def write(self, s):
-        if self.fh:
-            self.fh.write(str(s))
-
 def remove_any(path):
     """Remove a path whether it is a file or a directory. 
        Return: True if removed, False if nothing to remove"""
@@ -75,80 +67,6 @@ class Rollback(Paths):
         remove_any(dest)
         shutil.move(source, dest)
 
-def section_title(title):
-    return title + "\n" + "=" * len(title) + "\n"
-
-def indent_lines(s, indent):
-    return "\n".join([ " " * indent + line 
-                       for line in str(s).splitlines() ])
-
-def userdb_merge(old_etc, new_etc):
-    old_passwd = join(old_etc, "passwd")
-    new_passwd = join(new_etc, "passwd")
-    
-    old_group = join(old_etc, "group")
-    new_group = join(new_etc, "group")
-
-    def r(path):
-        return file(path).read()
-
-    return userdb.merge(r(old_passwd), r(old_group), 
-                        r(new_passwd), r(new_group))
-
-def iter_apply_overlay(overlay, root, limits=[]):
-    def walk(dir):
-        fnames = []
-        subdirs = []
-
-        for dentry in os.listdir(dir):
-            path = join(dir, dentry)
-
-            if not islink(path) and isdir(path):
-                subdirs.append(path)
-            else:
-                fnames.append(dentry)
-
-        yield dir, fnames
-
-        for subdir in subdirs:
-            for val in walk(subdir):
-                yield val
-
-    class OverlayError:
-        def __init__(self, path, exc):
-            self.path = path
-            self.exc = exc
-
-        def __str__(self):
-            return "OVERLAY ERROR @ %s: %s" % (self.path, self.exc)
-
-    pathmap = PathMap(limits)
-    overlay = overlay.rstrip('/')
-    for overlay_dpath, fnames in walk(overlay):
-        root_dpath = root + overlay_dpath[len(overlay) + 1:]
-        if exists(root_dpath) and not isdir(root_dpath):
-            os.remove(root_dpath)
-
-        for fname in fnames:
-            overlay_fpath = join(overlay_dpath, fname)
-            root_fpath = join(root_dpath, fname)
-
-            if root_fpath not in pathmap:
-                continue
-
-            try:
-                if exists(root_fpath):
-                    remove_any(root_fpath)
-
-                root_fpath_parent = dirname(root_fpath)
-                if not exists(root_fpath_parent):
-                    os.makedirs(root_fpath_parent)
-
-                shutil.move(overlay_fpath, root_fpath)
-                yield root_fpath
-            except Exception, e:
-                yield OverlayError(root_fpath, e)
-
 class TempDir(str):
     def __new__(cls, prefix='tmp', suffix='', dir=None):
         path = tempfile.mkdtemp(suffix, prefix, dir)
@@ -159,6 +77,79 @@ class TempDir(str):
 
 class Restore:
     Error = Error
+
+    @staticmethod
+    def _section_title(title):
+        return title + "\n" + "=" * len(title) + "\n"
+
+    @staticmethod
+    def _userdb_merge(old_etc, new_etc):
+        old_passwd = join(old_etc, "passwd")
+        new_passwd = join(new_etc, "passwd")
+        
+        old_group = join(old_etc, "group")
+        new_group = join(new_etc, "group")
+
+        def r(path):
+            return file(path).read()
+
+        return userdb.merge(r(old_passwd), r(old_group), 
+                            r(new_passwd), r(new_group))
+
+    @staticmethod
+    def _iter_apply_overlay(overlay, root, limits=[]):
+        def walk(dir):
+            fnames = []
+            subdirs = []
+
+            for dentry in os.listdir(dir):
+                path = join(dir, dentry)
+
+                if not islink(path) and isdir(path):
+                    subdirs.append(path)
+                else:
+                    fnames.append(dentry)
+
+            yield dir, fnames
+
+            for subdir in subdirs:
+                for val in walk(subdir):
+                    yield val
+
+        class OverlayError:
+            def __init__(self, path, exc):
+                self.path = path
+                self.exc = exc
+
+            def __str__(self):
+                return "OVERLAY ERROR @ %s: %s" % (self.path, self.exc)
+
+        pathmap = PathMap(limits)
+        overlay = overlay.rstrip('/')
+        for overlay_dpath, fnames in walk(overlay):
+            root_dpath = root + overlay_dpath[len(overlay) + 1:]
+            if exists(root_dpath) and not isdir(root_dpath):
+                os.remove(root_dpath)
+
+            for fname in fnames:
+                overlay_fpath = join(overlay_dpath, fname)
+                root_fpath = join(root_dpath, fname)
+
+                if root_fpath not in pathmap:
+                    continue
+
+                try:
+                    if exists(root_fpath):
+                        remove_any(root_fpath)
+
+                    root_fpath_parent = dirname(root_fpath)
+                    if not exists(root_fpath_parent):
+                        os.makedirs(root_fpath_parent)
+
+                    shutil.move(overlay_fpath, root_fpath)
+                    yield root_fpath
+                except Exception, e:
+                    yield OverlayError(root_fpath, e)
 
     @staticmethod
     def _duplicity_restore(address, key):
@@ -179,6 +170,14 @@ class Restore:
         return tmpdir
 
     def __init__(self, address, key, limits=[], rollback=True, log=None):
+        class DontWriteIfNone:
+            def __init__(self, fh=None):
+                self.fh = fh
+
+            def write(self, s):
+                if self.fh:
+                    self.fh.write(str(s))
+
         log = DontWriteIfNone(log)
         print >> log, "Restoring duplicity archive from " + address
         backup_archive = self._duplicity_restore(address, key)
@@ -198,11 +197,15 @@ class Restore:
                          else None)
         log = self.log
 
-        print >> log, "\n" + section_title("Restoring new packages")
+        print >> log, "\n" + self._section_title("Restoring new packages")
 
         # apt-get update, otherwise installer may skip everything
         print >> log, "apt-get update"
         output = commands.getoutput("apt-get update")
+
+        def indent_lines(s, indent):
+            return "\n".join([ " " * indent + line 
+                               for line in str(s).splitlines() ])
 
         print >> log, "\n" + indent_lines(output, 4) + "\n"
 
@@ -239,10 +242,10 @@ class Restore:
         limits = self.limits.fs
         log = self.log
 
-        print >> log, "\n" + section_title("Restoring filesystem")
+        print >> log, "\n" + self._section_title("Restoring filesystem")
 
         print >> log, "MERGING USERS AND GROUPS\n"
-        passwd, group, uidmap, gidmap = userdb_merge(extras.etc, "/etc")
+        passwd, group, uidmap, gidmap = self._userdb_merge(extras.etc, "/etc")
 
         for olduid in uidmap:
             print >> log, "UID %d => %d" % (olduid, uidmap[olduid])
@@ -267,7 +270,7 @@ class Restore:
 
         print >> log, "\nOVERLAY:\n"
 
-        for val in iter_apply_overlay(overlay, "/", limits):
+        for val in self._iter_apply_overlay(overlay, "/", limits):
             print >> log, val
 
         print >> log, "\nPOST-OVERLAY FIXES:\n"
@@ -291,7 +294,7 @@ class Restore:
         w("/etc/group", group)
 
     def database(self):
-        print >> self.log, "\n" + section_title("Restoring databases")
+        print >> self.log, "\n" + self._section_title("Restoring databases")
 
         if self.rollback:
             mysql.mysql2fs(mysql.mysqldump(), self.rollback.myfs)
