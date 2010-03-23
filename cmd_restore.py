@@ -140,8 +140,7 @@ def restore_newpkgs(newpkgs_file, rollback=None, log=None):
     print >> log, "apt-get update"
     output = commands.getoutput("apt-get update")
 
-    print >> log, indent_lines(output, 4)
-    print >> log
+    print >> log, "\n" + indent_lines(output, 4) + "\n"
 
     packages = file(newpkgs_file).read().strip().split('\n')
     installer = Installer(packages)
@@ -153,8 +152,7 @@ def restore_newpkgs(newpkgs_file, rollback=None, log=None):
         fh.close()
 
     if installer.skipping:
-        print >> log, "SKIPPING: " + " ".join(installer.skipping)
-        print >> log
+        print >> log, "SKIPPING: " + " ".join(installer.skipping) + "\n"
 
     if installer.command:
         print >> log, installer.command
@@ -163,7 +161,7 @@ def restore_newpkgs(newpkgs_file, rollback=None, log=None):
 
     try:
         exitcode, output = installer()
-        print >> log, indent_lines(output, 4)
+        print >> log, "\n" + indent_lines(output, 4)
         if exitcode != 0:
             print >> log, "# WARNING: non-zero exitcode (%d)" % exitcode
 
@@ -172,6 +170,7 @@ def restore_newpkgs(newpkgs_file, rollback=None, log=None):
 
 def restore_db(extras, limits=[], rollback=None, log=None):
     log = DontWriteIfNone(log)
+
     if rollback:
         mysql.mysql2fs(mysql.mysqldump(), rollback.paths.myfs)
         shutil.copy("/etc/mysql/debian.cnf", rollback.paths.etc.mysql)
