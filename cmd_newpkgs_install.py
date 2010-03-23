@@ -86,6 +86,7 @@ def main():
             print command
 
     if not opt_simulate and installing:
+        os.environ['DEBIAN_FRONTEND'] = 'noninteractive'
         errno = os.system(command)
         os.exit(errno)
 
