@@ -84,6 +84,8 @@ class Installer:
         installer()             Run installation command and return an error code
                                 By default noninteractive...
     """
+    Error = Error
+
     def __init__(self, packages):
         self.installable, self.skipping = installable(packages)
 
