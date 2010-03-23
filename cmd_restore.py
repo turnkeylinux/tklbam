@@ -109,178 +109,234 @@ def indent_lines(s, indent):
     return "\n".join([ " " * indent + line 
                        for line in str(s).splitlines() ])
 
-def restore_newpkgs(newpkgs_file, rollback=None, log=None):
-    log = DontWriteIfNone(log)
-    print >> log, "\n" + section_title("Restoring new packages")
+class TempDir(str):
+    def __new__(cls, prefix='tmp', suffix='', dir=None):
+        path = tempfile.mkdtemp(suffix, prefix, dir)
+        return str.__new__(cls, path)
 
-    # apt-get update, otherwise installer may skip everything
-    print >> log, "apt-get update"
-    output = commands.getoutput("apt-get update")
+    def __del__(self):
+        print "TempDir.__del__(%s)" % self
+        shutil.rmtree(self)
 
-    print >> log, "\n" + indent_lines(output, 4) + "\n"
+class Restore:
+    Error = Error
 
-    packages = file(newpkgs_file).read().strip().split('\n')
-    installer = Installer(packages)
+    @staticmethod
+    def _duplicity_restore(address, key):
+        tmpdir = TempDir(prefix="tklbam-")
+        os.chmod(tmpdir, 0700)
 
-    if rollback:
-        fh = file(rollback.paths.newpkgs, "w")
-        for package in installer.installable:
-            print >> fh, package
-        fh.close()
+        os.environ['PASSPHRASE'] = key
+        command = "duplicity %s %s" % (commands.mkarg(address), tmpdir)
+        status, output = commands.getstatusoutput(command)
+        del os.environ['PASSPHRASE']
 
-    if installer.skipping:
-        print >> log, "SKIPPING: " + " ".join(installer.skipping) + "\n"
+        if status != 0:
+            if "No backup chains found" in output:
+                raise Error("Valid backup not found at " + `address`)
+            else:
+                raise Error("Error restoring backup (bad key?):\n" + output)
 
-    if installer.command:
-        print >> log, installer.command
-    else:
-        print >> log, "NO NEW INSTALLABLE PACKAGES"
+        return tmpdir
 
-    try:
-        exitcode, output = installer()
-        print >> log, "\n" + indent_lines(output, 4)
-        if exitcode != 0:
-            print >> log, "# WARNING: non-zero exitcode (%d)" % exitcode
+    def __init__(self, address, key, limits=[], rollback=True, log=None):
+        log = DontWriteIfNone(log)
+        print >> log, "Restoring duplicity archive @ " + address
+        backup_archive = self._duplicity_restore(address, key)
 
-    except installer.Error:
-        pass
+        extras_path = TempDir(prefix="tklbam-extras-")
+        os.rename(backup_archive + backup.Backup.EXTRAS_PATH, extras_path)
 
-def restore_db(extras, limits=[], rollback=None, log=None):
-    log = DontWriteIfNone(log)
-    print >> log, "\n" + section_title("Restoring databases")
+        self.extras = backup.ExtrasPaths(extras_path)
+        self.rollback = Rollback() if rollback else None
+        self.limits = backup.Limits(limits)
+        self.backup_archive = backup_archive
+        self.log = log
 
-    if rollback:
-        mysql.mysql2fs(mysql.mysqldump(), rollback.paths.myfs)
-        shutil.copy("/etc/mysql/debian.cnf", rollback.paths.etc.mysql)
+    def packages(self):
+        newpkgs_file = self.extras.newpkgs
+        rollback = self.rollback
+        log = self.log
 
-    mysql.fs2mysql(mysql.mysql(), extras.myfs, limits, mysql.cb_print(log))
+        print >> log, "\n" + section_title("Restoring new packages")
 
-    shutil.copy(join(extras.etc.mysql, "debian.cnf"), "/etc/mysql/debian.cnf")
-    os.system("killall -HUP mysqld > /dev/null 2>&1")
+        # apt-get update, otherwise installer may skip everything
+        print >> log, "apt-get update"
+        output = commands.getoutput("apt-get update")
 
-def restore_fs(overlay, extras, limits=[], rollback=None, log=None):
-    log = DontWriteIfNone(log)
-    print >> log, "\n" + section_title("Restoring filesystem")
+        print >> log, "\n" + indent_lines(output, 4) + "\n"
 
-    def userdb_merge(old_etc, new_etc):
-        old_passwd = join(old_etc, "passwd")
-        new_passwd = join(new_etc, "passwd")
-        
-        old_group = join(old_etc, "group")
-        new_group = join(new_etc, "group")
+        packages = file(newpkgs_file).read().strip().split('\n')
+        installer = Installer(packages)
 
-        def r(path):
-            return file(path).read()
-
-        return userdb.merge(r(old_passwd), r(old_group), 
-                            r(new_passwd), r(new_group))
-
-    print >> log, "MERGING USERS AND GROUPS\n"
-    passwd, group, uidmap, gidmap = userdb_merge(extras.etc, "/etc")
-
-    for olduid in uidmap:
-        print >> log, "UID %d => %d" % (olduid, uidmap[olduid])
-    for oldgid in gidmap:
-        print >> log, "GID %d => %d" % (oldgid, gidmap[oldgid])
-
-    changes = Changes.fromfile(extras.fsdelta, limits)
-
-    if rollback:
-        shutil.copy("/etc/passwd", rollback.paths.etc)
-        shutil.copy("/etc/group", rollback.paths.etc)
-
-        changes.tofile(rollback.paths.fsdelta)
-
-        di = DirIndex()
-        for change in changes:
-            if exists(change.path):
-                di.add_path(change.path)
-                if change.OP == 'o':
-                    rollback.move_to_overlay(change.path)
-        di.save(rollback.paths.dirindex)
-
-    def iter_apply_overlay(overlay, root, limits=[]):
-        def walk(dir):
-            fnames = []
-            subdirs = []
-
-            for dentry in os.listdir(dir):
-                path = join(dir, dentry)
-
-                if not islink(path) and isdir(path):
-                    subdirs.append(path)
-                else:
-                    fnames.append(dentry)
-
-            yield dir, fnames
-
-            for subdir in subdirs:
-                for val in walk(subdir):
-                    yield val
-
-        class OverlayError:
-            def __init__(self, path, exc):
-                self.path = path
-                self.exc = exc
-
-            def __str__(self):
-                return "OVERLAY ERROR @ %s: %s" % (self.path, self.exc)
-
-        pathmap = PathMap(limits)
-        overlay = overlay.rstrip('/')
-        for overlay_dpath, fnames in walk(overlay):
-            root_dpath = root + overlay_dpath[len(overlay) + 1:]
-            if exists(root_dpath) and not isdir(root_dpath):
-                os.remove(root_dpath)
-
-            for fname in fnames:
-                overlay_fpath = join(overlay_dpath, fname)
-                root_fpath = join(root_dpath, fname)
-
-                if root_fpath not in pathmap:
-                    continue
-
-                try:
-                    if exists(root_fpath):
-                        remove_any(root_fpath)
-
-                    root_fpath_parent = dirname(root_fpath)
-                    if not exists(root_fpath_parent):
-                        os.makedirs(root_fpath_parent)
-
-                    shutil.move(overlay_fpath, root_fpath)
-                    yield root_fpath
-                except Exception, e:
-                    yield OverlayError(root_fpath, e)
-
-    print >> log, "\nAPPLY OVERLAY\n"
-
-    for val in iter_apply_overlay(overlay, "/", limits):
-        print >> log, val
-
-    print >> log, "\nAPPLYING POST-OVERLAY FIXES\n"
-    for action in changes.statfixes(uidmap, gidmap):
-        print >> log, action
-        action()
-
-    for action in changes.deleted():
-        print >> log, action
-
-        path, = action.args
         if rollback:
-            rollback.move_to_overlay(path)
+            fh = file(rollback.paths.newpkgs, "w")
+            for package in installer.installable:
+                print >> fh, package
+            fh.close()
+
+        if installer.skipping:
+            print >> log, "SKIPPING: " + " ".join(installer.skipping) + "\n"
+
+        if installer.command:
+            print >> log, installer.command
         else:
+            print >> log, "NO NEW INSTALLABLE PACKAGES"
+
+        try:
+            exitcode, output = installer()
+            print >> log, "\n" + indent_lines(output, 4)
+            if exitcode != 0:
+                print >> log, "# WARNING: non-zero exitcode (%d)" % exitcode
+
+        except installer.Error:
+            pass
+
+    def files(self):
+        extras = self.extras
+        limits = self.limits.fs
+        overlay = self.backup_archive
+        rollback = self.rollback
+        log = self.log
+
+        print >> log, "\n" + section_title("Restoring filesystem")
+
+        def userdb_merge(old_etc, new_etc):
+            old_passwd = join(old_etc, "passwd")
+            new_passwd = join(new_etc, "passwd")
+            
+            old_group = join(old_etc, "group")
+            new_group = join(new_etc, "group")
+
+            def r(path):
+                return file(path).read()
+
+            return userdb.merge(r(old_passwd), r(old_group), 
+                                r(new_passwd), r(new_group))
+
+        print >> log, "MERGING USERS AND GROUPS\n"
+        passwd, group, uidmap, gidmap = userdb_merge(extras.etc, "/etc")
+
+        for olduid in uidmap:
+            print >> log, "UID %d => %d" % (olduid, uidmap[olduid])
+        for oldgid in gidmap:
+            print >> log, "GID %d => %d" % (oldgid, gidmap[oldgid])
+
+        changes = Changes.fromfile(extras.fsdelta, limits)
+
+        if rollback:
+            shutil.copy("/etc/passwd", rollback.paths.etc)
+            shutil.copy("/etc/group", rollback.paths.etc)
+
+            changes.tofile(rollback.paths.fsdelta)
+
+            di = DirIndex()
+            for change in changes:
+                if exists(change.path):
+                    di.add_path(change.path)
+                    if change.OP == 'o':
+                        rollback.move_to_overlay(change.path)
+            di.save(rollback.paths.dirindex)
+
+        def iter_apply_overlay(overlay, root, limits=[]):
+            def walk(dir):
+                fnames = []
+                subdirs = []
+
+                for dentry in os.listdir(dir):
+                    path = join(dir, dentry)
+
+                    if not islink(path) and isdir(path):
+                        subdirs.append(path)
+                    else:
+                        fnames.append(dentry)
+
+                yield dir, fnames
+
+                for subdir in subdirs:
+                    for val in walk(subdir):
+                        yield val
+
+            class OverlayError:
+                def __init__(self, path, exc):
+                    self.path = path
+                    self.exc = exc
+
+                def __str__(self):
+                    return "OVERLAY ERROR @ %s: %s" % (self.path, self.exc)
+
+            pathmap = PathMap(limits)
+            overlay = overlay.rstrip('/')
+            for overlay_dpath, fnames in walk(overlay):
+                root_dpath = root + overlay_dpath[len(overlay) + 1:]
+                if exists(root_dpath) and not isdir(root_dpath):
+                    os.remove(root_dpath)
+
+                for fname in fnames:
+                    overlay_fpath = join(overlay_dpath, fname)
+                    root_fpath = join(root_dpath, fname)
+
+                    if root_fpath not in pathmap:
+                        continue
+
+                    try:
+                        if exists(root_fpath):
+                            remove_any(root_fpath)
+
+                        root_fpath_parent = dirname(root_fpath)
+                        if not exists(root_fpath_parent):
+                            os.makedirs(root_fpath_parent)
+
+                        shutil.move(overlay_fpath, root_fpath)
+                        yield root_fpath
+                    except Exception, e:
+                        yield OverlayError(root_fpath, e)
+
+        print >> log, "\nAPPLY OVERLAY\n"
+
+        for val in iter_apply_overlay(overlay, "/", limits):
+            print >> log, val
+
+        print >> log, "\nAPPLYING POST-OVERLAY FIXES\n"
+        for action in changes.statfixes(uidmap, gidmap):
+            print >> log, action
             action()
 
-    def w(path, s):
-        file(path, "w").write(str(s))
+        for action in changes.deleted():
+            print >> log, action
 
-    w("/etc/passwd", passwd)
-    w("/etc/group", group)
+            path, = action.args
+            if rollback:
+                rollback.move_to_overlay(path)
+            else:
+                action()
 
+        def w(path, s):
+            file(path, "w").write(str(s))
+
+        w("/etc/passwd", passwd)
+        w("/etc/group", group)
+
+    def database(self):
+        extras = self.extras
+        limits = self.limits.db
+        rollback = self.rollback
+        log = self.log
+
+        print >> log, "\n" + section_title("Restoring databases")
+
+        if rollback:
+            mysql.mysql2fs(mysql.mysqldump(), rollback.paths.myfs)
+            shutil.copy("/etc/mysql/debian.cnf", rollback.paths.etc.mysql)
+
+        mysql.fs2mysql(mysql.mysql(), extras.myfs, limits, mysql.cb_print(log))
+
+        shutil.copy(join(extras.etc.mysql, "debian.cnf"), "/etc/mysql/debian.cnf")
+        os.system("killall -HUP mysqld > /dev/null 2>&1")
+        
 def main():
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], 'h', 
+        opts, args = getopt.gnu_getopt(sys.argv[1:], 'vh', 
                                        ['skip-files', 'skip-database', 'skip-packages',
                                         'no-rollback'])
                                         
@@ -312,51 +368,20 @@ def main():
     if not exists(keyfile):
         fatal("keyfile %s does not exist" % `keyfile`)
 
-    os.environ['PASSPHRASE'] = file(keyfile).read().strip()
+    key = file(keyfile).read().strip()
 
-    log = sys.stdout
+    restore = Restore(address, key, limits, 
+                      log=sys.stdout, 
+                      rollback=not no_rollback)
 
-    tmpdir1 = tempfile.mkdtemp(prefix="tklbam-")
-    os.chmod(tmpdir1, 0700)
+    if not skip_packages:
+        restore.packages()
 
-    try:
-        command = "duplicity %s %s" % (commands.mkarg(address), tmpdir1)
-        status, output = commands.getstatusoutput(command)
+    if not skip_files:
+        restore.files()
 
-        del os.environ['PASSPHRASE']
-        if status != 0:
-            if "No backup chains found" in output:
-                raise Error("Valid backup not found at " + `address`)
-            else:
-                raise Error("Error restoring backup (bad key?):\n" + output)
-
-        backup_path = tmpdir1
-        limits = backup.Limits(limits)
-
-        tmpdir2 = tempfile.mkdtemp(prefix="tklbam-extras-")
-        os.rename(backup_path + backup.Backup.EXTRAS_PATH, tmpdir2)
-
-        overlay = backup_path
-        extras = backup.ExtrasPaths(tmpdir2)
-
-        if no_rollback:
-            rollback = None
-        else:
-            rollback = Rollback()
-
-        try:
-            if not skip_packages:
-                restore_newpkgs(extras.newpkgs, rollback, log)
-
-            if not skip_files:
-                restore_fs(overlay, extras, limits.fs, rollback, log)
-
-            if not skip_database:
-                restore_db(extras, limits.db, rollback, log)
-        finally:
-            shutil.rmtree(tmpdir2)
-    finally:
-        shutil.rmtree(tmpdir1)
+    if not skip_database:
+        restore.database()
 
 if __name__=="__main__":
     main()
