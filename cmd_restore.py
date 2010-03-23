@@ -46,29 +46,6 @@ def usage(e=None):
     print >> sys.stderr, __doc__.strip()
     sys.exit(1)
 
-def test():
-    tmpdir = "/var/tmp/restore/backup"
-    log = sys.stdout
-    restore(tmpdir, log=log)
-
-def restore(backup_path, limits=[], log=None):
-    limits = backup.Limits(limits)
-
-    tmpdir = tempfile.mkdtemp(prefix="tklbam-extras-")
-    os.rename(backup_path + backup.Backup.EXTRAS_PATH, tmpdir)
-
-    overlay = backup_path
-    extras = backup.ExtrasPaths(tmpdir)
-
-    rollback = Rollback()
-
-    try:
-        restore_newpkgs(extras.newpkgs, rollback, log)
-        restore_fs(overlay, extras, limits.fs, rollback, log)
-        restore_db(extras, limits.db, rollback, log)
-    finally:
-        shutil.rmtree(tmpdir)
-
 class DontWriteIfNone:
     def __init__(self, fh=None):
         self.fh = fh
@@ -134,7 +111,7 @@ def indent_lines(s, indent):
 
 def restore_newpkgs(newpkgs_file, rollback=None, log=None):
     log = DontWriteIfNone(log)
-    print >> log, section_title("Restoring new packages")
+    print >> log, "\n" + section_title("Restoring new packages")
 
     # apt-get update, otherwise installer may skip everything
     print >> log, "apt-get update"
@@ -329,14 +306,57 @@ def main():
     if len(args) < 2:
         usage()
 
-
     address, keyfile = args[:2]
     limits = args[2:]
 
-    # debug
-    for var in ('address', 'keyfile', 'limits', 'skip_files', 'skip_database', 'skip_packages', 'no_rollback'):
-        print "%s = %s" % (var, `locals()[var]`)
+    if not exists(keyfile):
+        fatal("keyfile %s does not exist" % `keyfile`)
+
+    os.environ['PASSPHRASE'] = file(keyfile).read().strip()
+
+    log = sys.stdout
+
+    tmpdir1 = tempfile.mkdtemp(prefix="tklbam-")
+    os.chmod(tmpdir1, 0700)
+
+    try:
+        command = "duplicity %s %s" % (commands.mkarg(address), tmpdir1)
+        status, output = commands.getstatusoutput(command)
+
+        del os.environ['PASSPHRASE']
+        if status != 0:
+            if "No backup chains found" in output:
+                raise Error("Valid backup not found at " + `address`)
+            else:
+                raise Error("Error restoring backup (bad key?):\n" + output)
+
+        backup_path = tmpdir1
+        limits = backup.Limits(limits)
+
+        tmpdir2 = tempfile.mkdtemp(prefix="tklbam-extras-")
+        os.rename(backup_path + backup.Backup.EXTRAS_PATH, tmpdir2)
+
+        overlay = backup_path
+        extras = backup.ExtrasPaths(tmpdir2)
+
+        if no_rollback:
+            rollback = None
+        else:
+            rollback = Rollback()
+
+        try:
+            if not skip_packages:
+                restore_newpkgs(extras.newpkgs, rollback, log)
+
+            if not skip_files:
+                restore_fs(overlay, extras, limits.fs, rollback, log)
+
+            if not skip_database:
+                restore_db(extras, limits.db, rollback, log)
+        finally:
+            shutil.rmtree(tmpdir2)
+    finally:
+        shutil.rmtree(tmpdir1)
 
 if __name__=="__main__":
-    args = sys.argv[1:]
-    test()
+    main()
