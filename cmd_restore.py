@@ -22,12 +22,14 @@ import getopt
 
 import shutil
 import tempfile
+import commands
 
 import userdb
 from paths import Paths
 from changes import Changes
 from pathmap import PathMap
 from dirindex import DirIndex
+from pkgman import Installer
 
 import backup
 import mysql
@@ -61,6 +63,7 @@ def restore(backup_path, limits=[], log=None):
     rollback = Rollback()
 
     try:
+        restore_newpkgs(extras.newpkgs, rollback, log)
         restore_fs(overlay, extras, limits.fs, rollback, log)
         restore_db(extras, limits.db, rollback, log)
     finally:
@@ -97,7 +100,7 @@ class Rollback:
     class Paths(Paths):
         files = [ 'etc', 'etc/mysql', 
                   'fsdelta', 'dirindex', 'overlay', 
-                  'myfs' ]
+                  'newpkgs', 'myfs' ]
 
     def __init__(self, path=PATH):
         """deletes path if it exists and creates it if it doesn't"""
@@ -121,6 +124,53 @@ class Rollback:
 
         remove_any(dest)
         shutil.move(source, dest)
+
+def section_title(title):
+    return title + "\n" + "=" * len(title) + "\n"
+
+def indent_lines(s, indent):
+    return "\n".join([ " " * indent + line 
+                       for line in str(s).splitlines() ])
+
+def restore_newpkgs(newpkgs_file, rollback=None, log=None):
+    packages = file(newpkgs_file).read().strip().split('\n')
+
+    # apt-get update, otherwise installer may skip everything
+    output = commands.getoutput("apt-get update")
+    if log:
+        print >> log, section_title("Restoring newpkgs")
+
+        print >> log, "apt-get update"
+        print >> log, indent_lines(output, 4)
+        print >> log
+
+    installer = Installer(packages)
+
+    if rollback:
+        fh = file(rollback.paths.newpkgs, "w")
+        for package in installer.installable:
+            print >> fh, package
+        fh.close()
+
+    if log:
+        if installer.skipping:
+            print >> log, "SKIPPING: " + " ".join(installer.skipping)
+            print >> log
+
+        if installer.command:
+            print >> log, installer.command
+        else:
+            print >> log, "NO NEW INSTALLABLE PACKAGES"
+
+    try:
+        exitcode, output = installer()
+        if log:
+            print >> log, indent_lines(output, 4)
+            if exitcode != 0:
+                print >> log, "# WARNING: non-zero exitcode (%d)" % exitcode
+
+    except installer.Error:
+        pass
 
 def restore_db(extras, limits=[], rollback=None, log=None):
     if rollback:
