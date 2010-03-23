@@ -109,13 +109,79 @@ def indent_lines(s, indent):
     return "\n".join([ " " * indent + line 
                        for line in str(s).splitlines() ])
 
+def userdb_merge(old_etc, new_etc):
+    old_passwd = join(old_etc, "passwd")
+    new_passwd = join(new_etc, "passwd")
+    
+    old_group = join(old_etc, "group")
+    new_group = join(new_etc, "group")
+
+    def r(path):
+        return file(path).read()
+
+    return userdb.merge(r(old_passwd), r(old_group), 
+                        r(new_passwd), r(new_group))
+
+def iter_apply_overlay(overlay, root, limits=[]):
+    def walk(dir):
+        fnames = []
+        subdirs = []
+
+        for dentry in os.listdir(dir):
+            path = join(dir, dentry)
+
+            if not islink(path) and isdir(path):
+                subdirs.append(path)
+            else:
+                fnames.append(dentry)
+
+        yield dir, fnames
+
+        for subdir in subdirs:
+            for val in walk(subdir):
+                yield val
+
+    class OverlayError:
+        def __init__(self, path, exc):
+            self.path = path
+            self.exc = exc
+
+        def __str__(self):
+            return "OVERLAY ERROR @ %s: %s" % (self.path, self.exc)
+
+    pathmap = PathMap(limits)
+    overlay = overlay.rstrip('/')
+    for overlay_dpath, fnames in walk(overlay):
+        root_dpath = root + overlay_dpath[len(overlay) + 1:]
+        if exists(root_dpath) and not isdir(root_dpath):
+            os.remove(root_dpath)
+
+        for fname in fnames:
+            overlay_fpath = join(overlay_dpath, fname)
+            root_fpath = join(root_dpath, fname)
+
+            if root_fpath not in pathmap:
+                continue
+
+            try:
+                if exists(root_fpath):
+                    remove_any(root_fpath)
+
+                root_fpath_parent = dirname(root_fpath)
+                if not exists(root_fpath_parent):
+                    os.makedirs(root_fpath_parent)
+
+                shutil.move(overlay_fpath, root_fpath)
+                yield root_fpath
+            except Exception, e:
+                yield OverlayError(root_fpath, e)
+
 class TempDir(str):
     def __new__(cls, prefix='tmp', suffix='', dir=None):
         path = tempfile.mkdtemp(suffix, prefix, dir)
         return str.__new__(cls, path)
 
     def __del__(self):
-        print "TempDir.__del__(%s)" % self
         shutil.rmtree(self)
 
 class Restore:
@@ -141,7 +207,7 @@ class Restore:
 
     def __init__(self, address, key, limits=[], rollback=True, log=None):
         log = DontWriteIfNone(log)
-        print >> log, "Restoring duplicity archive @ " + address
+        print >> log, "Restoring duplicity archive from " + address
         backup_archive = self._duplicity_restore(address, key)
 
         extras_path = TempDir(prefix="tklbam-extras-")
@@ -155,7 +221,8 @@ class Restore:
 
     def packages(self):
         newpkgs_file = self.extras.newpkgs
-        rollback = self.rollback
+        rollback_file = (self.rollback.paths.newpkgs if self.rollback 
+                         else None)
         log = self.log
 
         print >> log, "\n" + section_title("Restoring new packages")
@@ -169,8 +236,8 @@ class Restore:
         packages = file(newpkgs_file).read().strip().split('\n')
         installer = Installer(packages)
 
-        if rollback:
-            fh = file(rollback.paths.newpkgs, "w")
+        if rollback_file:
+            fh = file(rollback_file, "w")
             for package in installer.installable:
                 print >> fh, package
             fh.close()
@@ -194,25 +261,12 @@ class Restore:
 
     def files(self):
         extras = self.extras
-        limits = self.limits.fs
         overlay = self.backup_archive
         rollback = self.rollback
+        limits = self.limits.fs
         log = self.log
 
         print >> log, "\n" + section_title("Restoring filesystem")
-
-        def userdb_merge(old_etc, new_etc):
-            old_passwd = join(old_etc, "passwd")
-            new_passwd = join(new_etc, "passwd")
-            
-            old_group = join(old_etc, "group")
-            new_group = join(new_etc, "group")
-
-            def r(path):
-                return file(path).read()
-
-            return userdb.merge(r(old_passwd), r(old_group), 
-                                r(new_passwd), r(new_group))
 
         print >> log, "MERGING USERS AND GROUPS\n"
         passwd, group, uidmap, gidmap = userdb_merge(extras.etc, "/etc")
@@ -237,60 +291,6 @@ class Restore:
                     if change.OP == 'o':
                         rollback.move_to_overlay(change.path)
             di.save(rollback.paths.dirindex)
-
-        def iter_apply_overlay(overlay, root, limits=[]):
-            def walk(dir):
-                fnames = []
-                subdirs = []
-
-                for dentry in os.listdir(dir):
-                    path = join(dir, dentry)
-
-                    if not islink(path) and isdir(path):
-                        subdirs.append(path)
-                    else:
-                        fnames.append(dentry)
-
-                yield dir, fnames
-
-                for subdir in subdirs:
-                    for val in walk(subdir):
-                        yield val
-
-            class OverlayError:
-                def __init__(self, path, exc):
-                    self.path = path
-                    self.exc = exc
-
-                def __str__(self):
-                    return "OVERLAY ERROR @ %s: %s" % (self.path, self.exc)
-
-            pathmap = PathMap(limits)
-            overlay = overlay.rstrip('/')
-            for overlay_dpath, fnames in walk(overlay):
-                root_dpath = root + overlay_dpath[len(overlay) + 1:]
-                if exists(root_dpath) and not isdir(root_dpath):
-                    os.remove(root_dpath)
-
-                for fname in fnames:
-                    overlay_fpath = join(overlay_dpath, fname)
-                    root_fpath = join(root_dpath, fname)
-
-                    if root_fpath not in pathmap:
-                        continue
-
-                    try:
-                        if exists(root_fpath):
-                            remove_any(root_fpath)
-
-                        root_fpath_parent = dirname(root_fpath)
-                        if not exists(root_fpath_parent):
-                            os.makedirs(root_fpath_parent)
-
-                        shutil.move(overlay_fpath, root_fpath)
-                        yield root_fpath
-                    except Exception, e:
-                        yield OverlayError(root_fpath, e)
 
         print >> log, "\nAPPLY OVERLAY\n"
 
@@ -318,20 +318,15 @@ class Restore:
         w("/etc/group", group)
 
     def database(self):
-        extras = self.extras
-        limits = self.limits.db
-        rollback = self.rollback
-        log = self.log
+        print >> self.log, "\n" + section_title("Restoring databases")
 
-        print >> log, "\n" + section_title("Restoring databases")
+        if self.rollback:
+            mysql.mysql2fs(mysql.mysqldump(), self.rollback.paths.myfs)
+            shutil.copy("/etc/mysql/debian.cnf", self.rollback.paths.etc.mysql)
 
-        if rollback:
-            mysql.mysql2fs(mysql.mysqldump(), rollback.paths.myfs)
-            shutil.copy("/etc/mysql/debian.cnf", rollback.paths.etc.mysql)
+        mysql.fs2mysql(mysql.mysql(), self.extras.myfs, self.limits.db, mysql.cb_print(self.log))
 
-        mysql.fs2mysql(mysql.mysql(), extras.myfs, limits, mysql.cb_print(log))
-
-        shutil.copy(join(extras.etc.mysql, "debian.cnf"), "/etc/mysql/debian.cnf")
+        shutil.copy(join(self.extras.etc.mysql, "debian.cnf"), "/etc/mysql/debian.cnf")
         os.system("killall -HUP mysqld > /dev/null 2>&1")
         
 def main():
