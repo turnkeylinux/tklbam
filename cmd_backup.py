@@ -45,6 +45,7 @@ def usage(e=None):
 
     print >> sys.stderr, "Syntax: %s [ -options ] [ override ... ]" % sys.argv[0]
     tpl = Template(__doc__.strip())
+    Conf = backup.BackupConf
     print >> sys.stderr, tpl.substitute(CONF=Conf.paths.path,
                                         CONF_OVERRIDES=Conf.paths.overrides,
                                         CONF_KEY=Conf.paths.key,
