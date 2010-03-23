@@ -39,6 +39,18 @@ class Rollback(Paths):
               'fsdelta', 'dirindex', 'overlay', 
               'newpkgs', 'myfs' ]
 
+    class Overlay(str):
+        def move(self, source):
+            if not exists(source):
+                raise Error("no such file or directory: " + source)
+
+            dest = join(self, source.strip('/'))
+            if not exists(dirname(dest)):
+                os.makedirs(dirname(dest))
+
+            remove_any(dest)
+            shutil.move(source, dest)
+
     def __new__(cls, path=PATH):
         return Paths.__new__(cls, path)
 
@@ -56,16 +68,7 @@ class Rollback(Paths):
         os.mkdir(self.overlay)
         os.mkdir(self.myfs)
 
-    def move_to_overlay(self, source):
-        if not exists(source):
-            raise Error("no such file or directory: " + source)
-
-        dest = join(self.overlay, source.strip('/'))
-        if not exists(dirname(dest)):
-            os.makedirs(dirname(dest))
-
-        remove_any(dest)
-        shutil.move(source, dest)
+        self.overlay = self.Overlay(self.overlay)
 
 class TempDir(str):
     def __new__(cls, prefix='tmp', suffix='', dir=None):
@@ -265,7 +268,7 @@ class Restore:
                 if exists(change.path):
                     di.add_path(change.path)
                     if change.OP == 'o':
-                        rollback.move_to_overlay(change.path)
+                        rollback.overlay.move(change.path)
             di.save(rollback.dirindex)
 
         print >> log, "\nOVERLAY:\n"
@@ -283,7 +286,7 @@ class Restore:
 
             path, = action.args
             if rollback:
-                rollback.move_to_overlay(path)
+                rollback.overlay.move(path)
             else:
                 action()
 
