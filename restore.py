@@ -86,6 +86,102 @@ class Restore:
         return title + "\n" + "=" * len(title) + "\n"
 
     @staticmethod
+    def _duplicity_restore(address, key):
+        tmpdir = TempDir(prefix="tklbam-")
+        os.chmod(tmpdir, 0700)
+
+        os.environ['PASSPHRASE'] = key
+        command = "duplicity %s %s" % (commands.mkarg(address), tmpdir)
+        status, output = commands.getstatusoutput(command)
+        del os.environ['PASSPHRASE']
+
+        if status != 0:
+            if "No backup chains found" in output:
+                raise Error("Valid backup not found at " + `address`)
+            else:
+                raise Error("Error restoring backup (bad key?):\n" + output)
+
+        return tmpdir
+
+    def __init__(self, address, key, limits=[], rollback=True, log=None):
+        class DontWriteIfNone:
+            def __init__(self, fh=None):
+                self.fh = fh
+
+            def write(self, s):
+                if self.fh:
+                    self.fh.write(str(s))
+
+        log = DontWriteIfNone(log)
+        print >> log, "Restoring duplicity archive from " + address
+        backup_archive = self._duplicity_restore(address, key)
+
+        extras_path = TempDir(prefix="tklbam-extras-")
+        os.rename(backup_archive + backup.Backup.EXTRAS_PATH, extras_path)
+
+        self.extras = backup.ExtrasPaths(extras_path)
+        self.rollback = Rollback() if rollback else None
+        self.limits = backup.Limits(limits)
+        self.backup_archive = backup_archive
+        self.log = log
+
+    def database(self):
+        print >> self.log, "\n" + self._section_title("Restoring databases")
+
+        if self.rollback:
+            mysql.mysql2fs(mysql.mysqldump(), self.rollback.myfs)
+            shutil.copy("/etc/mysql/debian.cnf", self.rollback.etc.mysql)
+
+        mysql.fs2mysql(mysql.mysql(), self.extras.myfs, self.limits.db, mysql.cb_print(self.log))
+
+        shutil.copy(join(self.extras.etc.mysql, "debian.cnf"), "/etc/mysql/debian.cnf")
+        os.system("killall -HUP mysqld > /dev/null 2>&1")
+        
+    def packages(self):
+        newpkgs_file = self.extras.newpkgs
+        rollback_file = (self.rollback.newpkgs if self.rollback 
+                         else None)
+        log = self.log
+
+        print >> log, "\n" + self._section_title("Restoring new packages")
+
+        # apt-get update, otherwise installer may skip everything
+        print >> log, "apt-get update"
+        output = commands.getoutput("apt-get update")
+
+        def indent_lines(s, indent):
+            return "\n".join([ " " * indent + line 
+                               for line in str(s).splitlines() ])
+
+        print >> log, "\n" + indent_lines(output, 4) + "\n"
+
+        packages = file(newpkgs_file).read().strip().split('\n')
+        installer = Installer(packages)
+
+        if rollback_file:
+            fh = file(rollback_file, "w")
+            for package in installer.installable:
+                print >> fh, package
+            fh.close()
+
+        if installer.skipping:
+            print >> log, "SKIPPING: " + " ".join(installer.skipping) + "\n"
+
+        if installer.command:
+            print >> log, installer.command
+        else:
+            print >> log, "NO NEW INSTALLABLE PACKAGES"
+
+        try:
+            exitcode, output = installer()
+            print >> log, "\n" + indent_lines(output, 4)
+            if exitcode != 0:
+                print >> log, "# WARNING: non-zero exitcode (%d)" % exitcode
+
+        except installer.Error:
+            pass
+
+    @staticmethod
     def _userdb_merge(old_etc, new_etc):
         old_passwd = join(old_etc, "passwd")
         new_passwd = join(new_etc, "passwd")
@@ -154,90 +250,6 @@ class Restore:
                 except Exception, e:
                     yield OverlayError(root_fpath, e)
 
-    @staticmethod
-    def _duplicity_restore(address, key):
-        tmpdir = TempDir(prefix="tklbam-")
-        os.chmod(tmpdir, 0700)
-
-        os.environ['PASSPHRASE'] = key
-        command = "duplicity %s %s" % (commands.mkarg(address), tmpdir)
-        status, output = commands.getstatusoutput(command)
-        del os.environ['PASSPHRASE']
-
-        if status != 0:
-            if "No backup chains found" in output:
-                raise Error("Valid backup not found at " + `address`)
-            else:
-                raise Error("Error restoring backup (bad key?):\n" + output)
-
-        return tmpdir
-
-    def __init__(self, address, key, limits=[], rollback=True, log=None):
-        class DontWriteIfNone:
-            def __init__(self, fh=None):
-                self.fh = fh
-
-            def write(self, s):
-                if self.fh:
-                    self.fh.write(str(s))
-
-        log = DontWriteIfNone(log)
-        print >> log, "Restoring duplicity archive from " + address
-        backup_archive = self._duplicity_restore(address, key)
-
-        extras_path = TempDir(prefix="tklbam-extras-")
-        os.rename(backup_archive + backup.Backup.EXTRAS_PATH, extras_path)
-
-        self.extras = backup.ExtrasPaths(extras_path)
-        self.rollback = Rollback() if rollback else None
-        self.limits = backup.Limits(limits)
-        self.backup_archive = backup_archive
-        self.log = log
-
-    def packages(self):
-        newpkgs_file = self.extras.newpkgs
-        rollback_file = (self.rollback.newpkgs if self.rollback 
-                         else None)
-        log = self.log
-
-        print >> log, "\n" + self._section_title("Restoring new packages")
-
-        # apt-get update, otherwise installer may skip everything
-        print >> log, "apt-get update"
-        output = commands.getoutput("apt-get update")
-
-        def indent_lines(s, indent):
-            return "\n".join([ " " * indent + line 
-                               for line in str(s).splitlines() ])
-
-        print >> log, "\n" + indent_lines(output, 4) + "\n"
-
-        packages = file(newpkgs_file).read().strip().split('\n')
-        installer = Installer(packages)
-
-        if rollback_file:
-            fh = file(rollback_file, "w")
-            for package in installer.installable:
-                print >> fh, package
-            fh.close()
-
-        if installer.skipping:
-            print >> log, "SKIPPING: " + " ".join(installer.skipping) + "\n"
-
-        if installer.command:
-            print >> log, installer.command
-        else:
-            print >> log, "NO NEW INSTALLABLE PACKAGES"
-
-        try:
-            exitcode, output = installer()
-            print >> log, "\n" + indent_lines(output, 4)
-            if exitcode != 0:
-                print >> log, "# WARNING: non-zero exitcode (%d)" % exitcode
-
-        except installer.Error:
-            pass
-
     def files(self):
         extras = self.extras
         overlay = self.backup_archive
@@ -296,15 +308,3 @@ class Restore:
         w("/etc/passwd", passwd)
         w("/etc/group", group)
 
-    def database(self):
-        print >> self.log, "\n" + self._section_title("Restoring databases")
-
-        if self.rollback:
-            mysql.mysql2fs(mysql.mysqldump(), self.rollback.myfs)
-            shutil.copy("/etc/mysql/debian.cnf", self.rollback.etc.mysql)
-
-        mysql.fs2mysql(mysql.mysql(), self.extras.myfs, self.limits.db, mysql.cb_print(self.log))
-
-        shutil.copy(join(self.extras.etc.mysql, "debian.cnf"), "/etc/mysql/debian.cnf")
-        os.system("killall -HUP mysqld > /dev/null 2>&1")
-        
