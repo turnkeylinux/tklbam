@@ -255,10 +255,9 @@ class Restore:
                     continue
 
                 try:
-                    if lexists(root_dpath):
-                        if not isdir(root_dpath):
+                    if not isdir(root_dpath):
+                        if exists(root_dpath):
                             os.remove(root_dpath)
-                    else:
                         os.makedirs(root_dpath)
 
                     if lexists(root_fpath):
