@@ -9,6 +9,23 @@ from pathmap import PathMap
 import stat
 
 class Change:
+    """
+    Example usage::
+        change = Change.parse(line)
+        print change
+        print change.path
+
+        if change.OP in ('o', 's'):
+            print change.uid, change.gid
+
+        if change.OP == 's':
+            print change.mode
+
+        # or instead of using OP we can do this
+        if isinstance(change, Change.Deleted):
+            assert change.OP == 'd'
+
+    """
     class Base:
         OP = None
         def __init__(self, path):
@@ -82,6 +99,17 @@ class Change:
         return op2class[op].fromline(line[2:])
 
 class Changes(list):
+    """
+    A list of Change instances, which we can load from a file and write
+    back to a file.
+    
+    The smarts is in statfixes() and deleted() methods which compare the
+    list of changes to the current filesystem and yield Action() instances.
+
+    Action()s can be printed (e.g., for simulation or verbosity) or called
+    to run the operation that needs to be performed.
+
+    """
     class Action:
         def __init__(self, func, *args):
             self.func = func
@@ -174,6 +202,9 @@ class Changes(list):
                     yield self.Action(os.chmod, change.path, change.mode)
 
 def whatchanged(di_path, paths):
+    """Compared current filesystem with a saved dirindex from before.
+       Returns a Changes() list."""
+
     di_saved = DirIndex(di_path)
     di_fs = DirIndex()
     di_fs.walk(*paths)
