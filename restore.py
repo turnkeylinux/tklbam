@@ -36,10 +36,10 @@ class Rollback(Paths):
     PATH = "/var/backups/tklbam-rollback"
 
     files = [ 'etc', 'etc/mysql', 
-              'fsdelta', 'dirindex', 'overlay', 
+              'fsdelta', 'dirindex', 'originals', 
               'newpkgs', 'myfs' ]
 
-    class Overlay(str):
+    class Originals(str):
         def move(self, source):
             if not exists(source):
                 raise Error("no such file or directory: " + source)
@@ -65,10 +65,10 @@ class Rollback(Paths):
 
         os.mkdir(self.etc)
         os.mkdir(self.etc.mysql)
-        os.mkdir(self.overlay)
+        os.mkdir(self.originals)
         os.mkdir(self.myfs)
 
-        self.overlay = self.Overlay(self.overlay)
+        self.originals = self.Originals(self.originals)
 
 class TempDir(str):
     def __new__(cls, prefix='tmp', suffix='', dir=None):
@@ -268,7 +268,7 @@ class Restore:
                 if exists(change.path):
                     di.add_path(change.path)
                     if change.OP == 'o':
-                        rollback.overlay.move(change.path)
+                        rollback.originals.move(change.path)
             di.save(rollback.dirindex)
 
         print >> log, "\nOVERLAY:\n"
@@ -286,7 +286,7 @@ class Restore:
 
             path, = action.args
             if rollback:
-                rollback.overlay.move(path)
+                rollback.originals.move(path)
             else:
                 action()
 
