@@ -19,6 +19,15 @@ class DirIndex(dict):
             self.mtime = mtime
 
         @classmethod
+        def frompath(cls, path):
+            st = os.lstat(path)
+            rec = cls(path, 
+                      st.st_mode, 
+                      st.st_uid, st.st_gid, 
+                      st.st_size, st.st_mtime)
+            return rec
+
+        @classmethod
         def fromline(cls, line):
             vals = line.strip().split('\t')
             if len(vals) != 6:
@@ -58,11 +67,7 @@ class DirIndex(dict):
 
     def add_path(self, path):
         """add a single path to the DirIndex"""
-        st = os.lstat(path)
-        self[path] = DirIndex.Record(path, 
-                                     st.st_mode, 
-                                     st.st_uid, st.st_gid, 
-                                     st.st_size, st.st_mtime)
+        self[path] = DirIndex.Record.frompath(path)
 
     def walk(self, *paths):
         """walk paths and add files to index"""
