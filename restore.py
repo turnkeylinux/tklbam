@@ -40,26 +40,26 @@ class Rollback(Paths):
               'newpkgs', 'myfs' ]
 
     class Originals(str):
-        def move_in(self, source):
-            """Move source into originals"""
+        @staticmethod
+        def _move(source, dest):
             if not lexists(source):
-                raise Error("no such file or directory: " + source)
+                raise Error("no such file or directory " + `source`)
 
-            dest = join(self, source.strip('/'))
             if not exists(dirname(dest)):
                 os.makedirs(dirname(dest))
 
             remove_any(dest)
             shutil.move(source, dest)
 
+        def move_in(self, source):
+            """Move source into originals"""
+            dest = join(self, source.strip('/'))
+            self._move(source, dest)
+
         def move_out(self, dest):
             """Move path from originals to dest"""
             source = join(self, dest.strip('/'))
-            if not lexists(source):
-                raise Error("no such file or directory " + `source`)
-            if not exists(dirname(dest)):
-                os.makedirs(dirname(dest))
-            shutil.move(source, dest)
+            self._move(source, dest)
 
     @classmethod
     def create(cls, path=PATH):
