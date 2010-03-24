@@ -39,9 +39,7 @@ from changes import Changes
 from restore import Rollback, remove_any
 from dirindex import DirIndex
 
-def test():
-    rollback = Rollback()
-    
+def rollback_files(rollback):
     changes = Changes.fromfile(rollback.fsdelta)
     dirindex = DirIndex(rollback.dirindex)
 
@@ -67,7 +65,12 @@ def test():
             mod = stat.S_IMODE(dirindex_rec.mod)
             os.chmod(change.path, mod)
 
-    # delete empty directories
+    for fname in ('passwd', 'group'):
+        shutil.copy(join(rollback.etc, fname), "/etc")
+
+def test():
+    rollback = Rollback()
+    rollback_files(rollback)
 
 if __name__=="__main__":
     test()
