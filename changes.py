@@ -159,7 +159,7 @@ class Changes(list):
             if change.OP != 'd':
                 continue
 
-            if not exists(change.path):
+            if not lexists(change.path):
                 continue
 
             if not islink(change.path) and isdir(change.path):
@@ -178,7 +178,7 @@ class Changes(list):
         gidmap = TransparentMap(gidmap)
 
         for change in self:
-            if not exists(change.path):
+            if not lexists(change.path):
                 continue
 
             if change.OP == 'd':

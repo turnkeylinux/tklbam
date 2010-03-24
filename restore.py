@@ -22,7 +22,7 @@ def remove_any(path):
     """Remove a path whether it is a file or a directory. 
        Return: True if removed, False if nothing to remove"""
 
-    if not exists(path):
+    if not lexists(path):
         return False
 
     if not islink(path) and isdir(path):
@@ -42,7 +42,7 @@ class Rollback(Paths):
     class Originals(str):
         def move_in(self, source):
             """Move source into originals"""
-            if not exists(source):
+            if not lexists(source):
                 raise Error("no such file or directory: " + source)
 
             dest = join(self, source.strip('/'))
@@ -55,7 +55,7 @@ class Rollback(Paths):
         def move_out(self, dest):
             """Move path from originals to dest"""
             source = join(self, dest.strip('/'))
-            if not exists(source):
+            if not lexists(source):
                 raise Error("no such file or directory " + `source`)
             if not exists(dirname(dest)):
                 os.makedirs(dirname(dest))
@@ -246,8 +246,6 @@ class Restore:
         overlay = overlay.rstrip('/')
         for overlay_dpath, fnames in walk(overlay):
             root_dpath = root + overlay_dpath[len(overlay) + 1:]
-            if exists(root_dpath) and not isdir(root_dpath):
-                os.remove(root_dpath)
 
             for fname in fnames:
                 overlay_fpath = join(overlay_dpath, fname)
@@ -257,12 +255,14 @@ class Restore:
                     continue
 
                 try:
-                    if exists(root_fpath):
-                        remove_any(root_fpath)
+                    if lexists(root_dpath):
+                        if not isdir(root_dpath):
+                            os.remove(root_dpath)
+                    else:
+                        os.makedirs(root_dpath)
 
-                    root_fpath_parent = dirname(root_fpath)
-                    if not exists(root_fpath_parent):
-                        os.makedirs(root_fpath_parent)
+                    if lexists(root_fpath):
+                        remove_any(root_fpath)
 
                     shutil.move(overlay_fpath, root_fpath)
                     yield root_fpath
@@ -296,7 +296,7 @@ class Restore:
 
             di = DirIndex()
             for change in changes:
-                if exists(change.path):
+                if lexists(change.path):
                     di.add_path(change.path)
                     if change.OP == 'o':
                         rollback.originals.move_in(change.path)
