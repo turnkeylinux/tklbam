@@ -46,28 +46,25 @@ def test():
     dirindex = DirIndex(rollback.dirindex)
 
     for change in changes:
-        if change.OP == 'o':
-            print "removing overwritten " + change.path
-            remove_any(change.path)
-
         if change.path not in dirindex:
+            remove_any(change.path)
             continue
 
         if change.OP in ('o', 'd'):
-            print "restoring from originals: " + change.path
-            rollback.originals.move_out(change.path)
+            try:
+                rollback.originals.move_out(change.path)
+            except rollback.Error:
+                continue
 
         dirindex_rec = dirindex[change.path]
         local_rec = DirIndex.Record.frompath(change.path)
 
         if dirindex_rec.uid != local_rec.uid or \
            dirindex_rec.gid != local_rec.gid:
-            print "chown %d:%d %s" % (dirindex_rec.uid, dirindex_rec.gid, change.path)
             os.lchown(change.path, dirindex_rec.uid, dirindex_rec.gid)
 
         if dirindex_rec.mod != local_rec.mod:
             mod = stat.S_IMODE(dirindex_rec.mod)
-            print "chmod %s %s" % (oct(mod), change.path)
             os.chmod(change.path, mod)
 
     # delete empty directories
