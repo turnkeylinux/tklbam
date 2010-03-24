@@ -38,6 +38,7 @@ class Rollback(Paths):
     files = [ 'etc', 'etc/mysql', 
               'fsdelta', 'dirindex', 'originals', 
               'newpkgs', 'myfs' ]
+    Error = Error
 
     class Originals(str):
         @staticmethod
@@ -288,8 +289,8 @@ class Restore:
         changes = Changes.fromfile(extras.fsdelta, limits)
 
         if rollback:
-            shutil.copy("/etc/passwd", rollback.etc)
-            shutil.copy("/etc/group", rollback.etc)
+            for fname in ("passwd", "group"):
+                shutil.copy(join("/etc", fname), rollback.etc)
 
             changes.tofile(rollback.fsdelta)
 
