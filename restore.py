@@ -51,22 +51,31 @@ class Rollback(Paths):
             remove_any(dest)
             shutil.move(source, dest)
 
-    def __new__(cls, path=PATH):
-        return Paths.__new__(cls, path)
-
-    def __init__(self, path=PATH):
-        """deletes path if it exists and creates it if it doesn't"""
+    @classmethod
+    def create(cls, path=PATH):
         if exists(path):
             shutil.rmtree(path)
         os.makedirs(path)
         os.chmod(path, 0700)
 
-        Paths.__init__(self, path)
+        path = cls(path)
 
-        os.mkdir(self.etc)
-        os.mkdir(self.etc.mysql)
-        os.mkdir(self.originals)
-        os.mkdir(self.myfs)
+        os.mkdir(path.etc)
+        os.mkdir(path.etc.mysql)
+        os.mkdir(path.originals)
+        os.mkdir(path.myfs)
+
+        return path
+
+    def __new__(cls, path=PATH):
+        return Paths.__new__(cls, path)
+
+    def __init__(self, path=PATH):
+        """deletes path if it exists and creates it if it doesn't"""
+        if not exists(path):
+            raise Error("No such directory " + `path`)
+
+        Paths.__init__(self, path)
 
         self.originals = self.Originals(self.originals)
 
@@ -120,7 +129,7 @@ class Restore:
         os.rename(backup_archive + backup.Backup.EXTRAS_PATH, extras_path)
 
         self.extras = backup.ExtrasPaths(extras_path)
-        self.rollback = Rollback() if rollback else None
+        self.rollback = Rollback.create() if rollback else None
         self.limits = backup.Limits(limits)
         self.backup_archive = backup_archive
         self.log = log
