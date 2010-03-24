@@ -40,7 +40,8 @@ class Rollback(Paths):
               'newpkgs', 'myfs' ]
 
     class Originals(str):
-        def move(self, source):
+        def move_in(self, source):
+            """Move source into originals"""
             if not exists(source):
                 raise Error("no such file or directory: " + source)
 
@@ -49,6 +50,15 @@ class Rollback(Paths):
                 os.makedirs(dirname(dest))
 
             remove_any(dest)
+            shutil.move(source, dest)
+
+        def move_out(self, dest):
+            """Move path from originals to dest"""
+            source = join(self, dest.strip('/'))
+            if not exists(source):
+                raise Error("no such file or directory " + `source`)
+            if not exists(dirname(dest)):
+                os.makedirs(dirname(dest))
             shutil.move(source, dest)
 
     @classmethod
@@ -289,7 +299,7 @@ class Restore:
                 if exists(change.path):
                     di.add_path(change.path)
                     if change.OP == 'o':
-                        rollback.originals.move(change.path)
+                        rollback.originals.move_in(change.path)
             di.save(rollback.dirindex)
 
         print >> log, "\nOVERLAY:\n"
@@ -307,7 +317,7 @@ class Restore:
 
             path, = action.args
             if rollback:
-                rollback.originals.move(path)
+                rollback.originals.move_in(path)
             else:
                 action()
 
