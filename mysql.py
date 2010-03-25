@@ -203,6 +203,9 @@ class MyFS_Reader(MyFS):
             return "Database(%s)" % `self.paths.path`
 
         def tables(self):
+            if not exists(self.paths.tables):
+                return
+
             for fname in os.listdir(self.paths.tables):
                 table = self.myfs.Table(self, fname)
                 if (self.name, table.name) in self.myfs.limits:

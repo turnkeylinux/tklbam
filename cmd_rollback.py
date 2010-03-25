@@ -34,8 +34,11 @@ def main():
         usage()
 
 import os
+from os.path import *
 import stat
 import shutil
+
+import mysql
 from changes import Changes
 from restore import Rollback, remove_any
 from dirindex import DirIndex
@@ -78,10 +81,16 @@ def rollback_packages(rollback):
     if purge_packages:
         os.system("dpkg --purge " + " ".join(purge_packages))
 
+def rollback_database(rollback):
+    mysql.fs2mysql(mysql.mysql(), rollback.myfs, add_drop_database=True)
+    shutil.copy(join(rollback.etc.mysql, "debian.cnf"), "/etc/mysql")
+    os.system("killall -HUP mysqld > /dev/null 2>&1")
+
 def test():
     rollback = Rollback()
     rollback_files(rollback)
     rollback_packages(rollback)
+    rollback_database(rollback)
 
 if __name__=="__main__":
     test()
