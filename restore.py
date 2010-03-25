@@ -11,92 +11,14 @@ from changes import Changes
 from pathmap import PathMap
 from dirindex import DirIndex
 from pkgman import Installer
+from rollback import Rollback
+from utils import TempDir, remove_any
 
 import backup
 import mysql
 
 class Error(Exception):
     pass
-
-def remove_any(path):
-    """Remove a path whether it is a file or a directory. 
-       Return: True if removed, False if nothing to remove"""
-
-    if not lexists(path):
-        return False
-
-    if not islink(path) and isdir(path):
-        shutil.rmtree(path)
-    else:
-        os.remove(path)
-
-    return True
-
-class Rollback(Paths):
-    PATH = "/var/backups/tklbam-rollback"
-
-    files = [ 'etc', 'etc/mysql', 
-              'fsdelta', 'dirindex', 'originals', 
-              'newpkgs', 'myfs' ]
-    Error = Error
-
-    class Originals(str):
-        @staticmethod
-        def _move(source, dest):
-            if not lexists(source):
-                raise Error("no such file or directory " + `source`)
-
-            if not exists(dirname(dest)):
-                os.makedirs(dirname(dest))
-
-            remove_any(dest)
-            shutil.move(source, dest)
-
-        def move_in(self, source):
-            """Move source into originals"""
-            dest = join(self, source.strip('/'))
-            self._move(source, dest)
-
-        def move_out(self, dest):
-            """Move path from originals to dest"""
-            source = join(self, dest.strip('/'))
-            self._move(source, dest)
-
-    @classmethod
-    def create(cls, path=PATH):
-        if exists(path):
-            shutil.rmtree(path)
-        os.makedirs(path)
-        os.chmod(path, 0700)
-
-        path = cls(path)
-
-        os.mkdir(path.etc)
-        os.mkdir(path.etc.mysql)
-        os.mkdir(path.originals)
-        os.mkdir(path.myfs)
-
-        return path
-
-    def __new__(cls, path=PATH):
-        return Paths.__new__(cls, path)
-
-    def __init__(self, path=PATH):
-        """deletes path if it exists and creates it if it doesn't"""
-        if not exists(path):
-            raise Error("No such directory " + `path`)
-
-        Paths.__init__(self, path)
-
-        self.originals = self.Originals(self.originals)
-
-class TempDir(str):
-    def __new__(cls, prefix='tmp', suffix='', dir=None):
-        path = tempfile.mkdtemp(suffix, prefix, dir)
-        return str.__new__(cls, path)
-
-    def __del__(self):
-        shutil.rmtree(self)
 
 class Restore:
     Error = Error
