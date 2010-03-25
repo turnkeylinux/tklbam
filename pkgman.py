@@ -5,39 +5,55 @@ import commands
 class Error(Exception):
     pass
 
-class DpkgSelections(set):
-    Error = Error
+def installed():
+    """Return list of installed packages"""
 
-    @staticmethod
-    def _parse(buf):
-        for line in buf.strip().split('\n'):
-            package, state = re.split(r'\t+', line)
-            if state in ('deinstall', 'purge'):
-                continue
-            yield package
-
-    @staticmethod
-    def _dpkg_get_selections():
-        cmd = "dpkg --get-selections"
-        errno, output = commands.getstatusoutput(cmd)
-        if errno:
-            raise Error("command failed (%d): %s" % (os.WEXITSTATUS(errno), cmd))
-
-        return output
-
-    def __init__(self, arg=None):
-        """If arg is not provided we get selections from dpkg.
-           arg can be a filename, a string."""
-
-        if arg:
-            if os.path.exists(arg):
-                buf = file(arg).read()
+    def parse_status(path):
+        control = ""
+        for line in file(path).readlines():
+            if not line.strip():
+                yield control
+                control = ""
             else:
-                buf = arg
-        else:
-            buf = self._dpkg_get_selections()
+                control += line
 
-        set.__init__(self, self._parse(buf))
+        if control.strip():
+            yield control
+
+    packages = []
+    for control in parse_status("/var/lib/dpkg/status"):
+        d = dict([ re.split(':\s*', line, 1) 
+                   for line in control.split('\n') 
+                   if line and line[0] != ' ' ])
+
+        if d['Status'] == 'install ok installed':
+            packages.append(d['Package'])
+
+    return packages
+
+class Packages(set):
+    @classmethod
+    def fromfile(cls, path):
+        packages = file(path).read().strip().split('\n')
+        return cls(packages)
+
+    def tofile(self, path):
+        packages = list(self)
+        packages.sort()
+
+        fh = file(path, "w")
+        for package in packages:
+            print >> fh, package
+        fh.close()
+
+    def __init__(self, packages=None):
+        """If <packages> is None we get list of packages from the package
+        manager.
+        """
+        if packages is None:
+            packages = installed()
+
+        set.__init__(self, packages)
 
 class AptCache(set):
     Error = Error
@@ -56,13 +72,13 @@ class AptCache(set):
         set.__init__(self, cached)
 
 def installable(packages):
-    selections = DpkgSelections()
+    installed = Packages()
     aptcache = AptCache(packages)
 
     installable = []
     skipped = []
     for package in set(packages):
-        if package in selections:
+        if package in installed:
             continue
 
         if package not in aptcache:

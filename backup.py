@@ -9,7 +9,7 @@ from paths import Paths
 
 from dirindex import read_paths
 from changes import whatchanged
-from pkgman import DpkgSelections
+from pkgman import Packages
 
 import mysql
 
@@ -122,7 +122,7 @@ class BackupConf:
         self.overrides = Limits.fromfile(self.paths.overrides)
 
 class ProfilePaths(Paths):
-    files = [ 'dirindex', 'dirindex.conf', 'selections' ]
+    files = [ 'dirindex', 'dirindex.conf', 'packages' ]
 
 class ExtrasPaths(Paths):
     files = [ 'fsdelta', 'fsdelta-olist', 'newpkgs', 'myfs', 'etc', 'etc/mysql' ]
@@ -131,12 +131,12 @@ class Backup:
     EXTRAS_PATH = "/TKLBAM"
 
     @staticmethod
-    def _write_new_packages(dest, base_selections):
-        base_selections = DpkgSelections(base_selections)
-        current_selections = DpkgSelections()
+    def _write_new_packages(dest, base_packages):
+        base_packages = Packages.fromfile(base_packages)
+        current_packages = Packages()
 
         fh = file(dest, "w")
-        new_packages = list(current_selections - base_selections)
+        new_packages = list(current_packages - base_packages)
         new_packages.sort()
         for package in new_packages:
             print >> fh, package
@@ -175,7 +175,7 @@ class Backup:
                                 profile.dirindex, profile.dirindex_conf, 
                                 conf.overrides.fs)
 
-        self._write_new_packages(paths.newpkgs, profile.selections)
+        self._write_new_packages(paths.newpkgs, profile.packages)
 
         os.mkdir(paths.myfs)
         mysql.mysql2fs(mysql.mysqldump(), paths.myfs, conf.overrides.db)
