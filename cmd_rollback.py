@@ -3,38 +3,12 @@
 Rollback last restore
 """
 
+import os
+from os.path import *
+
 import sys
 import getopt
 
-def fatal(e):
-    print >> sys.stderr, "error: " + str(e)
-    sys.exit(1)
-
-def usage(e=None):
-    if e:
-        print >> sys.stderr, "error: " + str(e)
-
-    print >> sys.stderr, "Syntax: %s" % sys.argv[0]
-    print >> sys.stderr, __doc__.strip()
-    sys.exit(1)
-
-def main():
-    try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], 'h', 
-                                       ['help'])
-                                        
-    except getopt.GetoptError, e:
-        usage(e)
-
-    for opt, val in opts:
-        if opt in ('-h', '--help'):
-            usage()
-
-    if args:
-        usage()
-
-import os
-from os.path import *
 import stat
 import shutil
 
@@ -86,12 +60,39 @@ def rollback_database(rollback):
     shutil.copy(join(rollback.etc.mysql, "debian.cnf"), "/etc/mysql")
     os.system("killall -HUP mysqld > /dev/null 2>&1")
 
-def test():
+def fatal(e):
+    print >> sys.stderr, "error: " + str(e)
+    sys.exit(1)
+
+def usage(e=None):
+    if e:
+        print >> sys.stderr, "error: " + str(e)
+
+    print >> sys.stderr, "Syntax: %s" % sys.argv[0]
+    print >> sys.stderr, __doc__.strip()
+    sys.exit(1)
+
+def main():
+    try:
+        opts, args = getopt.gnu_getopt(sys.argv[1:], 'h', 
+                                       ['help'])
+                                        
+    except getopt.GetoptError, e:
+        usage(e)
+
+    for opt, val in opts:
+        if opt in ('-h', '--help'):
+            usage()
+
+    if args:
+        usage()
+
     rollback = Rollback()
     rollback_files(rollback)
     rollback_packages(rollback)
     rollback_database(rollback)
+    shutil.rmtree(rollback)
 
 if __name__=="__main__":
-    test()
+    main()
 
