@@ -26,7 +26,7 @@ def installed():
                    for line in control.split('\n') 
                    if line and line[0] != ' ' ])
 
-        if d['Status'] == 'install ok installed':
+        if "ok installed" in d['Status']:
             packages.append(d['Package'])
 
     return packages
