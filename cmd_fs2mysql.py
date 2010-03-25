@@ -7,6 +7,7 @@ Options:
     -v --verbose            Turn on verbosity
 
     --skip-extended-insert  Skip extended insert (useful in debugging)
+    --add-drop-database     Drop databases and then recreate them
 
 Supports the following subset of mysql(1) options:
 
@@ -35,6 +36,7 @@ def main():
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'u:p:v', 
                                        ['verbose', 'tofile=',
                                         'skip-extended-insert',
+                                        'add-drop-database',
                                         'user=', 'password=', 'defaults-file=', 'host='])
     except getopt.GetoptError, e:
         usage(e)
@@ -42,6 +44,7 @@ def main():
     opt_verbose = False
     opt_tofile = None
     opt_skip_extended_insert = False
+    opt_add_drop_database = False
     myconf = {}
     for opt, val in opts:
         if opt in ('-v', '--verbose'):
@@ -50,6 +53,8 @@ def main():
             opt_tofile = val
         elif opt == '--skip-extended-insert':
             opt_skip_extended_insert = True
+        elif opt == '--add-drop-database':
+            opt_add_drop_database = True
         elif opt in ('-u', '--user'):
             myconf['user'] = val
         elif opt in ('-p', '--password'):
@@ -83,7 +88,9 @@ def main():
     if opt_verbose:
         pass
 
-    mysql.fs2mysql(fh, myfs, limits, callback, opt_skip_extended_insert)
+    mysql.fs2mysql(fh, myfs, limits, callback, 
+                   opt_skip_extended_insert,
+                   opt_add_drop_database)
 
 if __name__ == "__main__":
     main()

@@ -213,6 +213,8 @@ class MyFS_Reader(MyFS):
             if callback:
                 callback(self)
 
+            if self.myfs.add_drop_database:
+                print >> fh, "/*!40000 DROP DATABASE IF EXISTS `%s`*/;" % self.name
             print >> fh, self.sql_init,
             print >> fh, "USE `%s`;" % self.name
 
@@ -284,10 +286,13 @@ UNLOCK TABLES;
                 tpl = Template(self.TPL_INSERT_POST)
                 print >> fh, tpl.substitute(name=self.name)
 
-    def __init__(self, path, limits=[], skip_extended_insert=False):
+    def __init__(self, path, limits=[], 
+                 skip_extended_insert=False,
+                 add_drop_database=False):
         self.path = path
         self.limits = self.Limits(limits)
         self.skip_extended_insert = skip_extended_insert
+        self.add_drop_database = add_drop_database
 
     def __iter__(self):
         for fname in os.listdir(self.path):
@@ -299,9 +304,9 @@ UNLOCK TABLES;
         for database in self:
             database.tofile(fh, callback)
 
-def fs2mysql(fh, myfs, limits=[], callback=None, skip_extended_insert=False):
-    MyFS_Reader(myfs, limits, skip_extended_insert).tofile(fh, callback)
+def fs2mysql(fh, myfs, limits=[], callback=None, skip_extended_insert=False, add_drop_database=False):
 
+    MyFS_Reader(myfs, limits, skip_extended_insert, add_drop_database).tofile(fh, callback)
 
 def cb_print(fh=None):
     if not fh:
