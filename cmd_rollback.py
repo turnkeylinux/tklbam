@@ -38,6 +38,7 @@ import stat
 from changes import Changes
 from restore import Rollback, remove_any
 from dirindex import DirIndex
+from pkgman import DpkgSelections
 
 def rollback_files(rollback):
     changes = Changes.fromfile(rollback.fsdelta)
@@ -68,9 +69,18 @@ def rollback_files(rollback):
     for fname in ('passwd', 'group'):
         shutil.copy(join(rollback.etc, fname), "/etc")
 
+def rollback_packages(rollback):
+    rollback_packages = file(rollback.newpkgs).read().strip().split('\n')
+    current_packages = DpkgSelections()
+
+    purge_packages = current_packages & set(rollback_packages)
+    if purge_packages:
+        os.system("dpkg --purge " + " ".join(purge_packages))
+
 def test():
     rollback = Rollback()
     rollback_files(rollback)
+    rollback_packages(rollback)
 
 if __name__=="__main__":
     test()
