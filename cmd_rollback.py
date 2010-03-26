@@ -37,7 +37,7 @@ def main():
 
     try:
         rollback = Rollback()
-    except rollback.Error:
+    except Rollback.Error:
         fatal("nothing to rollback")
 
     rollback.rollback()
