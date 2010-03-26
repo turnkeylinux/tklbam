@@ -1,8 +1,9 @@
 import os
 from os.path import *
 
+import sys
+
 import shutil
-import tempfile
 import commands
 
 import userdb
@@ -12,7 +13,8 @@ from pathmap import PathMap
 from dirindex import DirIndex
 from pkgman import Installer
 from rollback import Rollback
-from utils import TempDir, remove_any
+
+import utils
 
 import backup
 import mysql
@@ -24,17 +26,17 @@ class Restore:
     Error = Error
 
     @staticmethod
-    def _section_title(title):
-        return title + "\n" + "=" * len(title) + "\n"
+    def _title(title, c='='):
+        return title + "\n" + c * len(title) + "\n"
 
     @staticmethod
     def _duplicity_restore(address, key):
-        tmpdir = TempDir(prefix="tklbam-")
+        tmpdir = utils.TempDir(prefix="tklbam-")
         os.chmod(tmpdir, 0700)
 
         os.environ['PASSPHRASE'] = key
         command = "duplicity %s %s" % (commands.mkarg(address), tmpdir)
-        status, output = commands.getstatusoutput(command)
+        status, output = utils.system(command)
         del os.environ['PASSPHRASE']
 
         if status != 0:
@@ -58,7 +60,7 @@ class Restore:
         print >> log, "Restoring duplicity archive from " + address
         backup_archive = self._duplicity_restore(address, key)
 
-        extras_path = TempDir(prefix="tklbam-extras-")
+        extras_path = utils.TempDir(prefix="tklbam-extras-")
         os.rename(backup_archive + backup.Backup.EXTRAS_PATH, extras_path)
 
         self.extras = backup.ExtrasPaths(extras_path)
@@ -68,7 +70,7 @@ class Restore:
         self.log = log
 
     def database(self):
-        print >> self.log, "\n" + self._section_title("Restoring databases")
+        print >> self.log, "\n" + self._title("Restoring databases")
 
         if self.rollback:
             self.rollback.save_database()
@@ -82,17 +84,14 @@ class Restore:
         newpkgs_file = self.extras.newpkgs
         log = self.log
 
-        print >> log, "\n" + self._section_title("Restoring new packages")
+        print >> log, "\n" + self._title("Restoring new packages")
 
         # apt-get update, otherwise installer may skip everything
-        print >> log, "apt-get update"
-        output = commands.getoutput("apt-get update")
 
-        def indent_lines(s, indent):
-            return "\n".join([ " " * indent + line 
-                               for line in str(s).splitlines() ])
-
-        print >> log, "\n" + indent_lines(output, 4) + "\n"
+        print >> log, self._title("apt-get update", '-')
+        output = utils.system("apt-get update")[1]
+        if log is not sys.stdout:
+            print >> log, output
 
         packages = file(newpkgs_file).read().strip().split('\n')
         installer = Installer(packages)
@@ -100,6 +99,7 @@ class Restore:
         if self.rollback:
             self.rollback.save_new_packages(installer.installable)
 
+        print >> log, self._title("apt-get install", '-')
         if installer.skipping:
             print >> log, "SKIPPING: " + " ".join(installer.skipping) + "\n"
 
@@ -110,7 +110,9 @@ class Restore:
 
         try:
             exitcode, output = installer()
-            print >> log, "\n" + indent_lines(output, 4)
+            if log is not sys.stdout:
+                print >> log, output
+
             if exitcode != 0:
                 print >> log, "# WARNING: non-zero exitcode (%d)" % exitcode
 
@@ -178,7 +180,7 @@ class Restore:
                         os.makedirs(root_dpath)
 
                     if lexists(root_fpath):
-                        remove_any(root_fpath)
+                        utils.remove_any(root_fpath)
 
                     shutil.move(overlay_fpath, root_fpath)
                     yield root_fpath
@@ -192,7 +194,7 @@ class Restore:
         limits = self.limits.fs
         log = self.log
 
-        print >> log, "\n" + self._section_title("Restoring filesystem")
+        print >> log, "\n" + self._title("Restoring filesystem")
 
         print >> log, "MERGING USERS AND GROUPS\n"
         passwd, group, uidmap, gidmap = self._userdb_merge(extras.etc, "/etc")
@@ -209,7 +211,6 @@ class Restore:
             rollback.save_files(changes)
 
         print >> log, "\nOVERLAY:\n"
-
         for val in self._iter_apply_overlay(overlay, "/", limits):
             print >> log, val
 
