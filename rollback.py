@@ -16,35 +16,14 @@ from utils import remove_any
 class Error(Exception):
     pass
 
-class Rollback(Paths):
-    PATH = "/var/backups/tklbam-rollback"
-
-    files = [ 'etc', 'etc/mysql', 
-              'fsdelta', 'dirindex', 'originals', 
-              'newpkgs', 'myfs' ]
+class Rollback:
     Error = Error
 
-    class Originals(str):
-        @staticmethod
-        def _move(source, dest):
-            if not lexists(source):
-                raise Error("no such file or directory " + `source`)
-
-            if not exists(dirname(dest)):
-                os.makedirs(dirname(dest))
-
-            remove_any(dest)
-            shutil.move(source, dest)
-
-        def move_in(self, source):
-            """Move source into originals"""
-            dest = join(self, source.strip('/'))
-            self._move(source, dest)
-
-        def move_out(self, dest):
-            """Move path from originals to dest"""
-            source = join(self, dest.strip('/'))
-            self._move(source, dest)
+    PATH = "/var/backups/tklbam-rollback"
+    class Paths(Paths):
+        files = [ 'etc', 'etc/mysql', 
+                  'fsdelta', 'dirindex', 'originals', 
+                  'newpkgs', 'myfs' ]
 
     @classmethod
     def create(cls, path=PATH):
@@ -53,30 +32,47 @@ class Rollback(Paths):
         os.makedirs(path)
         os.chmod(path, 0700)
 
-        path = cls(path)
+        self = cls(path)
 
-        os.mkdir(path.etc)
-        os.mkdir(path.etc.mysql)
-        os.mkdir(path.originals)
-        os.mkdir(path.myfs)
+        os.mkdir(self.paths.etc)
+        os.mkdir(self.paths.etc.mysql)
+        os.mkdir(self.paths.originals)
+        os.mkdir(self.paths.myfs)
 
-        return path
-
-    def __new__(cls, path=PATH):
-        return Paths.__new__(cls, path)
+        return self
 
     def __init__(self, path=PATH):
         """deletes path if it exists and creates it if it doesn't"""
+
         if not exists(path):
             raise Error("No such directory " + `path`)
 
-        Paths.__init__(self, path)
+        self.paths = self.Paths(path)
 
-        self.originals = self.Originals(self.originals)
+    @staticmethod
+    def _move(source, dest):
+        if not lexists(source):
+            raise Error("no such file or directory " + `source`)
 
-    def _rollback_files(self):
-        changes = Changes.fromfile(self.fsdelta)
-        dirindex = DirIndex(self.dirindex)
+        if not exists(dirname(dest)):
+            os.makedirs(dirname(dest))
+
+        remove_any(dest)
+        shutil.move(source, dest)
+
+    def _move_to_originals(self, source):
+        """Move source into originals"""
+        dest = join(self.paths.originals, source.strip('/'))
+        self._move(source, dest)
+
+    def _move_from_originals(self, dest):
+        """Move path from originals to dest"""
+        source = join(self.paths.originals, dest.strip('/'))
+        self._move(source, dest)
+
+    def rollback_files(self):
+        changes = Changes.fromfile(self.paths.fsdelta)
+        dirindex = DirIndex(self.paths.dirindex)
 
         for change in changes:
             if change.path not in dirindex:
@@ -85,7 +81,7 @@ class Rollback(Paths):
 
             if change.OP in ('o', 'd'):
                 try:
-                    self.originals.move_out(change.path)
+                    self._move_from_originals(change.path)
                 except self.Error:
                     continue
 
@@ -101,23 +97,47 @@ class Rollback(Paths):
                 os.chmod(change.path, mod)
 
         for fname in ('passwd', 'group'):
-            shutil.copy(join(self.etc, fname), "/etc")
+            shutil.copy(join(self.paths.etc, fname), "/etc")
 
-    def _rollback_packages(self):
-        rollback_packages = Packages.fromfile(self.newpkgs)
+    def rollback_new_packages(self):
+        rollback_packages = Packages.fromfile(self.paths.newpkgs)
         current_packages = Packages()
 
         purge_packages = current_packages & rollback_packages
         if purge_packages:
             os.system("dpkg --purge " + " ".join(purge_packages))
 
-    def _rollback_database(self):
-        mysql.fs2mysql(mysql.mysql(), self.myfs, add_drop_database=True)
-        shutil.copy(join(self.etc.mysql, "debian.cnf"), "/etc/mysql")
+    def rollback_database(self):
+        mysql.fs2mysql(mysql.mysql(), self.paths.myfs, add_drop_database=True)
+        shutil.copy(join(self.paths.etc.mysql, "debian.cnf"), "/etc/mysql")
         os.system("killall -HUP mysqld > /dev/null 2>&1")
 
     def rollback(self):
-        self._rollback_database()
-        self._rollback_files()
-        self._rollback_packages()
-        shutil.rmtree(self)
+        self.rollback_database()
+        self.rollback_files()
+        self.rollback_new_packages()
+
+        shutil.rmtree(self.paths)
+
+    def save_files(self, changes):
+        for fname in ("passwd", "group"):
+            shutil.copy(join("/etc", fname), self.paths.etc)
+
+        changes.tofile(self.paths.fsdelta)
+        di = DirIndex()
+        for change in changes:
+            if lexists(change.path):
+                di.add_path(change.path)
+                if change.OP in ('o', 'd'):
+                    self._move_to_originals(change.path)
+        di.save(self.paths.dirindex)
+
+    def save_new_packages(self, installable):
+        fh = file(self.paths.newpkgs, "w")
+        for package in installable:
+            print >> fh, package
+        fh.close()
+
+    def save_database(self):
+        mysql.mysql2fs(mysql.mysqldump(), self.paths.myfs)
+        shutil.copy("/etc/mysql/debian.cnf", self.paths.etc.mysql)

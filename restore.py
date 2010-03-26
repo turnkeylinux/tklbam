@@ -71,8 +71,7 @@ class Restore:
         print >> self.log, "\n" + self._section_title("Restoring databases")
 
         if self.rollback:
-            mysql.mysql2fs(mysql.mysqldump(), self.rollback.myfs)
-            shutil.copy("/etc/mysql/debian.cnf", self.rollback.etc.mysql)
+            self.rollback.save_database()
 
         mysql.fs2mysql(mysql.mysql(), self.extras.myfs, self.limits.db, mysql.cb_print(self.log))
 
@@ -81,8 +80,6 @@ class Restore:
         
     def packages(self):
         newpkgs_file = self.extras.newpkgs
-        rollback_file = (self.rollback.newpkgs if self.rollback 
-                         else None)
         log = self.log
 
         print >> log, "\n" + self._section_title("Restoring new packages")
@@ -100,11 +97,8 @@ class Restore:
         packages = file(newpkgs_file).read().strip().split('\n')
         installer = Installer(packages)
 
-        if rollback_file:
-            fh = file(rollback_file, "w")
-            for package in installer.installable:
-                print >> fh, package
-            fh.close()
+        if self.rollback:
+            self.rollback.save_new_packages(installer.installable)
 
         if installer.skipping:
             print >> log, "SKIPPING: " + " ".join(installer.skipping) + "\n"
@@ -209,20 +203,10 @@ class Restore:
             print >> log, "GID %d => %d" % (oldgid, gidmap[oldgid])
 
         changes = Changes.fromfile(extras.fsdelta, limits)
+        deleted = list(changes.deleted())
 
         if rollback:
-            for fname in ("passwd", "group"):
-                shutil.copy(join("/etc", fname), rollback.etc)
-
-            changes.tofile(rollback.fsdelta)
-
-            di = DirIndex()
-            for change in changes:
-                if lexists(change.path):
-                    di.add_path(change.path)
-                    if change.OP == 'o':
-                        rollback.originals.move_in(change.path)
-            di.save(rollback.dirindex)
+            rollback.save_files(changes)
 
         print >> log, "\nOVERLAY:\n"
 
@@ -234,13 +218,11 @@ class Restore:
             print >> log, action
             action()
 
-        for action in changes.deleted():
+        for action in deleted:
             print >> log, action
 
-            path, = action.args
-            if rollback:
-                rollback.originals.move_in(path)
-            else:
+            # rollback moves deleted to 'originals'
+            if not rollback:
                 action()
 
         def w(path, s):
