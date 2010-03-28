@@ -75,10 +75,14 @@ class Restore:
         if self.rollback:
             self.rollback.save_database()
 
-        mysql.fs2mysql(mysql.mysql(), self.extras.myfs, self.limits.db, mysql.cb_print(self.log))
+        if exists(self.extras.myfs):
+            try:
+                mysql.fs2mysql(mysql.mysql(), self.extras.myfs, self.limits.db, mysql.cb_print(self.log))
+                shutil.copy(join(self.extras.etc.mysql, "debian.cnf"), "/etc/mysql/debian.cnf")
+                os.system("killall -HUP mysqld > /dev/null 2>&1")
 
-        shutil.copy(join(self.extras.etc.mysql, "debian.cnf"), "/etc/mysql/debian.cnf")
-        os.system("killall -HUP mysqld > /dev/null 2>&1")
+            except mysql.Error:
+                pass
         
     def packages(self):
         newpkgs_file = self.extras.newpkgs

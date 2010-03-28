@@ -37,8 +37,6 @@ class Rollback:
         os.mkdir(self.paths.etc)
         os.mkdir(self.paths.etc.mysql)
         os.mkdir(self.paths.originals)
-        os.mkdir(self.paths.myfs)
-
         return self
 
     def __init__(self, path=PATH):
@@ -108,9 +106,10 @@ class Rollback:
             os.system("dpkg --purge " + " ".join(purge_packages))
 
     def rollback_database(self):
-        mysql.fs2mysql(mysql.mysql(), self.paths.myfs, add_drop_database=True)
-        shutil.copy(join(self.paths.etc.mysql, "debian.cnf"), "/etc/mysql")
-        os.system("killall -HUP mysqld > /dev/null 2>&1")
+        if exists(self.paths.myfs):
+            mysql.fs2mysql(mysql.mysql(), self.paths.myfs, add_drop_database=True)
+            shutil.copy(join(self.paths.etc.mysql, "debian.cnf"), "/etc/mysql")
+            os.system("killall -HUP mysqld > /dev/null 2>&1")
 
     def rollback(self):
         self.rollback_database()
@@ -139,5 +138,10 @@ class Rollback:
         fh.close()
 
     def save_database(self):
-        mysql.mysql2fs(mysql.mysqldump(), self.paths.myfs)
-        shutil.copy("/etc/mysql/debian.cnf", self.paths.etc.mysql)
+        try:
+            mysqldump_fh = mysql.mysqldump()
+            os.mkdir(self.paths.myfs)
+            mysql.mysql2fs(mysqldump_fh, self.paths.myfs)
+            shutil.copy("/etc/mysql/debian.cnf", self.paths.etc.mysql)
+        except mysql.Error:
+            pass

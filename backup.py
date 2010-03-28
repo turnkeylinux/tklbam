@@ -177,8 +177,12 @@ class Backup:
 
         self._write_new_packages(paths.newpkgs, profile.packages)
 
-        os.mkdir(paths.myfs)
-        mysql.mysql2fs(mysql.mysqldump(), paths.myfs, conf.overrides.db)
+        try:
+            mysqldump_fh = mysql.mysqldump()
+            os.mkdir(paths.myfs)
+            mysql.mysql2fs(mysqldump_fh, paths.myfs, conf.overrides.db)
+        except mysql.Error:
+            pass
 
         args = ['--volsize 50',
                 '--include ' + paths.path,
