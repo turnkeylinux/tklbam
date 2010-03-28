@@ -7,6 +7,7 @@ import re
 from paths import Paths
 
 from string import Template
+from subprocess import Popen, PIPE
 
 def mkdir(path, parents=False):
     if not exists(path):
@@ -14,6 +15,9 @@ def mkdir(path, parents=False):
             os.makedirs(path)
         else:
             os.mkdir(path)
+
+class Error(Exception):
+    pass
 
 def _mysql_opts(opts=[], defaults_file=None, **conf):
     def isreadable(path):
@@ -41,10 +45,24 @@ def mysqldump(**conf):
              "compact", "quick" ]
 
     command = "mysqldump " + _mysql_opts(opts, **conf)
-    return os.popen(command)
+    popen = Popen(command, shell=True, stderr=PIPE, stdout=PIPE)
+
+    firstline = popen.stdout.readline()
+    if not firstline:
+        returncode = popen.wait()
+        raise Error("mysqldump error (%d): %s" % (returncode, popen.stderr.read()))
+
+    return popen.stdout
 
 def mysql(**conf):
     command = "mysql " + _mysql_opts(**conf)
+
+    popen = Popen(command, shell=True, stdin=PIPE, stderr=PIPE, stdout=PIPE)
+    popen.stdin.close()
+    returncode = popen.wait()
+    if returncode != 0:
+        raise Error("mysql error (%d): %s" % (returncode, popen.stderr.read()))
+
     return os.popen(command, "w")
 
 class MyFS:
