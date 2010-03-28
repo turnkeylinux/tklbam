@@ -20,12 +20,21 @@ class Redirect:
             os.dup2(self.dupfd, self.origin.fileno())
             os.close(self.dupfd)
 
+class RedirectOutput:
+    def __init__(self, sink):
+        self.rstdout = Redirect(sys.stdout, sink)
+        self.rstderr = Redirect(sys.stderr, sink)
+
+    def close(self):
+        self.rstdout.close()
+        self.rstderr.close()
+
 def test():
     print "redirecting to /tmp/output"
     fh = file("/tmp/output", "w")
 
     print "BEFORE"
-    redirector = Redirector(sys.stdout, fh)
+    redirector = Redirect(sys.stdout, fh)
     try:
         os.system("ls -la")
     finally:

@@ -1,8 +1,6 @@
 import os
 from os.path import *
 
-import sys
-
 import shutil
 import commands
 
@@ -13,7 +11,7 @@ from pathmap import PathMap
 from dirindex import DirIndex
 from pkgman import Installer
 from rollback import Rollback
-from redirect import Redirect
+from redirect import RedirectOutput
 from temp import TempDir
 
 import utils
@@ -58,7 +56,7 @@ class Restore:
         log = DontWriteIfNone(log)
         print >> log, "Restoring duplicity archive from " + address
 
-        redir = Redirect(sys.stderr, log.fh)
+        redir = RedirectOutput(log.fh)
         try:
             backup_archive = self._duplicity_restore(address, key)
         finally:
@@ -97,13 +95,11 @@ class Restore:
         # apt-get update, otherwise installer may skip everything
 
         print >> log, self._title("apt-get update", '-')
-        redir_stdout = Redirect(sys.stdout, log.fh)
-        redir_stderr = Redirect(sys.stderr, log.fh)
+        redir = RedirectOutput(log.fh)
         try:
             os.system("apt-get update")
         finally:
-            redir_stdout.close()
-            redir_stderr.close()
+            redir.close()
 
         packages = file(newpkgs_file).read().strip().split('\n')
         installer = Installer(packages)
@@ -121,13 +117,11 @@ class Restore:
             print >> log, "NO NEW INSTALLABLE PACKAGES"
 
         try:
-            redir_stdout = Redirect(sys.stdout, log.fh)
-            redir_stderr = Redirect(sys.stdout, log.fh)
+            redir = RedirectOutput(log.fh)
             try:
                 exitcode = installer()
             finally:
-                redir_stdout.close()
-                redir_stderr.close()
+                redir.close()
 
             if exitcode != 0:
                 print >> log, "# WARNING: non-zero exitcode (%d)" % exitcode
