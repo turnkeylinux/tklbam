@@ -71,9 +71,8 @@ class Restore:
 
         if exists(self.extras.myfs):
             try:
-                mysql.fs2mysql(mysql.mysql(), self.extras.myfs, self.limits.db, mysql.cb_print())
-                shutil.copy(join(self.extras.etc.mysql, "debian.cnf"), "/etc/mysql/debian.cnf")
-                os.system("killall -HUP mysqld > /dev/null 2>&1")
+                mysql.restore(self.extras.myfs, self.extras.etc.mysql, 
+                              limits=self.limits.db, callback=mysql.cb_print())
 
             except mysql.Error:
                 pass

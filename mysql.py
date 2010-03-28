@@ -6,11 +6,14 @@ from os.path import *
 import re
 from paths import Paths
 
+import shutil
 from string import Template
 from subprocess import Popen, PIPE
 
 class Error(Exception):
     pass
+
+PATH_DEBIAN_CNF = "/etc/mysql/debian.cnf"
 
 def _mysql_opts(opts=[], defaults_file=None, **conf):
     def isreadable(path):
@@ -21,9 +24,8 @@ def _mysql_opts(opts=[], defaults_file=None, **conf):
             return False
 
     if not defaults_file:
-        debian_cnf = "/etc/mysql/debian.cnf"
-        if isreadable(debian_cnf):
-            defaults_file = debian_cnf
+        if isreadable(PATH_DEBIAN_CNF):
+            defaults_file = PATH_DEBIAN_CNF
 
     if defaults_file:
         opts.insert(0, "defaults-file=" + defaults_file)
@@ -337,3 +339,29 @@ def cb_print(fh=None):
             print >> fh, "table: " + join(table.database.name, table.name)
 
     return func
+
+def backup(myfs, etc, **kws):
+    """High level mysql backup command.
+    Arguments:
+        
+        <myfs>      Directory we create to save MySQL backup
+        <etc>       Directory where we save required MySQL etc configuration files (e.g., debian.cnf)
+        """
+
+    mysqldump_fh = mysqldump()
+
+    if not exists(myfs):
+        os.mkdir(myfs)
+
+    mysql2fs(mysqldump_fh, myfs, **kws)
+
+    if not exists(etc):
+        os.mkdir(etc)
+
+    shutil.copy(PATH_DEBIAN_CNF, etc)
+
+def restore(myfs, etc, **kws):
+    fs2mysql(mysql(), myfs, **kws)
+
+    shutil.copy(join(etc, basename(PATH_DEBIAN_CNF)), PATH_DEBIAN_CNF)
+    os.system("killall -HUP mysqld > /dev/null 2>&1")

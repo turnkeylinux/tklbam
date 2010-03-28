@@ -175,12 +175,8 @@ class Backup:
         self._write_new_packages(paths.newpkgs, profile.packages)
 
         try:
-            mysqldump_fh = mysql.mysqldump()
-            os.mkdir(paths.myfs)
-            mysql.mysql2fs(mysqldump_fh, paths.myfs, conf.overrides.db)
-
-            os.mkdir(paths.etc.mysql)
-            shutil.copy("/etc/mysql/debian.cnf", paths.etc.mysql)
+            mysql.backup(paths.myfs, paths.etc.mysql, 
+                         limits=conf.overrides.db)
         except mysql.Error:
             pass
 

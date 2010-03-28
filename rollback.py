@@ -35,7 +35,6 @@ class Rollback:
         self = cls(path)
 
         os.mkdir(self.paths.etc)
-        os.mkdir(self.paths.etc.mysql)
         os.mkdir(self.paths.originals)
         return self
 
@@ -107,9 +106,8 @@ class Rollback:
 
     def rollback_database(self):
         if exists(self.paths.myfs):
-            mysql.fs2mysql(mysql.mysql(), self.paths.myfs, add_drop_database=True)
-            shutil.copy(join(self.paths.etc.mysql, "debian.cnf"), "/etc/mysql")
-            os.system("killall -HUP mysqld > /dev/null 2>&1")
+            mysql.restore(self.paths.myfs, self.paths.etc.mysql, 
+                          add_drop_database=True)
 
     def rollback(self):
         self.rollback_database()
@@ -139,9 +137,6 @@ class Rollback:
 
     def save_database(self):
         try:
-            mysqldump_fh = mysql.mysqldump()
-            os.mkdir(self.paths.myfs)
-            mysql.mysql2fs(mysqldump_fh, self.paths.myfs)
-            shutil.copy("/etc/mysql/debian.cnf", self.paths.etc.mysql)
+            mysql.backup(self.paths.myfs, self.paths.etc.mysql)
         except mysql.Error:
             pass
