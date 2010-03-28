@@ -1,3 +1,4 @@
+import sys
 import os
 import re
 import commands
@@ -123,4 +124,6 @@ class Installer:
         if not interactive:
             command = "DEBIAN_FRONTEND=noninteractive " + command
 
+        sys.stdout.flush()
+        sys.stderr.flush()
         return os.system(command)
