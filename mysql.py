@@ -9,13 +9,6 @@ from paths import Paths
 from string import Template
 from subprocess import Popen, PIPE
 
-def mkdir(path, parents=False):
-    if not exists(path):
-        if parents:
-            os.makedirs(path)
-        else:
-            os.mkdir(path)
-
 class Error(Exception):
     pass
 
@@ -140,7 +133,8 @@ class MyFS_Writer(MyFS):
     class Database(MyFS.Database):
         def __init__(self, outdir, name, sql):
             self.paths = self.Paths(join(outdir, name))
-            mkdir(self.paths.path)
+            if not exists(self.paths):
+                os.mkdir(self.paths)
 
             print >> file(self.paths.init, "w"), sql
             self.name = name
@@ -148,7 +142,8 @@ class MyFS_Writer(MyFS):
     class Table(MyFS.Table):
         def __init__(self, database, name, sql):
             self.paths = self.Paths(join(database.paths.tables, name))
-            mkdir(self.paths.path, True)
+            if not exists(self.paths):
+                os.makedirs(self.paths)
 
             print >> file(self.paths.init, "w"), sql
 
