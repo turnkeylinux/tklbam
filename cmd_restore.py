@@ -11,6 +11,7 @@ Options:
     --skip-packages             Don't restore new packages
 
     --no-rollback               Disable rollback
+    --silent                    Disable feedback
 
 """
 
@@ -19,6 +20,8 @@ import getopt
 
 from os.path import *
 from restore import Restore
+from redirect import RedirectOutput
+from temp import TempFile
 
 def fatal(e):
     print >> sys.stderr, "error: " + str(e)
@@ -34,8 +37,9 @@ def usage(e=None):
 
 def main():
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], 'vh', 
-                                       ['skip-files', 'skip-database', 'skip-packages',
+        opts, args = getopt.gnu_getopt(sys.argv[1:], 'h', 
+                                       ['silent',
+                                        'skip-files', 'skip-database', 'skip-packages',
                                         'no-rollback'])
                                         
     except getopt.GetoptError, e:
@@ -45,6 +49,7 @@ def main():
     skip_database = False
     skip_packages = False
     no_rollback = False
+    silent = False
     for opt, val in opts:
         if opt == '--skip-files':
             skip_files = True
@@ -54,6 +59,8 @@ def main():
             skip_packages = True
         elif opt == '--no-rollback':
             no_rollback = True
+        elif opt == '--silent':
+            silent = True
         elif opt == '-h':
             usage()
 
@@ -68,18 +75,26 @@ def main():
 
     key = file(keyfile).read().strip()
 
-    restore = Restore(address, key, limits, 
-                      log=sys.stdout, 
-                      rollback=not no_rollback)
+    if silent:
+        log = TempFile()
+    else:
+        log = sys.stdout
 
-    if not skip_packages:
-        restore.packages()
+    redir = RedirectOutput(log)
+    try:
+        restore = Restore(address, key, limits, 
+                          rollback=not no_rollback)
 
-    if not skip_files:
-        restore.files()
+        if not skip_packages:
+            restore.packages()
 
-    if not skip_database:
-        restore.database()
+        if not skip_files:
+            restore.files()
+
+        if not skip_database:
+            restore.database()
+    finally:
+        redir.close()
 
 if __name__=="__main__":
     main()

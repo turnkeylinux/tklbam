@@ -1,3 +1,5 @@
+import sys
+
 import os
 from os.path import *
 
@@ -11,7 +13,6 @@ from pathmap import PathMap
 from dirindex import DirIndex
 from pkgman import Installer
 from rollback import Rollback
-from redirect import RedirectOutput
 from temp import TempDir
 
 import utils
@@ -21,6 +22,11 @@ import mysql
 
 class Error(Exception):
     pass
+
+def system(command):
+    sys.stdout.flush()
+    sys.stderr.flush()
+    return os.system(command)
 
 class Restore:
     Error = Error
@@ -36,7 +42,8 @@ class Restore:
 
         os.environ['PASSPHRASE'] = key
         command = "duplicity %s %s" % (commands.mkarg(address), tmpdir)
-        status = os.system(command)
+        sys.stdout.flush()
+        status = system(command)
         del os.environ['PASSPHRASE']
 
         if status != 0:
@@ -44,23 +51,9 @@ class Restore:
 
         return tmpdir
 
-    def __init__(self, address, key, limits=[], rollback=True, log=None):
-        class DontWriteIfNone:
-            def __init__(self, fh=None):
-                self.fh = fh
-
-            def write(self, s):
-                if self.fh:
-                    self.fh.write(str(s))
-
-        log = DontWriteIfNone(log)
-        print >> log, "Restoring duplicity archive from " + address
-
-        redir = RedirectOutput(log.fh)
-        try:
-            backup_archive = self._duplicity_restore(address, key)
-        finally:
-            redir.close()
+    def __init__(self, address, key, limits=[], rollback=True):
+        print "Restoring duplicity archive from " + address
+        backup_archive = self._duplicity_restore(address, key)
 
         extras_path = TempDir(prefix="tklbam-extras-")
         os.rename(backup_archive + backup.Backup.EXTRAS_PATH, extras_path)
@@ -69,17 +62,16 @@ class Restore:
         self.rollback = Rollback.create() if rollback else None
         self.limits = backup.Limits(limits)
         self.backup_archive = backup_archive
-        self.log = log
 
     def database(self):
-        print >> self.log, "\n" + self._title("Restoring databases")
+        print "\n" + self._title("Restoring databases")
 
         if self.rollback:
             self.rollback.save_database()
 
         if exists(self.extras.myfs):
             try:
-                mysql.fs2mysql(mysql.mysql(), self.extras.myfs, self.limits.db, mysql.cb_print(self.log))
+                mysql.fs2mysql(mysql.mysql(), self.extras.myfs, self.limits.db, mysql.cb_print())
                 shutil.copy(join(self.extras.etc.mysql, "debian.cnf"), "/etc/mysql/debian.cnf")
                 os.system("killall -HUP mysqld > /dev/null 2>&1")
 
@@ -88,18 +80,12 @@ class Restore:
         
     def packages(self):
         newpkgs_file = self.extras.newpkgs
-        log = self.log
 
-        print >> log, "\n" + self._title("Restoring new packages")
+        print "\n" + self._title("Restoring new packages")
 
         # apt-get update, otherwise installer may skip everything
-
-        print >> log, self._title("apt-get update", '-')
-        redir = RedirectOutput(log.fh)
-        try:
-            os.system("apt-get update")
-        finally:
-            redir.close()
+        print self._title("apt-get update", '-')
+        system("apt-get update")
 
         packages = file(newpkgs_file).read().strip().split('\n')
         installer = Installer(packages)
@@ -107,24 +93,19 @@ class Restore:
         if self.rollback:
             self.rollback.save_new_packages(installer.installable)
 
-        print >> log, "\n" + self._title("apt-get install", '-')
+        print "\n" + self._title("apt-get install", '-')
         if installer.skipping:
-            print >> log, "SKIPPING: " + " ".join(installer.skipping) + "\n"
+            print "SKIPPING: " + " ".join(installer.skipping) + "\n"
 
         if installer.command:
-            print >> log, installer.command
+            print installer.command
         else:
-            print >> log, "NO NEW INSTALLABLE PACKAGES"
+            print "NO NEW INSTALLABLE PACKAGES"
 
         try:
-            redir = RedirectOutput(log.fh)
-            try:
-                exitcode = installer()
-            finally:
-                redir.close()
-
+            exitcode = installer()
             if exitcode != 0:
-                print >> log, "# WARNING: non-zero exitcode (%d)" % exitcode
+                print "# WARNING: non-zero exitcode (%d)" % exitcode
 
         except installer.Error:
             pass
@@ -202,17 +183,16 @@ class Restore:
         overlay = self.backup_archive
         rollback = self.rollback
         limits = self.limits.fs
-        log = self.log
 
-        print >> log, "\n" + self._title("Restoring filesystem")
+        print "\n" + self._title("Restoring filesystem")
 
-        print >> log, "MERGING USERS AND GROUPS\n"
+        print "MERGING USERS AND GROUPS\n"
         passwd, group, uidmap, gidmap = self._userdb_merge(extras.etc, "/etc")
 
         for olduid in uidmap:
-            print >> log, "UID %d => %d" % (olduid, uidmap[olduid])
+            print "UID %d => %d" % (olduid, uidmap[olduid])
         for oldgid in gidmap:
-            print >> log, "GID %d => %d" % (oldgid, gidmap[oldgid])
+            print "GID %d => %d" % (oldgid, gidmap[oldgid])
 
         changes = Changes.fromfile(extras.fsdelta, limits)
         deleted = list(changes.deleted())
@@ -220,17 +200,17 @@ class Restore:
         if rollback:
             rollback.save_files(changes)
 
-        print >> log, "\nOVERLAY:\n"
+        print "\nOVERLAY:\n"
         for val in self._iter_apply_overlay(overlay, "/", limits):
-            print >> log, val
+            print val
 
-        print >> log, "\nPOST-OVERLAY FIXES:\n"
+        print "\nPOST-OVERLAY FIXES:\n"
         for action in changes.statfixes(uidmap, gidmap):
-            print >> log, action
+            print action
             action()
 
         for action in deleted:
-            print >> log, action
+            print action
 
             # rollback moves deleted to 'originals'
             if not rollback:
