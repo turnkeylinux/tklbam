@@ -168,9 +168,6 @@ class Backup:
         shutil.copy("/etc/passwd", etc)
         shutil.copy("/etc/group", etc)
 
-        os.mkdir(paths.etc.mysql)
-        shutil.copy("/etc/mysql/debian.cnf", paths.etc.mysql)
-
         self._write_whatchanged(paths.fsdelta, paths.fsdelta_olist,
                                 profile.dirindex, profile.dirindex_conf, 
                                 conf.overrides.fs)
@@ -181,6 +178,9 @@ class Backup:
             mysqldump_fh = mysql.mysqldump()
             os.mkdir(paths.myfs)
             mysql.mysql2fs(mysqldump_fh, paths.myfs, conf.overrides.db)
+
+            os.mkdir(paths.etc.mysql)
+            shutil.copy("/etc/mysql/debian.cnf", paths.etc.mysql)
         except mysql.Error:
             pass
 
