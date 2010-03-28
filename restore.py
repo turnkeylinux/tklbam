@@ -13,6 +13,8 @@ from pathmap import PathMap
 from dirindex import DirIndex
 from pkgman import Installer
 from rollback import Rollback
+from redirect import Redirect
+from temp import TempDir
 
 import utils
 
@@ -31,19 +33,16 @@ class Restore:
 
     @staticmethod
     def _duplicity_restore(address, key):
-        tmpdir = utils.TempDir(prefix="tklbam-")
+        tmpdir = TempDir(prefix="tklbam-")
         os.chmod(tmpdir, 0700)
 
         os.environ['PASSPHRASE'] = key
         command = "duplicity %s %s" % (commands.mkarg(address), tmpdir)
-        status, output = utils.system(command)
+        status = os.system(command)
         del os.environ['PASSPHRASE']
 
         if status != 0:
-            if "No backup chains found" in output:
-                raise Error("Valid backup not found at " + `address`)
-            else:
-                raise Error("Error restoring backup (bad key?):\n" + output)
+            raise Error("Duplicity failed (%d)" % status)
 
         return tmpdir
 
@@ -58,9 +57,14 @@ class Restore:
 
         log = DontWriteIfNone(log)
         print >> log, "Restoring duplicity archive from " + address
-        backup_archive = self._duplicity_restore(address, key)
 
-        extras_path = utils.TempDir(prefix="tklbam-extras-")
+        redir = Redirect(sys.stderr, log.fh)
+        try:
+            backup_archive = self._duplicity_restore(address, key)
+        finally:
+            redir.close()
+
+        extras_path = TempDir(prefix="tklbam-extras-")
         os.rename(backup_archive + backup.Backup.EXTRAS_PATH, extras_path)
 
         self.extras = backup.ExtrasPaths(extras_path)
@@ -93,9 +97,13 @@ class Restore:
         # apt-get update, otherwise installer may skip everything
 
         print >> log, self._title("apt-get update", '-')
-        output = utils.system("apt-get update")[1]
-        if log is not sys.stdout:
-            print >> log, output
+        redir_stdout = Redirect(sys.stdout, log.fh)
+        redir_stderr = Redirect(sys.stderr, log.fh)
+        try:
+            os.system("apt-get update")
+        finally:
+            redir_stdout.close()
+            redir_stderr.close()
 
         packages = file(newpkgs_file).read().strip().split('\n')
         installer = Installer(packages)
@@ -103,7 +111,7 @@ class Restore:
         if self.rollback:
             self.rollback.save_new_packages(installer.installable)
 
-        print >> log, self._title("apt-get install", '-')
+        print >> log, "\n" + self._title("apt-get install", '-')
         if installer.skipping:
             print >> log, "SKIPPING: " + " ".join(installer.skipping) + "\n"
 
@@ -113,9 +121,13 @@ class Restore:
             print >> log, "NO NEW INSTALLABLE PACKAGES"
 
         try:
-            exitcode, output = installer()
-            if log is not sys.stdout:
-                print >> log, output
+            redir_stdout = Redirect(sys.stdout, log.fh)
+            redir_stderr = Redirect(sys.stdout, log.fh)
+            try:
+                exitcode = installer()
+            finally:
+                redir_stdout.close()
+                redir_stderr.close()
 
             if exitcode != 0:
                 print >> log, "# WARNING: non-zero exitcode (%d)" % exitcode

@@ -1,7 +1,6 @@
 import os
 import re
 import commands
-from utils import system
 
 class Error(Exception):
     pass
@@ -124,5 +123,4 @@ class Installer:
         if not interactive:
             command = "DEBIAN_FRONTEND=noninteractive " + command
 
-        status, output = system(command)
-        return (status, output)
+        return os.system(command)
