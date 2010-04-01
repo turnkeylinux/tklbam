@@ -31,6 +31,8 @@ def system(command):
 class Restore:
     Error = Error
 
+    PACKAGES_BLACKLIST = ['linux-image-*', 'linux-ubuntu-modules-*']
+
     @staticmethod
     def _title(title, c='='):
         return title + "\n" + c * len(title) + "\n"
@@ -87,7 +89,7 @@ class Restore:
         system("apt-get update")
 
         packages = file(newpkgs_file).read().strip().split('\n')
-        installer = Installer(packages)
+        installer = Installer(packages, self.PACKAGES_BLACKLIST)
 
         if self.rollback:
             self.rollback.save_new_packages(installer.installable)

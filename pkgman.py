@@ -3,6 +3,8 @@ import os
 import re
 import commands
 
+from fnmatch import fnmatch
+
 class Error(Exception):
     pass
 
@@ -72,9 +74,21 @@ class AptCache(set):
 
         set.__init__(self, cached)
 
-def installable(packages):
+class Blacklist:
+    def __init__(self, patterns):
+        self.patterns = patterns
+
+    def __contains__(self, val):
+        if self.patterns:
+            for pattern in self.patterns:
+                if fnmatch(val, pattern):
+                    return True
+        return False
+
+def installable(packages, blacklist=[]):
     installed = Packages()
     aptcache = AptCache(packages)
+    blacklist = Blacklist(blacklist)
 
     installable = []
     skipped = []
@@ -83,6 +97,10 @@ def installable(packages):
             continue
 
         if package not in aptcache:
+            skipped.append(package)
+            continue
+
+        if package in blacklist:
             skipped.append(package)
             continue
 
@@ -103,8 +121,8 @@ class Installer:
     """
     Error = Error
 
-    def __init__(self, packages):
-        self.installable, self.skipping = installable(packages)
+    def __init__(self, packages, blacklist=None):
+        self.installable, self.skipping = installable(packages, blacklist)
 
         self.installable.sort()
         self.skipping.sort()
