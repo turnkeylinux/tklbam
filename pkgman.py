@@ -110,7 +110,7 @@ class Installer:
         self.skipping.sort()
 
         if self.installable:
-            self.command = "apt-get install " + " ".join(self.installable)
+            self.command = "apt-get install --assume-yes " + " ".join(self.installable)
         else:
             self.command = None
 
