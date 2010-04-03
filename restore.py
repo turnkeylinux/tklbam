@@ -76,8 +76,8 @@ class Restore:
                 mysql.restore(self.extras.myfs, self.extras.etc.mysql, 
                               limits=self.limits.db, callback=mysql.cb_print())
 
-            except mysql.Error:
-                pass
+            except mysql.Error, e:
+                print "SKIPPING MYSQL DATABASE RESTORE: " + str(e)
         
     def packages(self):
         newpkgs_file = self.extras.newpkgs
