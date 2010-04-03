@@ -97,6 +97,9 @@ class Rollback:
             shutil.copy(join(self.paths.etc, fname), "/etc")
 
     def rollback_new_packages(self):
+        if not exists(self.paths.newpkgs):
+            return
+
         rollback_packages = Packages.fromfile(self.paths.newpkgs)
         current_packages = Packages()
 
