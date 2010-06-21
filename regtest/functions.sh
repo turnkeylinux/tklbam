@@ -7,7 +7,7 @@ error()
 cmd() {
     name=$1
     shift;
-    $BIN/cmd_$name.py $@
+    $BIN/cmd_internal.py $name $@
 }
 
 test_count=1
