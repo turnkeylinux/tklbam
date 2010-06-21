@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import os
 import sys
 import hub
 import sha
@@ -12,7 +13,7 @@ def usage(e=None):
     sys.exit(1)
 
 def generate_secret():
-    return sha.sha(file("/dev/random").read(16)).hexdigest()
+    return sha.sha(os.urandom(32)).hexdigest()
 
 def main():
     args = sys.argv[1:]
