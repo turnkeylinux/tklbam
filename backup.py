@@ -16,21 +16,6 @@ import mysql
 class Error(Exception):
     pass
 
-class Key:
-    @staticmethod
-    def create(keyfile):
-        def mcookie():
-            return md5.md5(file("/dev/random").read(16)).hexdigest()
-
-        fh = file(keyfile, "w")
-        os.chmod(keyfile, 0600)
-        print >> fh, mcookie()
-        fh.close()
-
-    @staticmethod
-    def read(keyfile):
-        return file(keyfile).read().strip()
-
 class Limits(list):
     @staticmethod
     def _is_db_limit(val):
