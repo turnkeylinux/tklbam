@@ -23,7 +23,10 @@ def random_passphrase():
 
     return "-".join(parts)
 
-def ask_passphrase():
+def get_passphrase():
+    if not os.isatty(sys.stdin.fileno()):
+        return sys.stdin.readline().rstrip()
+
     while True:
         passphrase = getpass.getpass("Passphrase: ")
         confirm_passphrase = getpass.getpass("Confirm passphrase: ")
@@ -59,7 +62,7 @@ def main():
         passphrase = random_passphrase()
         print passphrase
     else:
-        passphrase = ask_passphrase()
+        passphrase = get_passphrase()
 
 if __name__=="__main__":
     main()
