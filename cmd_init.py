@@ -11,7 +11,8 @@ Arguments:
 import os
 import sys
 import hub
-import sha
+import key
+
 from registry import registry
 
 NOT_SUBSCRIBED = """\
@@ -25,9 +26,6 @@ def usage(e=None):
     print >> sys.stderr, "Syntax: %s API-KEY" % sys.argv[0]
     print >> sys.stderr, __doc__.strip()
     sys.exit(1)
-
-def generate_secret():
-    return sha.sha(os.urandom(32)).hexdigest()
 
 def main():
     args = sys.argv[1:]
@@ -45,14 +43,15 @@ def main():
     subkey = hub.Backups.get_subkey(apikey)
 
     registry.subkey = subkey
-    registry.secret = generate_secret()
+    registry.secret = key.generate()
 
     try:
         credentials = hub.Backups(subkey).get_credentials()
+        registry.credentials = credentials
+
     except hub.Backups.Error, e:
         print >> sys.stderr, NOT_SUBSCRIBED
 
-    registry.credentials = credentials
 
 if __name__=="__main__":
     main()
