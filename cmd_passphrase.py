@@ -13,6 +13,8 @@ import base64
 import sys
 import getopt
 
+import getpass
+
 def random_passphrase():
     random = base64.b32encode(os.urandom(10))
     parts = []
@@ -20,6 +22,16 @@ def random_passphrase():
         parts.append(random[i * 4:(i+1) * 4])
 
     return "-".join(parts)
+
+def ask_passphrase():
+    while True:
+        passphrase = getpass.getpass("Passphrase: ")
+        confirm_passphrase = getpass.getpass("Confirm passphrase: ")
+        if passphrase == confirm_passphrase:
+            break
+        print >> sys.stderr, "Sorry, passphrases do not match"
+
+    return passphrase
 
 def usage(e=None):
     if e:
@@ -46,6 +58,8 @@ def main():
     if opt_random:
         passphrase = random_passphrase()
         print passphrase
+    else:
+        passphrase = ask_passphrase()
 
 if __name__=="__main__":
     main()
