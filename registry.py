@@ -5,7 +5,7 @@ from paths import Paths
 
 class _Registry(object):
     class Paths(Paths):
-        files = ['subkey', 'secret', 'credentials']
+        files = ['sub_apikey', 'secret', 'credentials']
 
     def __init__(self, path=None):
         if path is None:
@@ -31,9 +31,9 @@ class _Registry(object):
             print >> fh, val
             fh.close()
 
-    def subkey(self, val=None):
-        return self._fileval(self.path.subkey, val)
-    subkey = property(subkey, subkey)
+    def sub_apikey(self, val=None):
+        return self._fileval(self.path.sub_apikey, val)
+    sub_apikey = property(sub_apikey, sub_apikey)
 
     def secret(self, val=None):
         return self._fileval(self.path.secret, val)

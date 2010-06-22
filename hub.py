@@ -125,7 +125,7 @@ class Backups:
     SUBKEY_NS = "tklbam"
 
     @classmethod
-    def get_subkey(cls, apikey):
+    def get_sub_apikey(cls, apikey):
         """Check that APIKey is valid and return subkey"""
         apikey = APIKey(apikey)
         user = dummydb.get_user(apikey.uid)

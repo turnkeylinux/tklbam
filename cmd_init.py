@@ -35,23 +35,22 @@ def main():
     if len(args) != 1:
         usage("incorrect number of arguments")
 
-    if registry.subkey:
+    if registry.sub_apikey:
         print >> sys.stderr, "error: already initialized"
         sys.exit(1)
 
     apikey = args[0]
-    subkey = hub.Backups.get_subkey(apikey)
+    sub_apikey = hub.Backups.get_sub_apikey(apikey)
 
-    registry.subkey = subkey
+    registry.sub_apikey = sub_apikey
     registry.secret = key.generate()
 
     try:
-        credentials = hub.Backups(subkey).get_credentials()
+        credentials = hub.Backups(sub_apikey).get_credentials()
         registry.credentials = credentials
 
     except hub.Backups.Error, e:
         print >> sys.stderr, NOT_SUBSCRIBED
-
 
 if __name__=="__main__":
     main()
