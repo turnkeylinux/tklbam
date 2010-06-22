@@ -2,7 +2,7 @@ from os.path import *
 import os
 import struct
 import base64
-import sha
+from hashlib import sha1 as sha
 from paths import Paths
 import pickle
 
@@ -25,7 +25,7 @@ class APIKey:
         if secret is None:
             secret = os.urandom(8)
         else:
-            secret = sha.sha(secret).digest()[:8]
+            secret = sha(secret).digest()[:8]
 
         packed = struct.pack("!L8s", uid, secret)
         encoded = base64.b64encode(packed).lstrip("A")
@@ -63,7 +63,7 @@ class DummyUser(AttrDict):
         self.credentials = None
 
     def subscribe(self):
-        accesskey = base64.b64encode(sha.sha("%d" % self.uid).digest())[:20]
+        accesskey = base64.b64encode(sha("%d" % self.uid).digest())[:20]
         secretkey = base64.b64encode(os.urandom(30))[:40]
 
         self.credentials = accesskey, secretkey
