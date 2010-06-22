@@ -3,13 +3,22 @@ import hashlib
 import base64
 
 from Crypto.Cipher import AES
+
 SALT_LEN = 4
+HASH_PASSES = 100000
 
 class Error(Exception):
     pass
 
+def _cipher_key(passphrase):
+    cipher_key = hashlib.sha256(passphrase).digest()
+    if passphrase:
+        for i in xrange(HASH_PASSES):
+            cipher_key = hashlib.sha256(cipher_key).digest()
+    return cipher_key
+
 def _cipher(passphrase):
-    return AES.new(hashlib.sha256(passphrase).digest(), AES.MODE_CFB)
+    return AES.new(_cipher_key(passphrase), AES.MODE_CFB)
 
 def fmt(secret, passphrase):
     salt = os.urandom(SALT_LEN)
