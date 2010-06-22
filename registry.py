@@ -5,7 +5,7 @@ from paths import Paths
 
 class _Registry(object):
     class Paths(Paths):
-        files = ['subkey', 'secret']
+        files = ['subkey', 'secret', 'credentials']
 
     def __init__(self, path=None):
         if path is None:
@@ -38,5 +38,16 @@ class _Registry(object):
     def secret(self, val=None):
         return self._fileval(self.path.secret, val)
     secret = property(secret, secret)
+
+    def credentials(self, val=None):
+        if val:
+            val = val[0] + "\n" + val[1]
+
+        retval = self._fileval(self.path.credentials, val)
+
+        if retval:
+            return tuple(retval.split('\n'))
+
+    credentials = property(credentials, credentials)
     
 registry = _Registry()

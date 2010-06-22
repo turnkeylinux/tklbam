@@ -60,6 +60,16 @@ class DummyUser(AttrDict):
     def __init__(self, uid, apikey):
         self.uid = uid
         self.apikey = apikey
+        self.credentials = None
+
+    def subscribe(self):
+        accesskey = base64.b64encode(sha.sha("%d" % self.uid).digest())[:20]
+        secretkey = base64.b64encode(os.urandom(30))[:40]
+
+        self.credentials = accesskey, secretkey
+
+    def unsubscribe(self):
+        self.credentials = None
 
 class _DummyDB:
     class Paths(Paths):
@@ -111,6 +121,7 @@ class _DummyDB:
 dummydb = _DummyDB("/tmp/db")
 
 class Backups:
+    Error = Error
     SUBKEY_NS = "tklbam"
 
     @classmethod
@@ -124,13 +135,17 @@ class Backups:
 
         return apikey.subkey(cls.SUBKEY_NS)
 
-    @classmethod
-    def is_valid_subkey(cls, subkey):
-        subkey = APIKey(subkey)
-        user = dummydb.get_user(subkey.uid)
-
-        return subkey == user.apikey.subkey(cls.SUBKEY_NS)
-
     def __init__(self, subkey):
-        if not self.is_valid_subkey(subkey):
+        subkey = APIKey(subkey)
+
+        user = dummydb.get_user(subkey.uid)
+        if not user or subkey != user.apikey.subkey(self.SUBKEY_NS):
             raise Error("invalid authentication subkey: %s" % subkey)
+
+        self.user = user
+
+    def get_credentials(self):
+        if not self.user.credentials:
+            raise Error("user not subscribed to Backups")
+
+        return self.user.credentials
