@@ -3,7 +3,7 @@
 
 Options:
 
-    --random    Choose a random password (and print it)
+    --random    Choose a secure random password (and print it)
 
 """
 
