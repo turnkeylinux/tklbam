@@ -8,7 +8,6 @@ Arguments:
 
 """
 
-import os
 import sys
 import hub
 import key
