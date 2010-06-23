@@ -8,7 +8,7 @@ from Crypto.Cipher import AES
 SALT_LEN = 4
 
 PASSES_HASH = 100000
-PASSES_CIPHER = 200000
+PASSES_CIPHER = 100000
 
 class Error(Exception):
     pass
@@ -33,13 +33,15 @@ def _cipher_key(passphrase):
                               PASSES_HASH if passphrase else 1)
     return cipher_key
 
-def _cipher(passphrase, mode=AES.MODE_OFB):
-    return AES.new(_cipher_key(passphrase), mode)
+def _cipher(cipher_key):
+    return AES.new(cipher_key, AES.MODE_CBC)
 
 def fmt(secret, passphrase):
     salt = os.urandom(SALT_LEN)
+    cipher_key = _cipher_key(passphrase)
     plaintext = salt + hashlib.sha1(secret).digest() + secret
-    ciphertext = _rinserepeat(_cipher(passphrase).encrypt, 
+
+    ciphertext = _rinserepeat(lambda v: _cipher(cipher_key).encrypt(v), 
                               _pad(plaintext), 
                               PASSES_CIPHER if passphrase else 1)
 
@@ -47,7 +49,8 @@ def fmt(secret, passphrase):
 
 def parse(formatted, passphrase):
     ciphertext = base64.b64decode(formatted)
-    decrypted = _rinserepeat(_cipher(passphrase).decrypt,
+    cipher_key = _cipher_key(passphrase)
+    decrypted = _rinserepeat(lambda v: _cipher(cipher_key).decrypt(v),
                              ciphertext,
                              PASSES_CIPHER if passphrase else 1)
     decrypted = _unpad(decrypted)
