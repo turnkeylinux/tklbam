@@ -14,6 +14,10 @@ Options:
 import sys
 import getopt
 
+import keypacket
+from registry import registry
+from passphrase import *
+
 def usage(e=None):
     if e:
         print >> sys.stderr, "error: " + str(e)
@@ -53,9 +57,32 @@ def main():
         print >> sys.stderr, "error: --no-passphrase and --random-passphrase are incompatible options"
         sys.exit(1)
 
-    print `opt_no_passphrase`
-    print `opt_random_passphrase`
-    print `keyfile`
+    if not registry.secret:
+        print >> sys.stderr, "error: you need to run init first"
+        sys.exit(1)
 
+    secret = keypacket.parse(registry.secret, "")
+
+    def _passphrase():
+        if opt_no_passphrase:
+            return ""
+
+        if opt_random_passphrase:
+            passphrase = random_passphrase()
+            print passphrase
+            return passphrase
+
+        return get_passphrase()
+
+    passphrase = _passphrase()
+    key = keypacket.fmt(secret, passphrase)
+
+    if keyfile == '-':
+        fh = sys.stdout
+    else:
+        fh = file(keyfile, "w")
+
+    print >> fh, key
+    
 if __name__ == "__main__":
     main()
