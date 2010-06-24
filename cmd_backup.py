@@ -7,19 +7,9 @@ Arguments:
 
     Default overrides read from $CONF_OVERRIDES
 
-Resolution order for options:
-1) command line (highest precedence)
-2) configuration files ($CONF)
-
 Options:
-    --profile=PATH          base profile path
-                            default: $DEFAULT_PROFILE
-
-    --keyfile=PATH          secret keyfile
-                            default: $CONF_KEY
-
-    --address=TARGET_URL    duplicity target URL
-                            default: read from $CONF_ADDRESS
+    --address=TARGET_URL    manual backup target URL
+                            default: automatically configured via Hub
 
     -v --verbose            Turn on verbosity
     -s --simulate           Simulate operation. Don't actually backup.
@@ -34,6 +24,7 @@ import getopt
 from string import Template
 
 import backup
+from registry import registry
 
 def fatal(e):
     print >> sys.stderr, "error: " + str(e)
@@ -47,35 +38,37 @@ def usage(e=None):
     tpl = Template(__doc__.strip())
     Conf = backup.BackupConf
     print >> sys.stderr, tpl.substitute(CONF=Conf.paths.path,
-                                        CONF_OVERRIDES=Conf.paths.overrides,
-                                        CONF_KEY=Conf.paths.key,
-                                        CONF_ADDRESS=Conf.paths.address,
-                                        DEFAULT_PROFILE=Conf.profile)
+                                        CONF_OVERRIDES=Conf.paths.overrides)
     sys.exit(1)
 
 def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'svh', 
                                        ['simulate', 'verbose', 
-                                        'profile=', 'keyfile=', 'address='])
+                                        'profile=', 'secretfile=', 'address='])
     except getopt.GetoptError, e:
         usage(e)
 
     conf = backup.BackupConf()
+    conf.secretfile = registry.path.secret
 
     opt_simulate = False
     opt_verbose = False
+
+    opt_profile = None
     for opt, val in opts:
         if opt in ('-v', '--verbose'):
             opt_verbose = True
         elif opt in ('-s', '--simulate'):
             opt_simulate = True
+
         elif opt == '--profile':
-            conf.profile = val
-        elif opt == '--keyfile':
+            opt_profile = val
+
+        elif opt == '--secretfile':
             if not exists(val):
-                usage("keyfile %s does not exist" % `val`)
-            conf.keyfile = val
+                usage("secretfile %s does not exist" % `val`)
+            conf.secretfile = val
         elif opt == '--address':
             conf.address = val
         elif opt == '-h':
@@ -84,29 +77,24 @@ def main():
     conf.overrides += args
 
     if not conf.address:
-        fatal("address not configured")
-
-    if not exists(conf.keyfile):
-        print "generating new secret key"
-        backup.Key.create(conf.keyfile)
-
-    key = backup.Key.read(conf.keyfile)
-
-    if not isdir(conf.profile):
-        fatal("profile dir %s doesn't exist" % `conf.profile`)
+        # TODO: auto-configure via Hub
+        fatal("not implemented yet")
+        conf.address = registry.hbr.address
 
     if opt_simulate:
         opt_verbose = True
 
-    b = backup.Backup(conf, key)
-    if opt_verbose:
-        print "PASSPHRASE=$(cat %s) %s" % (conf.keyfile, b.command)
+    print "backup.Backup(%s)" % (`conf`)
 
-    if not opt_simulate:
-        try:
-            b.run()
-        finally:
-            b.cleanup()
+    #b = backup.Backup(conf)
+    #if opt_verbose:
+    #    print "PASSPHRASE=$(cat %s) %s" % (conf.secretfile, b.command)
+
+    #if not opt_simulate:
+    #    try:
+    #        b.run()
+    #    finally:
+    #        b.cleanup()
 
 if __name__=="__main__":
     main()

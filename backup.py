@@ -86,25 +86,22 @@ class Limits(list):
         cls = type(self)
         return cls(list.__add__(self, b))
 
-class BackupConf:
-    profile = "/usr/share/tklbam/profile"
+from utils import AttrDict
 
+class BackupConf:
     path = "/etc/tklbam"
     class Paths(Paths):
-        files = [ 'address', 'key', 'overrides' ]
+        files = [ 'overrides' ]
     paths = Paths(path)
 
-    @staticmethod
-    def _read_address(path):
-        try:
-            return file(path).read().strip()
-        except:
-            return None
-
     def __init__(self):
-        self.keyfile = self.paths.key
-        self.address = self._read_address(self.paths.address)
+        self.secretfile = None
+        self.address = None
         self.overrides = Limits.fromfile(self.paths.overrides)
+
+    def __repr__(self):
+        return "secretfile=%s, address=%s, overrides=%s" % \
+                (`self.secretfile`, `self.address`, `self.overrides`)
 
 class ProfilePaths(Paths):
     files = [ 'dirindex', 'dirindex.conf', 'packages' ]
@@ -140,7 +137,7 @@ class Backup:
         changes.tofile(dest)
         file(dest_olist, "w").writelines((path + "\n" for path in olist))
 
-    def __init__(self, conf, key):
+    def __init__(self, conf):
         profile = ProfilePaths(conf.profile)
         paths = ExtrasPaths(self.EXTRAS_PATH)
 
@@ -175,10 +172,9 @@ class Backup:
         self.command = "duplicity " + " ".join(args)
         self.paths = paths
         self.conf = conf
-        self.key = key
 
     def run(self):
-        os.environ['PASSPHRASE'] = self.key
+        os.environ['PASSPHRASE'] = file(self.secretfile).readline().strip()
         exitcode = os.system(self.command)
         del os.environ['PASSPHRASE']
 
