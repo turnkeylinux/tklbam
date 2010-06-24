@@ -64,10 +64,12 @@ class _Registry(object):
     key = property(key, key)
 
     def credentials(self, val=None):
+        # (accesskey, secretkey)
         return self._file_tuple(self.path.credentials, val)
     credentials = property(credentials, credentials)
     
     def hbr(self, val=None):
+        # expected hbr keys: backup_id, address
         return self._file_dict(self.path.hbr, val)
     hbr = property(hbr, hbr)
 
