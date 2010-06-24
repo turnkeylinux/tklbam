@@ -15,6 +15,7 @@ import getopt
 
 import getpass
 
+import hub
 import key
 from registry import registry
 
@@ -72,7 +73,19 @@ def main():
     else:
         passphrase = get_passphrase()
 
-    registry.key = key.fmt(secret, passphrase)
+    mykey = key.fmt(secret, passphrase)
+    hbr = registry.hbr
+    
+    # after we setup a backup record 
+    # only save key to registry if update_key works
+    if hbr:
+        try:
+            hub.Backups(registry.sub_apikey).update_key(hbr.backup_id, mykey)
+            registry.key = mykey
+        except hub.Error:
+            raise
+    else:
+        registry.key = mykey
 
 if __name__=="__main__":
     main()

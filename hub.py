@@ -6,6 +6,8 @@ from hashlib import sha1 as sha
 from paths import Paths
 import pickle
 
+from utils import AttrDict
+
 class Error(Exception):
     pass
 
@@ -46,15 +48,6 @@ class APIKey:
 
     def __ne__(self, other):
         return not self.__eq__(other)
-
-class AttrDict(dict):
-    def __getattr__(self, name):
-        if name in self:
-            return self[name]
-        raise AttributeError("no such attribute '%s'" % name)
-
-    def __setattr__(self, name, val):
-        self[name] = val
 
 class DummyUser(AttrDict):
     def __init__(self, uid, apikey):
@@ -149,3 +142,6 @@ class Backups:
             raise Error("user not subscribed to Backups")
 
         return self.user.credentials
+
+    def update_key(self, backup_id, key):
+        raise Error("not implemented yet")

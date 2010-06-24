@@ -3,9 +3,11 @@ import os
 from os.path import *
 from paths import Paths
 
-class Registry(object):
+from utils import AttrDict
+
+class _Registry(object):
     class Paths(Paths):
-        files = ['sub_apikey', 'secret', 'key', 'credentials']
+        files = ['sub_apikey', 'secret', 'key', 'credentials', 'hbr']
 
     def __init__(self, path=None):
         if path is None:
@@ -33,10 +35,21 @@ class Registry(object):
 
     @classmethod
     def _file_tuple(cls, path, t):
-        t = "\n".join([ str(v) for v in t ]) if t else None
+        t = "\n".join([ str(v) for v in t ]) \
+            if t else None
+
         retval = cls._file_str(path, t)
         if retval:
             return tuple(retval.split('\n'))
+
+    @classmethod
+    def _file_dict(cls, path, d):
+        d = "\n".join([ "%s\t%s" % (k, v) for k, v in d.items() ]) \
+            if d else None
+
+        retval = cls._file_str(path, d)
+        if retval:
+            return AttrDict([ v.split("\t", 1) for v in retval.split("\n") ])
 
     def sub_apikey(self, val=None):
         return self._file_str(self.path.sub_apikey, val)
@@ -47,11 +60,15 @@ class Registry(object):
     secret = property(secret, secret)
 
     def key(self, val=None):
-        return self._(self.path.key, val)
+        return self._file_str(self.path.key, val)
     key = property(key, key)
 
     def credentials(self, val=None):
         return self._file_tuple(self.path.credentials, val)
     credentials = property(credentials, credentials)
     
-registry = Registry()
+    def hbr(self, val=None):
+        return self._file_dict(self.path.hbr, val)
+    hbr = property(hbr, hbr)
+
+registry = _Registry("/tmp/registry")

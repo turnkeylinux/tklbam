@@ -16,3 +16,13 @@ def remove_any(path):
         os.remove(path)
 
     return True
+
+class AttrDict(dict):
+    def __getattr__(self, name):
+        if name in self:
+            return self[name]
+        raise AttributeError("no such attribute '%s'" % name)
+
+    def __setattr__(self, name, val):
+        self[name] = val
+
