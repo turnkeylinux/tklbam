@@ -83,5 +83,3 @@ def parse(formatted, passphrase):
 
     return secret
 
-def generate():
-    return fmt(hashlib.sha1(os.urandom(32)).digest(), "")

@@ -14,9 +14,19 @@ import keypacket
 
 from registry import registry
 
+import os
+import base64
+import hashlib
+
 NOT_SUBSCRIBED = """\
 Warning: backups are not yet enabled for your TurnKey Hub account. Log
 into the Hub and go to the "Backups" section for instructions."""
+
+def generate_secret():
+    # effective is key size: 160-bits (SHA1)
+    # base64 encoding to ensure cli safeness
+    # urandom guarantees we won't block. Redundant randomness just in case.
+    return base64.b64encode(hashlib.sha1(os.urandom(32)).digest()).rstrip("=")
 
 def usage(e=None):
     if e:
@@ -42,7 +52,7 @@ def main():
     sub_apikey = hub.Backups.get_sub_apikey(apikey)
 
     registry.sub_apikey = sub_apikey
-    registry.secret = keypacket.generate()
+    registry.secret = generate_secret()
 
     try:
         credentials = hub.Backups(sub_apikey).get_credentials()

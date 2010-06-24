@@ -61,8 +61,6 @@ def main():
         print >> sys.stderr, "error: you need to run init first"
         sys.exit(1)
 
-    secret = keypacket.parse(registry.secret, "")
-
     def _passphrase():
         if opt_no_passphrase:
             return ""
@@ -75,7 +73,7 @@ def main():
         return get_passphrase()
 
     passphrase = _passphrase()
-    key = keypacket.fmt(secret, passphrase)
+    key = keypacket.fmt(registry.secret, passphrase)
 
     if keyfile == '-':
         fh = sys.stdout

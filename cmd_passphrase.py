@@ -40,7 +40,6 @@ def main():
     if not registry.secret:
         print >> sys.stderr, "error: you need to run init first"
         sys.exit(1)
-    secret = keypacket.parse(registry.secret, "")
 
     if opt_random:
         passphrase = random_passphrase()
@@ -48,7 +47,7 @@ def main():
     else:
         passphrase = get_passphrase()
 
-    mykey = keypacket.fmt(secret, passphrase)
+    mykey = keypacket.fmt(registry.secret, passphrase)
     hbr = registry.hbr
     
     # after we setup a backup record 
