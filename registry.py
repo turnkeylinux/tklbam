@@ -5,7 +5,7 @@ from paths import Paths
 
 class Registry(object):
     class Paths(Paths):
-        files = ['key', 'sub_apikey', 'secret', 'credentials']
+        files = ['sub_apikey', 'secret', 'key', 'credentials']
 
     def __init__(self, path=None):
         if path is None:
