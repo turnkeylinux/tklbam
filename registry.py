@@ -18,8 +18,8 @@ class Registry(object):
         self.path = self.Paths(path)
 
     @staticmethod
-    def _fileval(path, val):
-        if val is None:
+    def _file_str(path, s):
+        if s is None:
             if not exists(path):
                 return None
 
@@ -28,29 +28,30 @@ class Registry(object):
         else:
             fh = file(path, "w")
             os.chmod(path, 0600)
-            print >> fh, val
+            print >> fh, s
             fh.close()
 
+    @classmethod
+    def _file_tuple(cls, path, t):
+        t = "\n".join([ str(v) for v in t ]) if t else None
+        retval = cls._file_str(path, t)
+        if retval:
+            return tuple(retval.split('\n'))
+
     def sub_apikey(self, val=None):
-        return self._fileval(self.path.sub_apikey, val)
+        return self._file_str(self.path.sub_apikey, val)
     sub_apikey = property(sub_apikey, sub_apikey)
 
     def secret(self, val=None):
-        return self._fileval(self.path.secret, val)
+        return self._file_str(self.path.secret, val)
     secret = property(secret, secret)
 
     def key(self, val=None):
-        return self._fileval(self.path.key, val)
+        return self._(self.path.key, val)
     key = property(key, key)
 
     def credentials(self, val=None):
-        if val:
-            val = val[0] + "\n" + val[1]
-
-        retval = self._fileval(self.path.credentials, val)
-
-        if retval:
-            return tuple(retval.split('\n'))
+        return self._file_tuple(self.path.credentials, val)
     credentials = property(credentials, credentials)
     
 registry = Registry()
