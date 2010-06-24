@@ -3,9 +3,9 @@ import os
 from os.path import *
 from paths import Paths
 
-class _Registry(object):
+class Registry(object):
     class Paths(Paths):
-        files = ['sub_apikey', 'secret', 'credentials']
+        files = ['key', 'sub_apikey', 'secret', 'credentials']
 
     def __init__(self, path=None):
         if path is None:
@@ -39,6 +39,10 @@ class _Registry(object):
         return self._fileval(self.path.secret, val)
     secret = property(secret, secret)
 
+    def key(self, val=None):
+        return self._fileval(self.path.key, val)
+    key = property(key, key)
+
     def credentials(self, val=None):
         if val:
             val = val[0] + "\n" + val[1]
@@ -47,7 +51,6 @@ class _Registry(object):
 
         if retval:
             return tuple(retval.split('\n'))
-
     credentials = property(credentials, credentials)
     
-registry = _Registry()
+registry = Registry()

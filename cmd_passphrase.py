@@ -15,6 +15,9 @@ import getopt
 
 import getpass
 
+import key
+from registry import registry
+
 def random_passphrase():
     random = base64.b32encode(os.urandom(10))
     parts = []
@@ -58,11 +61,18 @@ def main():
         if opt == '--random':
             opt_random = True
 
+    if not registry.secret:
+        print >> sys.stderr, "error: you need to run init first"
+        sys.exit(1)
+    secret = key.parse(registry.secret, "")
+
     if opt_random:
         passphrase = random_passphrase()
         print passphrase
     else:
         passphrase = get_passphrase()
+
+    registry.key = key.fmt(secret, passphrase)
 
 if __name__=="__main__":
     main()
