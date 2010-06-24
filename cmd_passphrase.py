@@ -7,38 +7,13 @@ Options:
 
 """
 
-import os
-import base64
-
 import sys
 import getopt
 
-import getpass
-
 import hub
-import key
+import keypacket
 from registry import registry
-
-def random_passphrase():
-    random = base64.b32encode(os.urandom(10))
-    parts = []
-    for i in range(4):
-        parts.append(random[i * 4:(i+1) * 4])
-
-    return "-".join(parts)
-
-def get_passphrase():
-    if not os.isatty(sys.stdin.fileno()):
-        return sys.stdin.readline().rstrip()
-
-    while True:
-        passphrase = getpass.getpass("Passphrase: ")
-        confirm_passphrase = getpass.getpass("Confirm passphrase: ")
-        if passphrase == confirm_passphrase:
-            break
-        print >> sys.stderr, "Sorry, passphrases do not match"
-
-    return passphrase
+from passphrase import *
 
 def usage(e=None):
     if e:
@@ -65,7 +40,7 @@ def main():
     if not registry.secret:
         print >> sys.stderr, "error: you need to run init first"
         sys.exit(1)
-    secret = key.parse(registry.secret, "")
+    secret = keypacket.parse(registry.secret, "")
 
     if opt_random:
         passphrase = random_passphrase()
@@ -73,7 +48,7 @@ def main():
     else:
         passphrase = get_passphrase()
 
-    mykey = key.fmt(secret, passphrase)
+    mykey = keypacket.fmt(secret, passphrase)
     hbr = registry.hbr
     
     # after we setup a backup record 

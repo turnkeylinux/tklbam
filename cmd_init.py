@@ -10,7 +10,7 @@ Arguments:
 
 import sys
 import hub
-import key
+import keypacket
 
 from registry import registry
 
@@ -42,7 +42,7 @@ def main():
     sub_apikey = hub.Backups.get_sub_apikey(apikey)
 
     registry.sub_apikey = sub_apikey
-    registry.secret = key.generate()
+    registry.secret = keypacket.generate()
 
     try:
         credentials = hub.Backups(sub_apikey).get_credentials()
