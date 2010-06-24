@@ -44,7 +44,10 @@ def usage(e=None):
 
     print >> sys.stderr, "\nCommands: \n"
 
-    for command in COMMANDS:
+    command_names = COMMANDS.keys()
+    command_names.sort()
+
+    for command in command_names:
         command_shortdesc = COMMANDS[command].__doc__.strip().split('\n')[0]
         print >> sys.stderr, "    %-16s %s" % (command, command_shortdesc)
 
