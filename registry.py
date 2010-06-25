@@ -73,4 +73,4 @@ class _Registry(object):
         return self._file_dict(self.path.hbr, val)
     hbr = property(hbr, hbr)
 
-registry = _Registry("/tmp/registry")
+registry = _Registry("/var/tmp/tklbam/registry")

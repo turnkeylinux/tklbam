@@ -111,7 +111,7 @@ class _DummyDB:
 
         return user
 
-dummydb = _DummyDB("/tmp/db")
+dummydb = _DummyDB("/var/tmp/tklbam/db")
 
 class Backups:
     Error = Error
