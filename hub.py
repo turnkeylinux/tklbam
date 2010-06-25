@@ -114,6 +114,13 @@ class _DummyDB:
 dummydb = _DummyDB("/var/tmp/tklbam/db")
 
 class Backups:
+    # For simplicity's sake this implements a dummy version of both
+    # client-side and server-side operations.
+    # 
+    # When translating to a real implementation the interface should remain
+    # but the implementation will change completely as only client-side
+    # operations remain.
+
     Error = Error
     SUBKEY_NS = "tklbam"
 
@@ -130,6 +137,10 @@ class Backups:
 
     def __init__(self, subkey):
         subkey = APIKey(subkey)
+
+        # the non-dummy implementation should only check the subkey when an
+        # action is performed. (I.e., NOT on initialization). In a REST API
+        # the subkey should probably be passed as an authentication header.
 
         user = dummydb.get_user(subkey.uid)
         if not user or subkey != user.apikey.subkey(self.SUBKEY_NS):
