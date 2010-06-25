@@ -106,9 +106,6 @@ def main():
 
     conf.overrides += args
 
-    if not registry.sub_apikey:
-        fatal("you need to run init first")
-
     hb = hub.Backups(registry.sub_apikey)
     profile = get_profile(hb)
 

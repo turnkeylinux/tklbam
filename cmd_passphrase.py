@@ -37,9 +37,7 @@ def main():
         if opt == '--random':
             opt_random = True
 
-    if not registry.secret:
-        print >> sys.stderr, "error: you need to run init first"
-        sys.exit(1)
+    hb = hub.Backups(registry.sub_apikey)
 
     if opt_random:
         passphrase = random_passphrase()
@@ -54,7 +52,7 @@ def main():
     # only save key to registry if update_key works
     if hbr:
         try:
-            hub.Backups(registry.sub_apikey).update_key(hbr.backup_id, mykey)
+            hb.update_key(hbr.backup_id, mykey)
             registry.key = mykey
         except hub.Error:
             raise

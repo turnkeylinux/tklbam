@@ -145,6 +145,9 @@ class Backups:
         return apikey.subkey(cls.SUBKEY_NS)
 
     def __init__(self, subkey):
+        if subkey is None:
+            raise Error("no APIKEY - tklbam not initialized")
+
         subkey = APIKey(subkey)
 
         # the non-dummy implementation should only check the subkey when an
