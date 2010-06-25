@@ -97,6 +97,7 @@ class BackupConf:
     def __init__(self):
         self.secretfile = None
         self.address = None
+        self.credentials = None
         self.overrides = Limits.fromfile(self.paths.overrides)
 
     def __repr__(self):

@@ -106,13 +106,17 @@ def main():
 
     conf.overrides += args
 
+    if not registry.sub_apikey:
+        fatal("you need to run init first")
+
     hb = hub.Backups(registry.sub_apikey)
     profile = get_profile(hb)
 
     if not conf.address:
-        # TODO: auto-configure via Hub
-        fatal("not implemented yet")
-        conf.address = registry.hbr.address
+        if not registry.credentials:
+            registry.credentials = hb.get_credentials()
+
+        conf.credentials = registry.credentials
 
     if opt_simulate:
         opt_verbose = True
