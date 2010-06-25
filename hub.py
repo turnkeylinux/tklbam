@@ -5,7 +5,9 @@ import base64
 from hashlib import sha1 as sha
 from paths import Paths
 import pickle
+import glob
 
+import executil
 from utils import AttrDict
 
 class Error(Exception):
@@ -66,7 +68,7 @@ class DummyUser(AttrDict):
 
 class _DummyDB:
     class Paths(Paths):
-        files = ['users']
+        files = ['users', 'profiles']
 
     @staticmethod
     def _save(path, obj):
@@ -110,6 +112,13 @@ class _DummyDB:
         self.users[uid] = user
 
         return user
+
+    def get_profile(self, turnkey_version):
+        matches = glob.glob("%s/%s.tar.*" % (self.path.profiles, turnkey_version))
+        if not matches:
+            return None
+
+        return matches[0]
 
 dummydb = _DummyDB("/var/tmp/tklbam/db")
 
@@ -156,3 +165,31 @@ class Backups:
 
     def update_key(self, backup_id, key):
         raise Error("not implemented yet")
+
+    def get_new_profile(self, turnkey_version, profile_timestamp):
+        """
+        Gets a profile for <turnkey_version> that is newer than <profile_timestamp>.
+
+        If there's a new profile, returns a ProfileArchive instance.
+        Otherwise returns None.
+
+        Raises an exception if no profile exists for turnkey_version.
+        """
+
+        archive = dummydb.get_profile(turnkey_version)
+        if not archive:
+            raise Error("no profile exists for turnkey_version '%s'" % turnkey_version)
+
+        archive_timestamp = os.stat(archive).st_mtime
+        if profile_timestamp and profile_timestamp >= archive_timestamp:
+            return None
+
+        return ProfileArchive(archive, archive_timestamp)
+
+class ProfileArchive:
+    def __init__(self, archive, timestamp):
+        self.path_archive = archive
+        self.timestamp = timestamp
+
+    def extract(self, path):
+        executil.system("tar -xf %s -C %s" % (self.path_archive, path))

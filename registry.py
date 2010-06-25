@@ -7,7 +7,7 @@ from utils import AttrDict
 
 class _Registry(object):
     class Paths(Paths):
-        files = ['sub_apikey', 'secret', 'key', 'credentials', 'hbr']
+        files = ['sub_apikey', 'secret', 'key', 'credentials', 'hbr', 'profile', 'profile/stamp']
 
     def __init__(self, path=None):
         if path is None:
@@ -72,5 +72,30 @@ class _Registry(object):
         # expected hbr keys: backup_id, address
         return self._file_dict(self.path.hbr, val)
     hbr = property(hbr, hbr)
+
+    def profile(self, val=None):
+        if val is None:
+            if not exists(self.path.profile.stamp):
+                return None
+
+            timestamp = os.stat(self.path.profile.stamp).st_mtime
+            return Profile(self.path.profile, timestamp)
+        else:
+            profile_archive = val
+
+            if not exists(self.path.profile):
+                os.makedirs(self.path.profile)
+
+            profile_archive.extract(self.path.profile)
+            file(self.path.profile.stamp, "w").close()
+            os.utime(self.path.profile.stamp, (0, profile_archive.timestamp))
+    profile = property(profile, profile)
+
+class Profile(str):
+    def __new__(cls, path, timestamp):
+        return str.__new__(cls, path)
+
+    def __init__(self, path, timestamp):
+        self.timestamp = timestamp
 
 registry = _Registry("/var/tmp/tklbam/registry")

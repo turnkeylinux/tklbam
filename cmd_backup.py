@@ -24,11 +24,9 @@ import getopt
 from string import Template
 
 import backup
-from registry import registry
 
-def fatal(e):
-    print >> sys.stderr, "error: " + str(e)
-    sys.exit(1)
+import hub
+from registry import registry
 
 def usage(e=None):
     if e:
@@ -40,6 +38,38 @@ def usage(e=None):
     print >> sys.stderr, tpl.substitute(CONF=Conf.paths.path,
                                         CONF_OVERRIDES=Conf.paths.overrides)
     sys.exit(1)
+
+def warn(e):
+    print >> sys.stderr, "warning: " + str(e)
+
+def fatal(e):
+    print >> sys.stderr, "error: " + str(e)
+    sys.exit(1)
+
+def get_turnkey_version():
+    return file("/etc/turnkey_version").readline().strip()
+
+def get_profile(hb):
+    """Get a new profile if we don't have a profile in the registry or the Hub
+    has a newer profile for this appliance. If we can't contact the Hub raise
+    an error if we don't already have profile."""
+
+    profile_timestamp = registry.profile.timestamp \
+                        if registry.profile else None
+
+    turnkey_version = get_turnkey_version()
+
+    try:
+        new_profile = hb.get_new_profile(turnkey_version, profile_timestamp)
+        if new_profile:
+            registry.profile = new_profile
+    except hb.Error, e:
+        if not registry.profile:
+            raise
+
+        warn("using cached profile because of a Hub error: " + str(e))
+
+    return registry.profile
 
 def main():
     try:
@@ -76,6 +106,9 @@ def main():
 
     conf.overrides += args
 
+    hb = hub.Backups(registry.sub_apikey)
+    profile = get_profile(hb)
+
     if not conf.address:
         # TODO: auto-configure via Hub
         fatal("not implemented yet")
@@ -98,3 +131,4 @@ def main():
 
 if __name__=="__main__":
     main()
+
