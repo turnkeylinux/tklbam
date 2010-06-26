@@ -18,8 +18,11 @@ class APIKey:
         apikey = str(apikey)
         self.encoded = apikey
         
-        padded = "A" * (16 - len(apikey)) + apikey
-        uid, secret = struct.unpack("!L8s", base64.b64decode(padded))
+        padded = "A" * (20 - len(apikey)) + apikey
+        try:
+            uid, secret = struct.unpack("!L8s", base64.b32decode(padded + "=" * 4))
+        except TypeError:
+            raise Error("Invalid characters in API-KEY")
 
         self.uid = uid
         self.secret = secret
@@ -32,7 +35,7 @@ class APIKey:
             secret = sha(secret).digest()[:8]
 
         packed = struct.pack("!L8s", uid, secret)
-        encoded = base64.b64encode(packed).lstrip("A")
+        encoded = base64.b32encode(packed).lstrip("A").rstrip("=")
 
         return cls(encoded)
 
