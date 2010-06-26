@@ -119,7 +119,7 @@ def main():
     conf.overrides += args
 
     hb = hub.Backups(registry.sub_apikey)
-    profile = get_profile(hb)
+    conf.profile = get_profile(hb) if not opt_profile else opt_profile
 
     if not conf.address:
         if not registry.credentials:

@@ -98,6 +98,7 @@ class BackupConf(AttrDict):
         self.secretfile = None
         self.address = None
         self.credentials = None
+        self.profile = None
         self.overrides = Limits.fromfile(self.paths.overrides)
 
 class ProfilePaths(Paths):
