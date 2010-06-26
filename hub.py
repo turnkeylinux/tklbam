@@ -222,6 +222,13 @@ class Backups:
 
         return backup_record
 
+    def updated_backup(self, address):
+        # nothing to do in the dummy implementation in the real implementation
+        # this should add a task which queries S3 with the user's credentials
+        # and updates the Hub database (e.g., size, data on backup sessions,
+        # etc.)
+        pass
+
 class ProfileArchive:
     def __init__(self, archive, timestamp):
         self.path_archive = archive

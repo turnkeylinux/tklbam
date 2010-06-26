@@ -149,6 +149,7 @@ def main():
     #        b.run()
     #    finally:
     #        b.cleanup()
+    hb.updated_backup(conf.address)
 
 if __name__=="__main__":
     main()
