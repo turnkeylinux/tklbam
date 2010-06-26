@@ -45,19 +45,19 @@ def main():
     else:
         passphrase = get_passphrase()
 
-    mykey = keypacket.fmt(registry.secret, passphrase)
+    key = keypacket.fmt(registry.secret, passphrase)
     hbr = registry.hbr
     
     # after we setup a backup record 
     # only save key to registry if update_key works
     if hbr:
         try:
-            hb.update_key(hbr.backup_id, mykey)
-            registry.key = mykey
+            hb.update_key(hbr.backup_id, key)
+            registry.key = key
         except hub.Error:
             raise
     else:
-        registry.key = mykey
+        registry.key = key
 
 if __name__=="__main__":
     main()
