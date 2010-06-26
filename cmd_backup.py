@@ -133,7 +133,6 @@ def main():
                                                 get_server_id())
 
         conf.address = registry.hbr.address
-        conf.credentials = conf.credentials
 
     if opt_simulate:
         opt_verbose = True
