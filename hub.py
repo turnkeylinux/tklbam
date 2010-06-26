@@ -56,6 +56,7 @@ class DummyUser(AttrDict):
         self.uid = uid
         self.apikey = apikey
         self.credentials = None
+        self.backups = {}
 
     def subscribe(self):
         accesskey = base64.b64encode(sha("%d" % self.uid).digest())[:20]
@@ -65,6 +66,16 @@ class DummyUser(AttrDict):
 
     def unsubscribe(self):
         self.credentials = None
+
+class DummyBackupRecord(AttrDict):
+    # backup_id, address
+    def __init__(self, owner_uid, backup_id, address, key, turnkey_version, server_id):
+        self.owner_uid = owner_uid
+        self.backup_id = backup_id
+        self.address = address
+        self.key = key
+        self.turnkey_version = turnkey_version
+        self.server_id = server_id
 
 class _DummyDB:
     class Paths(Paths):
@@ -112,6 +123,7 @@ class _DummyDB:
         self.users[uid] = user
 
         return user
+
 
     def get_profile(self, turnkey_version):
         matches = glob.glob("%s/%s.tar.*" % (self.path.profiles, turnkey_version))
@@ -188,6 +200,24 @@ class Backups:
             return None
 
         return ProfileArchive(archive, archive_timestamp)
+
+    def new_backup_record(self, key, turnkey_version, server_id=None):
+        # in the real implementation the hub would create a bucket not a dir...
+
+        # real implementation would have to make sure this is unique
+        backup_id =  "bak-" + base64.b16encode(os.urandom(4)).lower()
+
+        path = "/var/tmp/duplicity/" + backup_id
+        os.makedirs(path)
+        address = "file://" + path
+
+        backup_record = DummyBackupRecord(self.user.uid, backup_id, address, key, \
+                                          turnkey_version, server_id)
+
+        self.user.backups[backup_id] = backup_record
+        dummydb.save()
+
+        return backup_record
 
 class ProfileArchive:
     def __init__(self, archive, timestamp):

@@ -88,7 +88,7 @@ class Limits(list):
 
 from utils import AttrDict
 
-class BackupConf:
+class BackupConf(AttrDict):
     path = "/etc/tklbam"
     class Paths(Paths):
         files = [ 'overrides' ]
@@ -99,10 +99,6 @@ class BackupConf:
         self.address = None
         self.credentials = None
         self.overrides = Limits.fromfile(self.paths.overrides)
-
-    def __repr__(self):
-        return "secretfile=%s, address=%s, overrides=%s" % \
-                (`self.secretfile`, `self.address`, `self.overrides`)
 
 class ProfilePaths(Paths):
     files = [ 'dirindex', 'dirindex.conf', 'packages' ]

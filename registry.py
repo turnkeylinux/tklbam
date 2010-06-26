@@ -44,12 +44,12 @@ class _Registry(object):
 
     @classmethod
     def _file_dict(cls, path, d):
-        d = "\n".join([ "%s\t%s" % (k, v) for k, v in d.items() ]) \
+        d = "\n".join([ "%s=%s" % (k, v) for k, v in d.items() ]) \
             if d else None
 
         retval = cls._file_str(path, d)
         if retval:
-            return AttrDict([ v.split("\t", 1) for v in retval.split("\n") ])
+            return AttrDict([ v.split("=", 1) for v in retval.split("\n") ])
 
     def sub_apikey(self, val=None):
         return self._file_str(self.path.sub_apikey, val)
@@ -70,6 +70,9 @@ class _Registry(object):
     
     def hbr(self, val=None):
         # expected hbr keys: backup_id, address
+        if val:
+            val = AttrDict({'address':val.address,
+                            'backup_id':val.backup_id})
         return self._file_dict(self.path.hbr, val)
     hbr = property(hbr, hbr)
 

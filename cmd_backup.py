@@ -49,6 +49,18 @@ def fatal(e):
 def get_turnkey_version():
     return file("/etc/turnkey_version").readline().strip()
 
+from conffile import ConfFile
+
+class ServerConf(ConfFile):
+    CONF_FILE="/var/lib/hubclient/server.conf"
+    REQUIRED=['serverid']
+
+def get_server_id():
+    if not exists(ServerConf.CONF_FILE):
+        return None
+
+    return ServerConf()['serverid']
+
 def get_profile(hb):
     """Get a new profile if we don't have a profile in the registry or the Hub
     has a newer profile for this appliance. If we can't contact the Hub raise
@@ -114,6 +126,14 @@ def main():
             registry.credentials = hb.get_credentials()
 
         conf.credentials = registry.credentials
+
+        if not registry.hbr:
+            registry.hbr = hb.new_backup_record(registry.key, 
+                                                get_turnkey_version(), 
+                                                get_server_id())
+
+        conf.address = registry.hbr.address
+        conf.credentials = conf.credentials
 
     if opt_simulate:
         opt_verbose = True

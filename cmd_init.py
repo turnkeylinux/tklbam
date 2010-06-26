@@ -53,6 +53,7 @@ def main():
 
     registry.sub_apikey = sub_apikey
     registry.secret = generate_secret()
+    registry.key = keypacket.fmt(registry.secret, "")
 
     try:
         credentials = hub.Backups(sub_apikey).get_credentials()
