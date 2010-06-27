@@ -6,6 +6,7 @@ from hashlib import sha1 as sha
 from paths import Paths
 import pickle
 import glob
+from datetime import datetime
 
 import executil
 from utils import AttrDict
@@ -79,6 +80,13 @@ class DummyBackupRecord(AttrDict):
         self.key = key
         self.turnkey_version = turnkey_version
         self.server_id = server_id
+
+        self.created = datetime.now()
+        self.updated = None
+
+        # in MBs
+        self.size = 0
+        self.label = "TurnKey Backup"
 
 class _DummyDB:
     class Paths(Paths):
