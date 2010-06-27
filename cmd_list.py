@@ -79,13 +79,16 @@ def main():
             print format(hbr)
 
     else:
-        print "# ID         Created     Updated    Size (GB)  Label"
+        print "# ID  Created     Updated    Size (GB)  Label"
         for hbr in hbrs:
-            print "%s %s  %-10s %-8.1f   %s" % (hbr.backup_id,
-                                           hbr.created.strftime("%Y-%m-%d"),
-                                           hbr.updated.strftime("%Y-%m-%d") if hbr.updated else "-",
-                                           hbr.size / 1024.0,
-                                           hbr.label)
+            print "%4s  %s  %-10s %-8.1f   %s" % (hbr.backup_id,
+                                                  hbr.created.strftime("%Y-%m-%d"),
+
+                                                  hbr.updated.strftime("%Y-%m-%d") 
+                                                  if hbr.updated else "-",
+
+                                                  hbr.size / 1024.0,
+                                                  hbr.label)
 
 if __name__ == "__main__":
     main()
