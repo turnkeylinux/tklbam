@@ -1,3 +1,6 @@
+# the registry is implemented as a virtual object with properties that are
+# mapped directly to files.
+
 import sys
 import os
 from os.path import *
