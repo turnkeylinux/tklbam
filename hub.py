@@ -253,11 +253,15 @@ class Backups:
         return self.user.backups.values()
 
     def updated_backup(self, address):
-        # nothing to do in the dummy implementation in the real implementation
-        # this should add a task which queries S3 with the user's credentials
-        # and updates the Hub database (e.g., size, data on backup sessions,
-        # etc.)
-        pass
+        # In the real implementation this should add a task which queries S3
+        # with the user's credentials and updates the Hub database (e.g., size,
+        # data on backup sessions, etc.)
+
+        for backup in self.user.backups.values():
+            if address == backup.address:
+                backup.updated = datetime.now()
+                dummydb.save()
+                return
 
 class ProfileArchive:
     def __init__(self, archive, timestamp):
