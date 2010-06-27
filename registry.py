@@ -3,6 +3,7 @@ import os
 from os.path import *
 from paths import Paths
 
+import shutil
 from utils import AttrDict
 
 class UNDEFINED:
@@ -31,15 +32,19 @@ class _Registry(object):
             return file(path).read().rstrip()
 
         else:
-            fh = file(path, "w")
-            os.chmod(path, 0600)
-            print >> fh, s
-            fh.close()
+            if s is None:
+                if exists(path):
+                    os.remove(path)
+            else:
+                fh = file(path, "w")
+                os.chmod(path, 0600)
+                print >> fh, s
+                fh.close()
 
     @classmethod
     def _file_tuple(cls, path, t=UNDEFINED):
-        t = "\n".join([ str(v) for v in t ]) \
-            if t is not UNDEFINED else UNDEFINED
+        if t and t is not UNDEFINED:
+            t = "\n".join([ str(v) for v in t ])
 
         retval = cls._file_str(path, t)
         if retval:
@@ -47,8 +52,8 @@ class _Registry(object):
 
     @classmethod
     def _file_dict(cls, path, d=UNDEFINED):
-        d = "\n".join([ "%s=%s" % (k, v) for k, v in d.items() ]) \
-            if d is not UNDEFINED else UNDEFINED
+        if d and d is not UNDEFINED:
+            d = "\n".join([ "%s=%s" % (k, v) for k, v in d.items() ])
 
         retval = cls._file_str(path, d)
         if retval:
@@ -72,13 +77,16 @@ class _Registry(object):
     credentials = property(credentials, credentials)
     
     def hbr(self, val=UNDEFINED):
-        if val is not UNDEFINED:
+        if val and val is not UNDEFINED:
             val = AttrDict({'address':val.address,
                             'backup_id':val.backup_id})
         return self._file_dict(self.path.hbr, val)
     hbr = property(hbr, hbr)
 
     def profile(self, val=UNDEFINED):
+        if val is None:
+            return shutil.rmtree(self.path.profile, ignore_errors=True)
+
         if val is UNDEFINED:
             if not exists(self.path.profile.stamp):
                 return None
