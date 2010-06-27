@@ -5,6 +5,9 @@ from paths import Paths
 
 from utils import AttrDict
 
+class UNDEFINED:
+    pass
+
 class _Registry(object):
     class Paths(Paths):
         files = ['sub_apikey', 'secret', 'key', 'credentials', 'hbr', 'profile', 'profile/stamp']
@@ -20,8 +23,8 @@ class _Registry(object):
         self.path = self.Paths(path)
 
     @staticmethod
-    def _file_str(path, s):
-        if s is None:
+    def _file_str(path, s=UNDEFINED):
+        if s is UNDEFINED:
             if not exists(path):
                 return None
 
@@ -34,50 +37,49 @@ class _Registry(object):
             fh.close()
 
     @classmethod
-    def _file_tuple(cls, path, t):
+    def _file_tuple(cls, path, t=UNDEFINED):
         t = "\n".join([ str(v) for v in t ]) \
-            if t else None
+            if t is not UNDEFINED else UNDEFINED
 
         retval = cls._file_str(path, t)
         if retval:
             return tuple(retval.split('\n'))
 
     @classmethod
-    def _file_dict(cls, path, d):
+    def _file_dict(cls, path, d=UNDEFINED):
         d = "\n".join([ "%s=%s" % (k, v) for k, v in d.items() ]) \
-            if d else None
+            if d is not UNDEFINED else UNDEFINED
 
         retval = cls._file_str(path, d)
         if retval:
             return AttrDict([ v.split("=", 1) for v in retval.split("\n") ])
 
-    def sub_apikey(self, val=None):
+    def sub_apikey(self, val=UNDEFINED):
         return self._file_str(self.path.sub_apikey, val)
     sub_apikey = property(sub_apikey, sub_apikey)
 
-    def secret(self, val=None):
+    def secret(self, val=UNDEFINED):
         return self._file_str(self.path.secret, val)
     secret = property(secret, secret)
 
-    def key(self, val=None):
+    def key(self, val=UNDEFINED):
         return self._file_str(self.path.key, val)
     key = property(key, key)
 
-    def credentials(self, val=None):
+    def credentials(self, val=UNDEFINED):
         # (accesskey, secretkey)
         return self._file_tuple(self.path.credentials, val)
     credentials = property(credentials, credentials)
     
-    def hbr(self, val=None):
-        # expected hbr keys: backup_id, address
-        if val:
+    def hbr(self, val=UNDEFINED):
+        if val is not UNDEFINED:
             val = AttrDict({'address':val.address,
                             'backup_id':val.backup_id})
         return self._file_dict(self.path.hbr, val)
     hbr = property(hbr, hbr)
 
-    def profile(self, val=None):
-        if val is None:
+    def profile(self, val=UNDEFINED):
+        if val is UNDEFINED:
             if not exists(self.path.profile.stamp):
                 return None
 
