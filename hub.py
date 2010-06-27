@@ -222,6 +222,9 @@ class Backups:
 
         return backup_record
 
+    def list_backups(self):
+        return self.user.backups.values()
+
     def updated_backup(self, address):
         # nothing to do in the dummy implementation in the real implementation
         # this should add a task which queries S3 with the user's credentials
