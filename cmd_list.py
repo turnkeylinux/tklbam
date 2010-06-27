@@ -79,9 +79,9 @@ def main():
             print format(hbr)
 
     else:
-        print "# ID  Created     Updated    Size (GB)  Label"
+        print "# ID  Created     Updated     Size (GB)  Label"
         for hbr in hbrs:
-            print "%4s  %s  %-10s %-8.1f   %s" % (hbr.backup_id,
+            print "%4s  %s  %-10s  %-8.1f   %s" % (hbr.backup_id,
                                                   hbr.created.strftime("%Y-%m-%d"),
 
                                                   hbr.updated.strftime("%Y-%m-%d") 
