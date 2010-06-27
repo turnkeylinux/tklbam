@@ -14,6 +14,12 @@ from utils import AttrDict
 class Error(Exception):
     pass
 
+class NotSubscribedError(Error):
+    pass
+
+class InvalidBackupError(Error):
+    pass
+
 class APIKey:
     def __init__(self, apikey):
         apikey = str(apikey)
@@ -75,8 +81,7 @@ class DummyUser(AttrDict):
     def new_backup(self, address, key, turnkey_version, server_id=None):
         self.backups_max += 1
 
-        id = self.backups_max
-
+        id = str(self.backups_max)
         backup_record = DummyBackupRecord(id, address, key, \
                                           turnkey_version, server_id)
 
@@ -197,7 +202,7 @@ class Backups:
 
     def get_credentials(self):
         if not self.user.credentials:
-            raise Error("user not subscribed to Backups")
+            raise NotSubscribedError("user not subscribed to Backups")
 
         return self.user.credentials
 
@@ -234,10 +239,15 @@ class Backups:
         backup_record = self.user.new_backup(address, key, 
                                              turnkey_version, server_id)
 
-
         dummydb.save()
 
         return backup_record
+
+    def get_backup_record(self, backup_id):
+        if backup_id not in self.user.backups:
+            raise InvalidBackupError("no such backup (%s)" % backup_id)
+
+        return self.user.backups[backup_id]
 
     def list_backups(self):
         return self.user.backups.values()

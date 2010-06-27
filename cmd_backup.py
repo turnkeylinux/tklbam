@@ -122,10 +122,33 @@ def main():
     conf.profile = get_profile(hb) if not opt_profile else opt_profile
 
     if not conf.address:
-        if not registry.credentials:
+        try:
             registry.credentials = hb.get_credentials()
+        except hb.Error, e:
+            # in the real implementation asking for get_credentials() might fail
+            # if the hub is down. If we already have the credentials we can survive
+            # that.
+            if isinstance(e, hub.NotSubscribedError) or not registry.credentials:
+                raise
+            warn(e)
 
         conf.credentials = registry.credentials
+
+        if registry.hbr:
+            try:
+                registry.hbr = hb.get_backup_record(registry.hbr.backup_id)
+            except hb.Error, e:
+                # in the real implementation if the Hub is down we can hope that
+                # the cached address is still valid and warn and try to backup anyway.
+                #
+                # But if we reach the Hub and it tells us the backup is invalid
+                # we must invalidate the cached backup record and start over.
+
+                if isinstance(e, hub.InvalidBackupError):
+                    warn("old backup record deleted, creating new ... ")
+                    registry.hbr = None
+                else:
+                    warn(e)
 
         if not registry.hbr:
             registry.hbr = hb.new_backup_record(registry.key, 
