@@ -1,5 +1,5 @@
 #!/usr/bin/python
-"""Create an independent backup escrow key. Save this somewhere safe.
+"""Create a backup escrow key (Save this somewhere safe)
 
 Arguments:
 

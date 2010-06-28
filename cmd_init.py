@@ -1,6 +1,6 @@
 #!/usr/bin/python
 """
-Initialize TKLBAM (TurnKey Linux Backups and Migration)
+Initialization (start here)
 
 Arguments:
 
