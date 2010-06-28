@@ -13,23 +13,12 @@ debug:
 	$(foreach v, $V, $(warning $v = $($v)))
 	@true
 
-dist: clean
-	-mkdir -p $(PATH_DIST)
-
-	-cp -a .git .gitignore $(PATH_DIST)
-	-cp -a *.sh *.c *.py Makefile libexec* $(PATH_DIST)
-
-	tar jcvf $(PATH_DIST).tar.bz2 $(PATH_DIST)
-	rm -rf $(PATH_DIST)
-
 help:
 	@echo '=== Targets:'
 	@echo 'install   [ prefix=path/to/usr ] # default: prefix=$(value prefix)'
 	@echo 'uninstall [ prefix=path/to/usr ]'
 	@echo
 	@echo 'clean'
-	@echo
-	@echo 'dist                             # create distribution tarball'
 
 # DRY macros
 truepath = $(shell echo $1 | sed -e 's/^debian\/$(progname)//')
