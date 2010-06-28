@@ -36,6 +36,36 @@ from restore import Restore
 from redirect import RedirectOutput
 from temp import TempFile
 
+import hub
+from registry import registry
+
+class Error(Exception):
+    pass
+
+def get_backup_id(arg):
+    hb = hub.Backups(registry.sub_apikey)
+    if re.match(r'^\d+$', arg):
+        backup_id = arg
+
+        try:
+            hb.get_backup_record(backup_id)
+        except hub.InvalidBackupError, e:
+            raise Error('invalid backup id (%s)' % backup_id)
+
+        return backup_id
+
+    # treat our argument as a pattern
+    matches = [ hbr for hbr in hb.list_backups() 
+                if re.search(arg, hbr.label, re.IGNORECASE) ]
+
+    if not matches:
+        raise Error("'%s' doesn't match any backup labels" % arg)
+
+    if len(matches) > 1:
+        raise Error("'%s' matches more than one backup label" % arg)
+
+    return matches[0].backup_id
+
 def fatal(e):
     print >> sys.stderr, "error: " + str(e)
     sys.exit(1)
@@ -98,7 +128,10 @@ def main():
         if len(args) != 1:
             usage("incorrect number of arguments")
 
-        backup_id = args[0]
+        try:
+            backup_id = get_backup_id(args[0])
+        except Error, e:
+            fatal(e)
 
     else:
         if not opt_address:
