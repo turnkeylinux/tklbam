@@ -105,6 +105,15 @@ class DummyBackupRecord(AttrDict):
         self.size = 0
         self.label = "TurnKey Backup"
 
+    def update(self):
+        self.updated = datetime.now()
+
+        path = self.address[len("file://"):] 
+        size = sum([ os.stat(join(path, fname)).st_size 
+                     for fname in os.listdir(path) ])
+
+        self.size = size / (1024 * 1024)
+
 class _DummyDB:
     class Paths(Paths):
         files = ['users', 'profiles']
@@ -260,7 +269,7 @@ class Backups:
 
         for backup in self.user.backups.values():
             if address == backup.address:
-                backup.updated = datetime.now()
+                backup.update()
                 dummydb.save()
                 return
 
