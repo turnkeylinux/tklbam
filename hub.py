@@ -1,5 +1,7 @@
-from os.path import *
 import os
+from os.path import *
+
+import re
 import struct
 import base64
 from hashlib import sha1 as sha
@@ -89,6 +91,57 @@ class DummyUser(AttrDict):
 
         return backup_record
 
+class DuplicityFile(AttrDict):
+    @classmethod
+    def from_fname(cls, fname):
+        m = re.match(r'duplicity-(.*?)\.(.*?).(?:sigtar|vol.*difftar)', fname)
+        if not m:
+            return None
+
+        type, timestamp = m.groups()
+        m = re.search(r'to\.(.*)', timestamp)
+        if m:
+            timestamp, = m.groups()
+
+        if 'full' in type:
+            type = 'full'
+        else:
+            type = 'inc'
+
+        try:
+            timestamp = datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%SZ")
+        except ValueError:
+            return
+
+        return cls(type, timestamp)
+
+    def __init__(self, type, timestamp):
+        self.type = type
+        self.timestamp = timestamp
+
+class DummySession(AttrDict):
+    def __init__(self, type, timestamp, size=0):
+        self.type = type
+        self.timestamp = timestamp
+        self.size = size
+
+def _parse_duplicity_sessions(path):
+    sessions = {}
+    for fname in os.listdir(path):
+        fpath = join(path, fname)
+        fsize = os.stat(fpath).st_size
+
+        df = DuplicityFile.from_fname(fname)
+        if not df:
+            continue
+
+        if not df.timestamp in sessions:
+            sessions[df.timestamp] = DummySession(df.type, df.timestamp, fsize)
+        else:
+            sessions[df.timestamp].size += fsize
+
+    return sessions.values()
+
 class DummyBackupRecord(AttrDict):
     # backup_id, address
     def __init__(self, backup_id, address, key, turnkey_version, server_id):
@@ -105,14 +158,16 @@ class DummyBackupRecord(AttrDict):
         self.size = 0
         self.label = "TurnKey Backup"
 
+        # no user interface for this in the dummy hub
+        self.sessions = []
+
     def update(self):
         self.updated = datetime.now()
 
         path = self.address[len("file://"):] 
-        size = sum([ os.stat(join(path, fname)).st_size 
-                     for fname in os.listdir(path) ])
 
-        self.size = size / (1024 * 1024)
+        self.sessions = _parse_duplicity_sessions(path)
+        self.size = sum([ session.size for session in self.sessions ]) / (1024 * 1024)
 
 class _DummyDB:
     class Paths(Paths):
