@@ -51,9 +51,10 @@ def fmt(secret, passphrase):
     ciphertext = _repeat(lambda v: _cipher(cipher_key).encrypt(v), 
                          _pad(plaintext), cipher_repeats)
 
+    fingerprint = hashlib.sha1(secret).digest()[:4]
     packet = struct.pack("!BHH", KEY_VERSION, 
                          hash_repeats / 1000, 
-                         cipher_repeats / 1000) + ciphertext
+                         cipher_repeats / 1000) + fingerprint + ciphertext
 
     return base64.b64encode(packet)
 
@@ -66,7 +67,7 @@ def parse(packet, passphrase):
 
     hash_repeats = khr * 1000 + 1
     cipher_repeats = kcr * 1000 + 1
-    ciphertext = packet[5:]
+    ciphertext = packet[9:]
 
     cipher_key = _cipher_key(passphrase, hash_repeats)
     decrypted = _repeat(lambda v: _cipher(cipher_key).decrypt(v),
@@ -82,3 +83,7 @@ def parse(packet, passphrase):
         raise Error("error decrypting key")
 
     return secret
+
+def fingerprint(packet):
+    fingerprint = base64.b64decode(packet)[5:9]
+    return base64.b16encode(fingerprint)
