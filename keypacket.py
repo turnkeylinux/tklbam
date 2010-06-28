@@ -67,8 +67,12 @@ def parse(packet, passphrase):
     if version != KEY_VERSION:
         raise Error("unknown key version (%d)" % version)
 
-    hash_repeats = khr * 1000 + 1
-    cipher_repeats = kcr * 1000 + 1
+    if not passphrase:
+        hash_repeats = cipher_repeats = 1
+    else:
+        hash_repeats = khr * 1000 + 1
+        cipher_repeats = kcr * 1000 + 1
+
     ciphertext = packet[5 + FINGERPRINT_LEN:]
 
     cipher_key = _cipher_key(passphrase, hash_repeats)
