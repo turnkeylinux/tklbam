@@ -169,7 +169,7 @@ class DummyBackupRecord(AttrDict):
         self.sessions = _parse_duplicity_sessions(path)
         self.size = sum([ session.size for session in self.sessions ]) / (1024 * 1024)
 
-class _DummyDB:
+class _DummyDB(AttrDict):
     class Paths(Paths):
         files = ['users', 'profiles']
 
