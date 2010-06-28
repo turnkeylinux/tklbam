@@ -11,6 +11,8 @@ SALT_LEN = 4
 KILO_REPEATS_HASH = 80
 KILO_REPEATS_CIPHER = 80
 
+FINGERPRINT_LEN = 6
+
 class Error(Exception):
     pass
 
@@ -51,7 +53,7 @@ def fmt(secret, passphrase):
     ciphertext = _repeat(lambda v: _cipher(cipher_key).encrypt(v), 
                          _pad(plaintext), cipher_repeats)
 
-    fingerprint = hashlib.sha1(secret).digest()[:4]
+    fingerprint = hashlib.sha1(secret).digest()[:FINGERPRINT_LEN]
     packet = struct.pack("!BHH", KEY_VERSION, 
                          hash_repeats / 1000, 
                          cipher_repeats / 1000) + fingerprint + ciphertext
@@ -67,7 +69,7 @@ def parse(packet, passphrase):
 
     hash_repeats = khr * 1000 + 1
     cipher_repeats = kcr * 1000 + 1
-    ciphertext = packet[9:]
+    ciphertext = packet[5 + FINGERPRINT_LEN:]
 
     cipher_key = _cipher_key(passphrase, hash_repeats)
     decrypted = _repeat(lambda v: _cipher(cipher_key).decrypt(v),
@@ -85,5 +87,5 @@ def parse(packet, passphrase):
     return secret
 
 def fingerprint(packet):
-    fingerprint = base64.b64decode(packet)[5:9]
+    fingerprint = base64.b64decode(packet)[5:5 + FINGERPRINT_LEN]
     return base64.b16encode(fingerprint)
