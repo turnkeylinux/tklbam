@@ -207,7 +207,8 @@ class Backups:
         return self.user.credentials
 
     def update_key(self, backup_id, key):
-        raise Error("not implemented yet")
+        self.get_backup_record(backup_id).key = key
+        dummydb.save()
 
     def get_new_profile(self, turnkey_version, profile_timestamp):
         """
