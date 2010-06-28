@@ -2,12 +2,13 @@
 """
 TurnKey Linux Backup and Migration
 """
-import os
+from os.path import *
 from cliwrapper import CliWrapper
 
 class CliWrapper(CliWrapper):
     DESCRIPTION = __doc__
-    PATH = [ os.path.dirname(__file__) ]
+    PATH = [ dirname(realpath(__file__)) ]
+    
     COMMANDS_USAGE_ORDER = ['init',
                             '',
                             'passphrase', 'escrow',
