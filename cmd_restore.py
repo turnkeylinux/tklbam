@@ -173,27 +173,27 @@ def main():
     print "opt_limits: " + `opt_limits`
     print "credentials: " + `credentials`
 
-    #if silent:
-    #    log = TempFile()
-    #else:
-    #    log = sys.stdout
+    if silent:
+        log = TempFile()
+    else:
+        log = sys.stdout
 
-    #redir = RedirectOutput(log)
-    #try:
-    #    restore = Restore(address, secret, opt_limits, 
-    #                      credentials=credentials,
-    #                      rollback=not no_rollback)
+    redir = RedirectOutput(log)
+    try:
+        restore = Restore(address, secret, opt_limits, 
+                          credentials=credentials,
+                          rollback=not no_rollback)
 
-    #    if not skip_packages:
-    #        restore.packages()
+        if not skip_packages:
+            restore.packages()
 
-    #    if not skip_files:
-    #        restore.files()
+        if not skip_files:
+            restore.files()
 
-    #    if not skip_database:
-    #        restore.database()
-    #finally:
-    #    redir.close()
+        if not skip_database:
+            restore.database()
+    finally:
+        redir.close()
 
 if __name__=="__main__":
     main()

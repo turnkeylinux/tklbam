@@ -162,15 +162,15 @@ def main():
 
     print "backup.Backup(%s)" % (`conf`)
 
-    #b = backup.Backup(conf)
-    #if opt_verbose:
-    #    print "PASSPHRASE=$(cat %s) %s" % (conf.secretfile, b.command)
+    b = backup.Backup(conf)
+    if opt_verbose:
+        print "PASSPHRASE=$(cat %s) %s" % (conf.secretfile, b.command)
 
-    #if not opt_simulate:
-    #    try:
-    #        b.run()
-    #    finally:
-    #        b.cleanup()
+    if not opt_simulate:
+        try:
+            b.run()
+        finally:
+            b.cleanup()
     hb.updated_backup(conf.address)
 
 if __name__=="__main__":
