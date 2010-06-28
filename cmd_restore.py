@@ -136,6 +136,7 @@ def main():
             usage()
 
     hbr = None
+    credentials = None
 
     if args:
         if len(args) != 1:
@@ -143,6 +144,7 @@ def main():
 
         try:
             hbr = get_backup_record(args[0])
+            credentials = hub.Backups(registry.sub_apikey).get_credentials()
         except Error, e:
             fatal(e)
 
@@ -166,9 +168,10 @@ def main():
     key = opt_key if opt_key else hbr.key
     secret = decrypt_key(key)
 
-    print "secret: " + `secret`
     print "address: " + `address`
+    print "secret: " + `secret`
     print "opt_limits: " + `opt_limits`
+    print "credentials: " + `credentials`
 
     #if silent:
     #    log = TempFile()
@@ -177,7 +180,8 @@ def main():
 
     #redir = RedirectOutput(log)
     #try:
-    #    restore = Restore(address, key, limits, 
+    #    restore = Restore(address, secret, opt_limits, 
+    #                      credentials=credentials,
     #                      rollback=not no_rollback)
 
     #    if not skip_packages:

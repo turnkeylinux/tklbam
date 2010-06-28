@@ -38,11 +38,11 @@ class Restore:
         return title + "\n" + c * len(title) + "\n"
 
     @staticmethod
-    def _duplicity_restore(address, key):
+    def _duplicity_restore(address, secret):
         tmpdir = TempDir(prefix="tklbam-")
         os.chmod(tmpdir, 0700)
 
-        os.environ['PASSPHRASE'] = key
+        os.environ['PASSPHRASE'] = secret
         command = "duplicity %s %s" % (commands.mkarg(address), tmpdir)
         sys.stdout.flush()
         status = system(command)
@@ -53,9 +53,9 @@ class Restore:
 
         return tmpdir
 
-    def __init__(self, address, key, limits=[], rollback=True):
+    def __init__(self, address, secret, limits=[], credentials=None, rollback=True):
         print "Restoring duplicity archive from " + address
-        backup_archive = self._duplicity_restore(address, key)
+        backup_archive = self._duplicity_restore(address, secret)
 
         extras_path = TempDir(prefix="tklbam-extras-")
         os.rename(backup_archive + backup.Backup.EXTRAS_PATH, extras_path)
@@ -63,6 +63,7 @@ class Restore:
         self.extras = backup.ExtrasPaths(extras_path)
         self.rollback = Rollback.create() if rollback else None
         self.limits = backup.Limits(limits)
+        self.credentials = credentials
         self.backup_archive = backup_archive
 
     def database(self):
