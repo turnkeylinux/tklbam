@@ -11,12 +11,15 @@ def random_passphrase():
 
     return "-".join(parts)
 
-def get_passphrase():
+def get_passphrase(confirm=True):
     if not os.isatty(sys.stdin.fileno()):
         return sys.stdin.readline().rstrip()
 
     while True:
         passphrase = getpass.getpass("Passphrase: ")
+        if not confirm:
+            return passphrase
+
         confirm_passphrase = getpass.getpass("Confirm passphrase: ")
         if passphrase == confirm_passphrase:
             break

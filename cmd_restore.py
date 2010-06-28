@@ -38,21 +38,22 @@ from temp import TempFile
 
 import hub
 from registry import registry
+import keypacket
+
+import passphrase
 
 class Error(Exception):
     pass
 
-def get_backup_id(arg):
+def get_backup_record(arg):
     hb = hub.Backups(registry.sub_apikey)
     if re.match(r'^\d+$', arg):
         backup_id = arg
 
         try:
-            hb.get_backup_record(backup_id)
+            return hb.get_backup_record(backup_id)
         except hub.InvalidBackupError, e:
             raise Error('invalid backup id (%s)' % backup_id)
-
-        return backup_id
 
     # treat our argument as a pattern
     matches = [ hbr for hbr in hb.list_backups() 
@@ -64,7 +65,19 @@ def get_backup_id(arg):
     if len(matches) > 1:
         raise Error("'%s' matches more than one backup label" % arg)
 
-    return matches[0].backup_id
+    return matches[0]
+
+def decrypt_key(key):
+    try:
+        return keypacket.parse(key, "")
+    except keypacket.Error:
+        pass
+
+    while True:
+        try:
+            return keypacket.parse(key, passphrase.get_passphrase(confirm=False))
+        except keypacket.Error:
+            print >> sys.stderr, "Incorrect passphrase, try again"
 
 def fatal(e):
     print >> sys.stderr, "error: " + str(e)
@@ -80,7 +93,7 @@ def usage(e=None):
 
 def main():
     opt_limits = []
-    opt_keyfile = None
+    opt_key = None
     opt_address = None
 
     skip_files = False
@@ -106,7 +119,7 @@ def main():
             if not isfile(val):
                 fatal("keyfile %s does not exist or is not a file" % `val`)
 
-            opt_keyfile = val
+            opt_key = file(val).read()
         elif opt == '--address':
             opt_address = val
         elif opt == '--skip-files':
@@ -122,14 +135,14 @@ def main():
         elif opt == '-h':
             usage()
 
-    backup_id = None
+    hbr = None
 
     if args:
         if len(args) != 1:
             usage("incorrect number of arguments")
 
         try:
-            backup_id = get_backup_id(args[0])
+            hbr = get_backup_record(args[0])
         except Error, e:
             fatal(e)
 
@@ -138,15 +151,24 @@ def main():
             usage()
 
     if opt_address:
-        if backup_id:
+        if hbr:
             fatal("a manual --address is incompatible with a <backup-id>")
 
-        if not opt_keyfile:
+        if not opt_key:
             fatal("a manual --address needs a --keyfile")
 
-    print "backup_id: " + `backup_id`
+    address = hbr.address if hbr else opt_address
+
+    if hbr and opt_key and \
+       keypacket.fingerprint(hbr.key) != keypacket.fingerprint(opt_key):
+        fatal("invalid escrow key for the selected backup")
+
+    key = opt_key if opt_key else hbr.key
+    secret = decrypt_key(key)
+
+    print "secret: " + `secret`
+    print "address: " + `address`
     print "opt_limits: " + `opt_limits`
-    print "opt_address=%s, opt_keyfile=%s" % (opt_address, opt_keyfile)
 
     #if silent:
     #    log = TempFile()
