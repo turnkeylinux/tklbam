@@ -57,8 +57,8 @@ def fmt(secret, passphrase):
 
     return base64.b64encode(packet)
 
-def parse(formatted, passphrase):
-    packet = base64.b64decode(formatted)
+def parse(packet, passphrase):
+    packet = base64.b64decode(packet)
     version, khr, kcr = struct.unpack("!BHH", packet[:5])
 
     if version != KEY_VERSION:
@@ -82,4 +82,3 @@ def parse(formatted, passphrase):
         raise Error("error decrypting key")
 
     return secret
-
