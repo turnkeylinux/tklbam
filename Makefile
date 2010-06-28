@@ -29,7 +29,7 @@ echo-do = echo $1; $1
 # first argument: code we execute if there is just one executable module
 # second argument: code we execute if there is more than on executable module
 define with-py-executables
-	@modules=$$(find -maxdepth 1 -type f -name '*.py' -perm -100); \
+	@modules=$$(find -maxdepth 1 -type f -name 'cmd_*.py' -perm -100); \
 	modules_len=$$(echo $$modules | wc -w); \
 	if [ $$modules_len = 1 ]; then \
 		module=$$modules; \
@@ -55,6 +55,8 @@ install:
 	$(call with-py-executables, \
 	  ln -fs $(call libpath, $$module) $(PATH_BIN)/$(progname), \
 	  ln -fs $(call libpath, $$module) $(PATH_BIN)/$(call subcommand, $$module))
+
+	ln -fs $(call libpath, cmd.py) $(PATH_BIN)/$(progname)
 
 uninstall:
 	rm -rf $(PATH_INSTALL_LIB)
