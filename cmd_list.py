@@ -78,7 +78,7 @@ def main():
         for hbr in hbrs:
             print format(hbr)
 
-    else:
+    elif hbrs:
         print "# ID  Created     Updated     Size (GB)  Label"
         for hbr in hbrs:
             print "%4s  %s  %-10s  %-8.1f   %s" % (hbr.backup_id,
