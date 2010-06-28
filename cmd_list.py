@@ -81,7 +81,7 @@ def main():
     elif hbrs:
         print "# ID  Created     Updated     Size (GB)  Label"
         for hbr in hbrs:
-            print "%4s  %s  %-10s  %-8.1f   %s" % (hbr.backup_id,
+            print "%4s  %s  %-10s  %-8.2f   %s" % (hbr.backup_id,
                                                   hbr.created.strftime("%Y-%m-%d"),
 
                                                   hbr.updated.strftime("%Y-%m-%d") 
