@@ -172,7 +172,7 @@ class Backup:
         self.conf = conf
 
     def run(self):
-        os.environ['PASSPHRASE'] = file(self.secretfile).readline().strip()
+        os.environ['PASSPHRASE'] = file(self.conf.secretfile).readline().strip()
         exitcode = os.system(self.command)
         del os.environ['PASSPHRASE']
 
