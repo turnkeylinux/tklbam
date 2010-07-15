@@ -84,7 +84,7 @@ def api(method, url, attrs={}, headers=[]):
             raise NotSubscribedError("user not subscribed to Backups")
 
         if c.response_data.splitlines()[1] == "BackupRecord does not exist":
-            backup_id = uri.strip("/").split("/")[-1]
+            backup_id = url.strip("/").split("/")[-1]
             raise InvalidBackupError("no such backup (%s)" % backup_id)
 
         raise Error(c.response_code, c.response_data)
