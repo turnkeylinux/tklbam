@@ -57,9 +57,11 @@ import os
 import base64
 import tempfile
 import simplejson as json
+from datetime import datetime
 
 import executil
 from pycurl_wrapper import Curl
+from utils import AttrDict
 
 API_URL = os.getenv('APIURL', 'https://hub.turnkeylinux.org/api/backup/')
 API_HEADERS = ['Accept: application/json']
@@ -90,6 +92,32 @@ def api(method, url, attrs={}, headers=[]):
         raise Error(c.response_code, c.response_data)
 
     return json.loads(c.response_data)
+
+class BackupRecord(AttrDict):
+    @staticmethod
+    def _datetime(s):
+        # return datetime("Y-M-D h:m:s")
+        if not s:
+            return None
+
+        s = s.replace('-', ' ').replace(':', ' ').split()
+        return datetime(*map(lambda i: int(i), s))
+
+    def __init__(self, response):
+        self.key = response['key']
+        self.address = response['address']
+        self.backup_id = response['backup_id']
+        self.server_id = response['server_id']
+        self.turnkey_version = response['turnkey_version']
+
+        self.created = self._datetime(response['date_created'])
+        self.updated = self._datetime(response['date_updated'])
+
+        self.size = int(response['size']) # in MBs
+        self.label = response['description']
+
+        # no interface for this in tklbam, so not returned from hub 
+        self.sessions = []
 
 class Backups:
     Error = Error
@@ -146,15 +174,15 @@ class Backups:
             attrs['server_id'] = server_id
 
         response = self._api('POST', 'record/create/', attrs)
-        return response
+        return BackupRecord(response)
 
     def get_backup_record(self, backup_id):
         response = self._api('GET', 'record/%s/' % backup_id)
-        return response
+        return BackupRecord(response)
 
     def update_key(self, backup_id, key):
         response = self._api('PUT', 'record/%s/' % backup_id, {'key': key})
-        return response
+        return BackupRecord(response)
 
     def updated_backup(self, address):
         response = self._api('PUT', 'record/update/', {'address': address})
@@ -162,7 +190,7 @@ class Backups:
 
     def list_backups(self):
         response = self._api('GET', 'records/')
-        return response
+        return map(lambda r: BackupRecord(r), response)
 
 class ProfileArchive:
     def __init__(self, archive, timestamp):
