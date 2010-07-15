@@ -64,7 +64,7 @@ from pycurl_wrapper import Curl
 from utils import AttrDict
 
 API_URL = os.getenv('APIURL', 'https://hub.turnkeylinux.org/api/backup/')
-API_HEADERS = ['Accept: application/json']
+API_HEADERS = {'Accept': 'application/json'}
 
 class Error(Exception):
     pass
@@ -75,7 +75,7 @@ class NotSubscribedError(Error):
 class InvalidBackupError(Error):
     pass
 
-def api(method, url, attrs={}, headers=[]):
+def api(method, url, attrs={}, headers={}):
     c = Curl(url, headers)
     func = getattr(c, method.lower())
     func(attrs)
@@ -126,11 +126,12 @@ class Backups:
         if subkey is None:
             raise Error("no APIKEY - tklbam not initialized")
 
-        self.api_headers = API_HEADERS
-        self.api_headers.append('subkey: ' + str(subkey))
+        self.subkey = subkey
 
     def _api(self, method, uri, attrs={}):
-        return api(method, API_URL + uri, attrs, self.api_headers)
+        headers = API_HEADERS.copy()
+        headers['subkey'] = str(self.subkey)
+        return api(method, API_URL + uri, attrs, headers)
 
     @classmethod
     def get_sub_apikey(cls, apikey):
