@@ -92,6 +92,8 @@ def api(method, url, attrs={}, headers=[]):
     return json.loads(c.response_data)
 
 class Backups:
+    Error = Error
+
     def __init__(self, subkey=None):
         if subkey is None:
             raise Error("no APIKEY - tklbam not initialized")
