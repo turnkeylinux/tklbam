@@ -167,5 +167,5 @@ class ProfileArchive:
         self.timestamp = timestamp
 
     def extract(self, path):
-        executil.system("tar -xf %s -C %s" % (self.path_archive, path))
+        executil.system("tar -zxf %s -C %s" % (self.path_archive, path))
 
