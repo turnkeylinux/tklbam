@@ -58,6 +58,7 @@ import base64
 import tempfile
 import simplejson as json
 
+import executil
 from pycurl_wrapper import Curl
 
 API_URL = os.getenv('APIURL', 'https://hub.turnkeylinux.org/api/backup/')
