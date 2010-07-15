@@ -140,10 +140,10 @@ class Backups:
 
         return ProfileArchive(archive_path, archive_timestamp)
 
-    def new_backup_record(self, key, turnkey_version, server_id=''):
-        attrs = {'key': key, 
-                 'server_id': server_id,
-                 'turnkey_version': turnkey_version}
+    def new_backup_record(self, key, turnkey_version, server_id=None):
+        attrs = {'key': key, 'turnkey_version': turnkey_version}
+        if server_id:
+            attrs['server_id'] = server_id
 
         response = self._api('POST', 'record/create/', attrs)
         return response
