@@ -14,7 +14,7 @@ subkey/
 credentials/
     method: GET
     fields:
-    return: accesskey, secretkey
+    return: accesskey, secretkey, usertoken, producttoken
 
 record/create/
     method: POST
@@ -139,8 +139,8 @@ class Backups:
         return response['subkey']
 
     def get_credentials(self):
-        response = self._api('GET', 'credentials/')
-        return response['accesskey'], response['secretkey']
+        r = self._api('GET', 'credentials/')
+        return r['accesskey'], r['secretkey'], r['usertoken'], r['producttoken']
 
     def get_new_profile(self, turnkey_version, profile_timestamp):
         """
