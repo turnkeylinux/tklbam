@@ -207,6 +207,10 @@ class Restore:
             print val
 
         print "\nPOST-OVERLAY FIXES:\n"
+        for action in changes.emptydirs():
+            print action
+            action()
+
         for action in changes.statfixes(uidmap, gidmap):
             print action
             action()

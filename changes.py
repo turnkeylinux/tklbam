@@ -131,6 +131,9 @@ class Changes(list):
             elif func is os.remove:
                 path, = args
                 return "rm " + path
+            elif func is os.makedirs:
+                path, = args
+                return "mkdir -p " + path
 
     def __add__(self, other):
         cls = type(self)
@@ -167,6 +170,11 @@ class Changes(list):
 
             yield self.Action(os.remove, change.path)
     
+    def emptydirs(self):
+        for change in self:
+            if not lexists(change.path) and change.OP == 's':
+                yield self.Action(os.makedirs, change.path)
+
     def statfixes(self, uidmap={}, gidmap={}):
         class TransparentMap(dict):
             def __getitem__(self, key):
