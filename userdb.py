@@ -118,7 +118,7 @@ def merge(old_passwd, old_group, new_passwd, new_group):
     p1 = EtcPasswd(old_passwd)
     p2 = EtcPasswd(new_passwd)
 
-    passwd, uidmap = EtcPasswd.merge(p1, p2)
-    passwd.fixgids(gidmap)
+    p1.fixgids(gidmap)
 
+    passwd, uidmap = EtcPasswd.merge(p1, p2)
     return passwd, group, uidmap, gidmap
