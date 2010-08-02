@@ -98,6 +98,13 @@ class Change:
 
         return op2class[op].fromline(line[2:])
 
+def mkdir(path):
+    try:
+        os.makedirs(path)
+    except OSError, e:
+        if e.errno != errno.EEXIST:
+            raise
+
 class Changes(list):
     """
     A list of Change instances, which we can load from a file and write
@@ -131,7 +138,7 @@ class Changes(list):
             elif func is os.remove:
                 path, = args
                 return "rm " + path
-            elif func is os.makedirs:
+            elif func is mkdir:
                 path, = args
                 return "mkdir -p " + path
 
@@ -173,7 +180,7 @@ class Changes(list):
     def emptydirs(self):
         for change in self:
             if not lexists(change.path) and change.OP == 's':
-                yield self.Action(os.makedirs, change.path)
+                yield self.Action(mkdir, change.path)
 
     def statfixes(self, uidmap={}, gidmap={}):
         class TransparentMap(dict):
