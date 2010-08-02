@@ -39,9 +39,9 @@ class Base(dict):
         return [ self[name].id for name in self ]
     ids = property(ids)
 
-    def new_id(self, old_id=1000):
+    def new_id(self, extra_ids=[], old_id=1000):
         """find first new id in the same number range as old id"""
-        ids = set(self.ids)
+        ids = set(self.ids + extra_ids)
 
         _range = None
         if old_id < 100:
@@ -82,7 +82,7 @@ class Base(dict):
             elif name in old:
                 merged[name] = cls.Ent(old[name])
                 if old[name].id in new.ids:
-                    merged[name].id = new.new_id()
+                    merged[name].id = new.new_id(old.ids)
                     idmap[old[name].id] = merged[name].id
 
         return merged, idmap
