@@ -33,7 +33,7 @@ class Base(dict):
         arr = [ self[name] for name in self ]
         # order by id ascending
         arr.sort(lambda x,y: cmp(x.id, y.id))
-        return "\n".join([ ':'.join(ent) for ent in arr ])
+        return "\n".join([ ':'.join(ent) for ent in arr ]) + "\n"
 
     def ids(self):
         return [ self[name].id for name in self ]
