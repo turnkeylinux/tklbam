@@ -33,15 +33,15 @@ class Base(dict):
         arr = [ self[name] for name in self ]
         # order by id ascending
         arr.sort(lambda x,y: cmp(x.id, y.id))
-        return "\n".join([ ':'.join(ent) for ent in arr ])
+        return "\n".join([ ':'.join(ent) for ent in arr ]) + "\n"
 
     def ids(self):
         return [ self[name].id for name in self ]
     ids = property(ids)
 
-    def new_id(self, old_id=1000):
+    def new_id(self, extra_ids=[], old_id=1000):
         """find first new id in the same number range as old id"""
-        ids = set(self.ids)
+        ids = set(self.ids + extra_ids)
 
         _range = None
         if old_id < 100:
@@ -82,7 +82,7 @@ class Base(dict):
             elif name in old:
                 merged[name] = cls.Ent(old[name])
                 if old[name].id in new.ids:
-                    merged[name].id = new.new_id()
+                    merged[name].id = new.new_id(old.ids)
                     idmap[old[name].id] = merged[name].id
 
         return merged, idmap
@@ -118,7 +118,7 @@ def merge(old_passwd, old_group, new_passwd, new_group):
     p1 = EtcPasswd(old_passwd)
     p2 = EtcPasswd(new_passwd)
 
-    passwd, uidmap = EtcPasswd.merge(p1, p2)
-    passwd.fixgids(gidmap)
+    p1.fixgids(gidmap)
 
+    passwd, uidmap = EtcPasswd.merge(p1, p2)
     return passwd, group, uidmap, gidmap

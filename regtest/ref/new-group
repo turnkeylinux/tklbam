@@ -51,3 +51,4 @@ syslog:x:111:
 postfix:x:112:
 postdrop:x:113:
 certssl:x:1000:
+guest:x:1001:

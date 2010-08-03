@@ -50,9 +50,10 @@ syslog:x:111:
 postfix:x:112:
 postdrop:x:113:
 certssl:x:1000:
-foo1:x:1001:
-foo:x:1001:
+guest:x:1001:
 testopenid:x:1002:
 alon:x:1003:
 liraz:x:1004:
+foo1:x:1005:
+foo:x:1005:
 nogroup:x:65534:
