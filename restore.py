@@ -43,7 +43,7 @@ class Restore:
         tmpdir = TempDir(prefix="tklbam-")
         os.chmod(tmpdir, 0700)
 
-        duplicity.Command([], address, tmpdir).run(secret)
+        duplicity.Command(address, tmpdir).run(secret)
         sys.stdout.flush()
 
         return tmpdir
