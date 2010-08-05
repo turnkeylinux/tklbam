@@ -11,6 +11,7 @@ from dirindex import read_paths
 from changes import whatchanged
 from pkgman import Packages
 
+import duplicity
 import mysql
 
 class Error(Exception):
@@ -160,24 +161,19 @@ class Backup:
         except mysql.Error:
             pass
 
-        args = ['--volsize 50',
-                '--include ' + paths.path,
-                '--include-filelist ' + paths.fsdelta_olist,
-                "--exclude '**'",
-                '/',
-                conf.address]
+        opts = [('volsize', 50),
+                ('include', paths.path),
+                ('include-filelist', paths.fsdelta_olist),
+                ('exclude', '**')]
 
-        self.command = "duplicity " + " ".join(args)
+        self.command = duplicity.Command(opts, '/', conf.address)
+
         self.paths = paths
         self.conf = conf
 
     def run(self):
-        os.environ['PASSPHRASE'] = file(self.conf.secretfile).readline().strip()
-        exitcode = os.system(self.command)
-        del os.environ['PASSPHRASE']
-
-        if exitcode != 0:
-            raise Error("non-zero exitcode (%d) from backup command: %s" % (exitcode, self.command))
+        passphrase = file(self.conf.secretfile).readline().strip()
+        self.command.run(passphrase)
 
     def cleanup(self):
         shutil.rmtree(self.paths.path)

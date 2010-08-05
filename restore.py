@@ -19,6 +19,7 @@ import utils
 
 import backup
 import mysql
+import duplicity
 
 class Error(Exception):
     pass
@@ -42,14 +43,8 @@ class Restore:
         tmpdir = TempDir(prefix="tklbam-")
         os.chmod(tmpdir, 0700)
 
-        os.environ['PASSPHRASE'] = secret
-        command = "duplicity %s %s" % (commands.mkarg(address), tmpdir)
+        duplicity.Command([], address, tmpdir).run(secret)
         sys.stdout.flush()
-        status = system(command)
-        del os.environ['PASSPHRASE']
-
-        if status != 0:
-            raise Error("Duplicity failed (%d)" % status)
 
         return tmpdir
 
