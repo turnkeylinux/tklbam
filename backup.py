@@ -101,6 +101,7 @@ class BackupConf(AttrDict):
         self.credentials = None
         self.profile = None
         self.overrides = Limits.fromfile(self.paths.overrides)
+        self.verbose = True
 
 class ProfilePaths(Paths):
     files = [ 'dirindex', 'dirindex.conf', 'packages' ]
@@ -165,6 +166,9 @@ class Backup:
                 ('include', paths.path),
                 ('include-filelist', paths.fsdelta_olist),
                 ('exclude', '**')]
+
+        if conf.verbose:
+            opts += [('verbosity', 5)]
 
         self.command = duplicity.Command(opts, '/', conf.address)
 

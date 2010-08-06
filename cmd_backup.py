@@ -11,7 +11,7 @@ Options:
     --address=TARGET_URL    manual backup target URL
                             default: automatically configured via Hub
 
-    -v --verbose            Turn on verbosity
+    -q --quiet              Be less verbose
     -s --simulate           Simulate operation. Don't actually backup.
 
 """
@@ -85,8 +85,8 @@ def get_profile(hb):
 
 def main():
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], 'svh', 
-                                       ['simulate', 'verbose', 
+        opts, args = getopt.gnu_getopt(sys.argv[1:], 'qsh', 
+                                       ['simulate', 'quiet', 
                                         'profile=', 'secretfile=', 'address='])
     except getopt.GetoptError, e:
         usage(e)
@@ -95,17 +95,17 @@ def main():
     conf.secretfile = registry.path.secret
 
     opt_simulate = False
-    opt_verbose = False
 
     opt_profile = None
     for opt, val in opts:
-        if opt in ('-v', '--verbose'):
-            opt_verbose = True
-        elif opt in ('-s', '--simulate'):
+        if opt in ('-s', '--simulate'):
             opt_simulate = True
 
         elif opt == '--profile':
             opt_profile = val
+
+        elif opt in ('-q', '--quiet'):
+            conf.verbose = False
 
         elif opt == '--secretfile':
             if not exists(val):
@@ -157,13 +157,10 @@ def main():
 
         conf.address = registry.hbr.address
 
-    if opt_simulate:
-        opt_verbose = True
-
     print "backup.Backup(%s)" % (`conf`)
 
     b = backup.Backup(conf)
-    if opt_verbose:
+    if conf.verbose:
         print "PASSPHRASE=$(cat %s) %s" % (conf.secretfile, b.command)
 
     if not opt_simulate:
