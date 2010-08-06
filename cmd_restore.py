@@ -7,9 +7,20 @@ Arguments:
     <hub-backup> := backup-id || unique label pattern
 
 Options:
-    --limits="<limit1> .. <limitN>"   Restore filesystem or database limitations
+    --time=TIME                       Time to restore from
+     
+      TIME := YYYY/MM/DD | <int>[DWMY]
+        
+              2010/08/06 - 2010, August 6th
 
-      <limit> := -?( /path/to/add/or/remove | mysql:database[/table] )
+              4D - 4 days ago
+              3W - 3 weeks ago
+              2M - 2 months ago
+              1Y - 1 year ago
+
+    --limits="LIMIT-1 .. LIMIT-N"     Restore filesystem or database limitations
+
+      LIMIT := -?( /path/to/add/or/remove | mysql:database[/table] )
 
     --keyfile=KEYFILE                 Path to escrow keyfile.
                                       default: Hub provides this automatically.
@@ -92,6 +103,7 @@ def usage(e=None):
     sys.exit(1)
 
 def main():
+    opt_time = None
     opt_limits = []
     opt_key = None
     opt_address = None
@@ -105,6 +117,7 @@ def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'h', 
                                        ['limits=', 'address=', 'keyfile=', 
+                                        'time=',
                                         'silent',
                                         'skip-files', 'skip-database', 'skip-packages',
                                         'no-rollback'])
@@ -122,6 +135,11 @@ def main():
             opt_key = file(val).read()
         elif opt == '--address':
             opt_address = val
+        elif opt == '--time':
+            if not re.match(r'\d+[DWMY]$|\d\d\d\d/\d{1,2}/\d{1,2}', val):
+                fatal("bad value for time (%s)" % val)
+            
+            opt_time = val
         elif opt == '--skip-files':
             skip_files = True
         elif opt == '--skip-database':
@@ -170,6 +188,7 @@ def main():
 
     print "address: " + `address`
     print "secret: " + `secret`
+    print "opt_time: " + `opt_time`
     print "opt_limits: " + `opt_limits`
     print "credentials: " + `credentials`
 
@@ -180,7 +199,7 @@ def main():
 
     redir = RedirectOutput(log)
     try:
-        restore = Restore(address, secret, opt_limits, 
+        restore = Restore(address, secret, opt_limits, opt_time,
                           credentials=credentials,
                           rollback=not no_rollback)
 
