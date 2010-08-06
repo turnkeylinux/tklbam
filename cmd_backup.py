@@ -21,7 +21,7 @@ Configurable options:
     --full-backup FREQUENCY   Time frequency of full backup
                               default: $CONF_FULL_BACKUP
 
-                              format := <count>[DWM]
+                              format := <int>[DWM]
 
                                 e.g.,
                                 3D - three days
