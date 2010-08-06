@@ -8,11 +8,35 @@ Arguments:
     Default overrides read from $CONF_OVERRIDES
 
 Options:
-    --address=TARGET_URL    manual backup target URL
-                            default: automatically configured via Hub
+    --address=TARGET_URL      manual backup target URL
+                              default: automatically configured via Hub
 
-    -q --quiet              Be less verbose
-    -s --simulate           Simulate operation. Don't actually backup.
+    -q --quiet                Be less verbose
+    -s --simulate             Simulate operation. Don't actually backup.
+
+Configurable options:
+    --volsize MB              Size of backup volume in MBs
+                              default: $CONF_VOLSIZE
+
+    --full-backup FREQUENCY   Time frequency of full backup
+                              default: $CONF_FULL_BACKUP
+
+                              format := <count>[DWM]
+
+                                e.g.,
+                                3D - three days
+                                2W - two weeks
+                                1M - one month
+                                
+Resolution order for configurable options:
+
+  1) comand line (highest precedence)
+  2) configuration file ($CONF_PATH)
+  3) built-in default (lowest precedence)
+
+Configuration file format ($CONF_PATH):
+
+  <option-name> <value>
 
 """
 
@@ -34,9 +58,11 @@ def usage(e=None):
 
     print >> sys.stderr, "Syntax: %s [ -options ] [ override ... ]" % sys.argv[0]
     tpl = Template(__doc__.strip())
-    Conf = backup.BackupConf
-    print >> sys.stderr, tpl.substitute(CONF=Conf.paths.path,
-                                        CONF_OVERRIDES=Conf.paths.overrides)
+    conf = backup.BackupConf()
+    print >> sys.stderr, tpl.substitute(CONF_PATH=conf.paths.conf,
+                                        CONF_OVERRIDES=conf.paths.overrides,
+                                        CONF_VOLSIZE=conf.volsize,
+                                        CONF_FULL_BACKUP=conf.full_backup)
     sys.exit(1)
 
 def warn(e):
@@ -86,8 +112,10 @@ def get_profile(hb):
 def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'qsh', 
-                                       ['simulate', 'quiet', 
-                                        'profile=', 'secretfile=', 'address='])
+                                       ['help',
+                                        'simulate', 'quiet', 
+                                        'profile=', 'secretfile=', 'address=',
+                                        'volsize=', 'full-backup='])
     except getopt.GetoptError, e:
         usage(e)
 
@@ -113,7 +141,14 @@ def main():
             conf.secretfile = val
         elif opt == '--address':
             conf.address = val
-        elif opt == '-h':
+
+        elif opt == '--volsize':
+            conf.volsize = val
+
+        elif opt == '--full-backup':
+            conf.full_backup = val
+
+        elif opt in ('-h', '--help'):
             usage()
 
     conf.overrides += args
@@ -158,7 +193,6 @@ def main():
         conf.address = registry.hbr.address
 
     print "backup.Backup(%s)" % (`conf`)
-
     b = backup.Backup(conf)
     if conf.verbose:
         print "PASSPHRASE=$(cat %s) %s" % (conf.secretfile, b.command)

@@ -90,10 +90,45 @@ class Limits(list):
 from utils import AttrDict
 
 class BackupConf(AttrDict):
+    class Error(Exception):
+        pass
+
     path = "/etc/tklbam"
     class Paths(Paths):
-        files = [ 'overrides' ]
+        files = [ 'overrides', 'conf' ]
     paths = Paths(path)
+
+    def _error(self, s):
+        return self.Error("%s: %s" % (self.paths.conf, s))
+
+    def __setitem__(self, name, val):
+        if name == 'full_backup':
+            if not re.match(r'^\d+[HDWMY]', val):
+                raise self.Error("bad full-backup value (%s)" % val)
+
+        if name == 'volsize':
+            try:
+                val = int(val)
+            except ValueError:
+                raise self.Error("volsize not a number (%s)" % val)
+
+        AttrDict.__setitem__(self, name, val)
+
+    def _full_backup(self, val=None):
+        print "full_backup"
+        if val is None:
+            return getattr(self, '_full_backup', None)
+
+        setattr(self, '_full_backup', val)
+
+    def _volsize(self, val=None):
+        if val is None:
+            return getattr(self, '_volsize', None)
+
+        try:
+            setattr(self, '_volsize', int(val))
+        except ValueError:
+            raise self._error("bad volsize value (%s)" % val)
 
     def __init__(self):
         self.secretfile = None
@@ -102,6 +137,35 @@ class BackupConf(AttrDict):
         self.profile = None
         self.overrides = Limits.fromfile(self.paths.overrides)
         self.verbose = True
+
+        self.volsize = 50
+        self.full_backup = "1M"
+
+        if not exists(self.paths.conf):
+            return
+
+        for line in file(self.paths.conf).read().split("\n"):
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+
+            try:
+                opt, val = re.split(r'\s+', line, 1)
+            except ValueError:
+                raise self._error("illegal line '%s'" % (line))
+
+            try:
+                if opt == 'full-backup':
+                    self.full_backup = val
+
+                elif opt == 'volsize':
+                    self.volsize = val
+
+                else:
+                    raise self.Error("unknown conf option '%s'" % opt)
+
+            except self.Error, e:
+                raise self._error(e)
 
 class ProfilePaths(Paths):
     files = [ 'dirindex', 'dirindex.conf', 'packages' ]
@@ -162,7 +226,8 @@ class Backup:
         except mysql.Error:
             pass
 
-        opts = [('volsize', 50),
+        opts = [('volsize', conf.volsize),
+                ('full-if-older-than', conf.full_backup),
                 ('include', paths.path),
                 ('include-filelist', paths.fsdelta_olist),
                 ('exclude', '**')]
