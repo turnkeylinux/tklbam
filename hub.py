@@ -109,7 +109,7 @@ class DuplicityFile(AttrDict):
             type = 'inc'
 
         try:
-            timestamp = datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%SZ")
+            timestamp = datetime.strptime(timestamp, "%Y%m%dT%H%M%SZ")
         except ValueError:
             return
 
