@@ -9,10 +9,14 @@ Arguments:
 Options:
     --time=TIME                       Time to restore from
      
-      TIME := YYYY/MM/DD | <int>[DWMY]
+      TIME := YYYY-MM-DD | YYYY-MM-DDThh:mm:ss | <int>[mhDWMY]
         
-              2010/08/06 - 2010, August 6th
+              2010-08-06 - 2010, August 6th, 00:00
 
+              2010-08-07T14:00 - 2010, August 7th 14:00 UTC
+
+              6m - 6 minutes
+              5h - 5 hours
               4D - 4 days ago
               3W - 3 weeks ago
               2M - 2 months ago
@@ -136,9 +140,6 @@ def main():
         elif opt == '--address':
             opt_address = val
         elif opt == '--time':
-            if not re.match(r'\d+[DWMY]$|\d\d\d\d/\d{1,2}/\d{1,2}', val):
-                fatal("bad value for time (%s)" % val)
-            
             opt_time = val
         elif opt == '--skip-files':
             skip_files = True
