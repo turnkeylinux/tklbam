@@ -123,13 +123,12 @@ def main():
     conf = backup.BackupConf()
     conf.secretfile = registry.path.secret
 
-    opt_profile = None
     for opt, val in opts:
         if opt in ('-s', '--simulate'):
             conf.simulate = True
 
         elif opt == '--profile':
-            opt_profile = val
+            conf.profile = val
 
         elif opt in ('-q', '--quiet'):
             conf.verbose = False
@@ -138,6 +137,7 @@ def main():
             if not exists(val):
                 usage("secretfile %s does not exist" % `val`)
             conf.secretfile = val
+
         elif opt == '--address':
             conf.address = val
 
@@ -156,7 +156,8 @@ def main():
     conf.overrides += args
 
     hb = hub.Backups(registry.sub_apikey)
-    conf.profile = get_profile(hb) if not opt_profile else opt_profile
+    if not conf.profile:
+        conf.profile = get_profile(hb)
 
     if not conf.address:
         try:
