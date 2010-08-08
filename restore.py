@@ -32,7 +32,7 @@ def system(command):
 class Restore:
     Error = Error
 
-    PACKAGES_BLACKLIST = ['linux-image-*', 'linux-ubuntu-modules-*']
+    PACKAGES_BLACKLIST = ['linux-*']
 
     @staticmethod
     def _title(title, c='='):
