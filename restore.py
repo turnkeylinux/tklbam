@@ -32,7 +32,7 @@ def system(command):
 class Restore:
     Error = Error
 
-    PACKAGES_BLACKLIST = ['linux-*']
+    PACKAGES_BLACKLIST = ['linux-*', 'vmware-tools*']
 
     @staticmethod
     def _title(title, c='='):
