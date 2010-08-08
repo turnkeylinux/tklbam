@@ -114,6 +114,7 @@ def main():
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'qsh', 
                                        ['help',
                                         'simulate', 'quiet', 
+                                        'checkpoint-restore',
                                         'profile=', 'secretfile=', 'address=',
                                         'volsize=', 'full-backup='])
     except getopt.GetoptError, e:
@@ -122,12 +123,10 @@ def main():
     conf = backup.BackupConf()
     conf.secretfile = registry.path.secret
 
-    opt_simulate = False
-
     opt_profile = None
     for opt, val in opts:
         if opt in ('-s', '--simulate'):
-            opt_simulate = True
+            conf.simulate = True
 
         elif opt == '--profile':
             opt_profile = val
@@ -147,6 +146,9 @@ def main():
 
         elif opt == '--full-backup':
             conf.full_backup = val
+
+        elif opt == '--checkpoint-restore':
+            conf.checkpoint_restore = True
 
         elif opt in ('-h', '--help'):
             usage()
@@ -193,12 +195,16 @@ def main():
         conf.address = registry.hbr.address
 
     print "backup.Backup(%s)" % (`conf`)
+
     b = backup.Backup(conf)
     try:
-        b.run(opt_simulate)
-    finally:
-        if not opt_simulate:
+        b.run()
+    except:
+        if not conf.checkpoint_restore:
             b.cleanup()
+        raise
+
+    b.cleanup()
     hb.updated_backup(conf.address)
 
 if __name__=="__main__":

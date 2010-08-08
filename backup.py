@@ -137,6 +137,10 @@ class BackupConf(AttrDict):
         self.profile = None
         self.overrides = Limits.fromfile(self.paths.overrides)
         self.verbose = True
+        self.simulate = False
+
+        # warning: checkpoint restore is currently broken in duplicity
+        self.checkpoint_restore = False
 
         self.volsize = 50
         self.full_backup = "1M"
@@ -173,6 +177,10 @@ class ProfilePaths(Paths):
 class ExtrasPaths(Paths):
     files = [ 'fsdelta', 'fsdelta-olist', 'newpkgs', 'myfs', 'etc', 'etc/mysql' ]
 
+def _rmdir(path):
+    if exists(path):
+        shutil.rmtree(path)
+
 class Backup:
     EXTRAS_PATH = "/TKLBAM"
 
@@ -201,35 +209,52 @@ class Backup:
         changes.tofile(dest)
         file(dest_olist, "w").writelines((path + "\n" for path in olist))
 
-    def __init__(self, conf):
-        profile = ProfilePaths(conf.profile)
-        paths = ExtrasPaths(self.EXTRAS_PATH)
+    @classmethod
+    def _create_extras(cls, extras, profile, conf):
+        os.mkdir(extras.path)
 
-        if isdir(paths.path):
-            shutil.rmtree(paths.path)
-        os.mkdir(paths.path)
-
-        etc = str(paths.etc)
+        etc = str(extras.etc)
         os.mkdir(etc)
         shutil.copy("/etc/passwd", etc)
         shutil.copy("/etc/group", etc)
 
-        self._write_whatchanged(paths.fsdelta, paths.fsdelta_olist,
-                                profile.dirindex, profile.dirindex_conf, 
-                                conf.overrides.fs)
+        cls._write_whatchanged(extras.fsdelta, extras.fsdelta_olist,
+                               profile.dirindex, profile.dirindex_conf, 
+                               conf.overrides.fs)
 
-        self._write_new_packages(paths.newpkgs, profile.packages)
+        cls._write_new_packages(extras.newpkgs, profile.packages)
 
         try:
-            mysql.backup(paths.myfs, paths.etc.mysql, 
+            mysql.backup(extras.myfs, extras.etc.mysql, 
                          limits=conf.overrides.db)
         except mysql.Error:
             pass
 
-        self.paths = paths
-        self.conf = conf
+    def __init__(self, conf):
+        profile_paths = ProfilePaths(conf.profile)
+        extras_paths = ExtrasPaths(self.EXTRAS_PATH)
 
-    def run(self, simulate=False):
+        if not conf.checkpoint_restore:
+            _rmdir(extras_paths.path)
+
+        if not exists(extras_paths.path):
+            if conf.verbose:
+                print "CREATING " + extras_paths.path
+
+            try:
+                self._create_extras(extras_paths, profile_paths, conf)
+            except:
+                # destroy potentially incomplete extras
+                _rmdir(extras_paths.path)
+                raise
+        else:
+            if conf.verbose:
+                print "RE-USING " + extras_paths.path
+
+        self.conf = conf
+        self.extras_paths = extras_paths
+
+    def run(self):
         conf = self.conf
         passphrase = file(conf.secretfile).readline().strip()
 
@@ -237,27 +262,29 @@ class Backup:
         if conf.verbose:
             opts += [('verbosity', 5)]
 
-        cleanup_command = duplicity.Command(opts, "cleanup", "--force", conf.address)
-        if conf.verbose:
-            print "\n# " + str(cleanup_command)
+        if not conf.checkpoint_restore:
+            cleanup_command = duplicity.Command(opts, "cleanup", "--force", conf.address)
+            if conf.verbose:
+                print "\n# " + str(cleanup_command)
 
-        if not simulate:
-            cleanup_command.run(passphrase)
+            if not conf.simulate:
+                cleanup_command.run(passphrase)
 
         opts += [('volsize', conf.volsize),
                  ('full-if-older-than', conf.full_backup),
-                 ('include', self.paths.path),
-                 ('include-filelist', self.paths.fsdelta_olist),
+                 ('include', self.extras_paths.path),
+                 ('include-filelist', self.extras_paths.fsdelta_olist),
                  ('exclude', '**')]
 
         backup_command = duplicity.Command(opts, '/', conf.address)
         if conf.verbose:
             print "\n# PASSPHRASE=$(cat %s) %s" % (conf.secretfile, 
-                                                 backup_command)
+                                                   backup_command)
 
-        if not simulate:
+        if not conf.simulate:
             backup_command.run(passphrase)
 
     def cleanup(self):
-        shutil.rmtree(self.paths.path)
+        if not self.conf.simulate:
+            _rmdir(self.extras_paths.path)
 
