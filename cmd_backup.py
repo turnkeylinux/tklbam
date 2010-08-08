@@ -194,13 +194,10 @@ def main():
 
     print "backup.Backup(%s)" % (`conf`)
     b = backup.Backup(conf)
-    if conf.verbose:
-        print "PASSPHRASE=$(cat %s) %s" % (conf.secretfile, b.command)
-
-    if not opt_simulate:
-        try:
-            b.run()
-        finally:
+    try:
+        b.run(opt_simulate)
+    finally:
+        if not opt_simulate:
             b.cleanup()
     hb.updated_backup(conf.address)
 

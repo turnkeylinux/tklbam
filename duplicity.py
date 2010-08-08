@@ -1,4 +1,5 @@
 import os
+import sys
 
 from subprocess import *
 
@@ -24,6 +25,8 @@ class Command:
         self.command = ["duplicity"] + opts + list(args)
 
     def run(self, passphrase):
+        sys.stdout.flush()
+
         os.environ['PASSPHRASE'] = passphrase
         child = Popen(self.command)
         del os.environ['PASSPHRASE']

@@ -226,23 +226,37 @@ class Backup:
         except mysql.Error:
             pass
 
-        opts = [('volsize', conf.volsize),
-                ('full-if-older-than', conf.full_backup),
-                ('include', paths.path),
-                ('include-filelist', paths.fsdelta_olist),
-                ('exclude', '**')]
-
-        if conf.verbose:
-            opts += [('verbosity', 5)]
-
-        self.command = duplicity.Command(opts, '/', conf.address)
-
         self.paths = paths
         self.conf = conf
 
-    def run(self):
-        passphrase = file(self.conf.secretfile).readline().strip()
-        self.command.run(passphrase)
+    def run(self, simulate=False):
+        conf = self.conf
+        passphrase = file(conf.secretfile).readline().strip()
+
+        opts = []
+        if conf.verbose:
+            opts += [('verbosity', 5)]
+
+        cleanup_command = duplicity.Command(opts, "cleanup", "--force", conf.address)
+        if conf.verbose:
+            print "\n# " + str(cleanup_command)
+
+        if not simulate:
+            cleanup_command.run(passphrase)
+
+        opts += [('volsize', conf.volsize),
+                 ('full-if-older-than', conf.full_backup),
+                 ('include', self.paths.path),
+                 ('include-filelist', self.paths.fsdelta_olist),
+                 ('exclude', '**')]
+
+        backup_command = duplicity.Command(opts, '/', conf.address)
+        if conf.verbose:
+            print "\n# PASSPHRASE=$(cat %s) %s" % (conf.secretfile, 
+                                                 backup_command)
+
+        if not simulate:
+            backup_command.run(passphrase)
 
     def cleanup(self):
         shutil.rmtree(self.paths.path)
