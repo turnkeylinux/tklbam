@@ -123,4 +123,4 @@ class Profile(str):
     def __init__(self, path, timestamp):
         self.timestamp = timestamp
 
-registry = _Registry("/var/tmp/tklbam/registry")
+registry = _Registry()
