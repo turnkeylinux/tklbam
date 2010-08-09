@@ -1,6 +1,10 @@
 #!/usr/bin/python
 """
 Rollback last restore
+
+Options:
+
+    --force     Don't ask for confirmation (caution)
 """
 
 import sys
@@ -23,14 +27,17 @@ def usage(e=None):
 def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'h', 
-                                       ['help'])
+                                       ['force', 'help'])
                                         
     except getopt.GetoptError, e:
         usage(e)
 
+    opt_force = False
     for opt, val in opts:
         if opt in ('-h', '--help'):
             usage()
+        if opt == '--force':
+            opt_force = True
 
     if args:
         usage()
@@ -40,6 +47,20 @@ def main():
     except Rollback.Error:
         fatal("nothing to rollback")
 
+    if not opt_force:
+        print "DATA LOSS WARNING: this will rollback your system to the pre-restore"
+        print "snapshot from " + rollback.timestamp.ctime()
+        print
+
+        while True:
+            answer = raw_input("Is really this what you want? [yes/no] ")
+            if answer:
+                break
+
+        if answer.lower() != "yes":
+            print "You didn't answer 'yes'. Aborting!"
+            sys.exit(1)
+        
     rollback.rollback()
 
 if __name__=="__main__":

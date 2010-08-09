@@ -4,6 +4,7 @@ from os.path import *
 import stat
 import shutil
 
+from datetime import datetime
 from paths import Paths
 
 import mysql
@@ -45,6 +46,7 @@ class Rollback:
             raise Error("No such directory " + `path`)
 
         self.paths = self.Paths(path)
+        self.timestamp = datetime.fromtimestamp(os.stat(path).st_ctime)
 
     @staticmethod
     def _move(source, dest):
