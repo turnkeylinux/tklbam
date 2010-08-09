@@ -54,6 +54,7 @@ archive/timestamp/
 """
 
 import os
+
 import base64
 import tempfile
 import simplejson as json
@@ -208,3 +209,6 @@ class ProfileArchive:
     def extract(self, path):
         executil.system("tar -zxf %s -C %s" % (self.path_archive, path))
 
+    def __del__(self):
+        if os.path.exists(self.path_archive):
+            os.remove(self.path_archive)
