@@ -179,8 +179,8 @@ def main():
             try:
                 registry.hbr = hb.get_backup_record(registry.hbr.backup_id)
             except hb.Error, e:
-                # in the real implementation if the Hub is down we can hope that
-                # the cached address is still valid and warn and try to backup anyway.
+                # if the Hub is down we can hope that the cached address 
+                # is still valid and warn and try to backup anyway.
                 #
                 # But if we reach the Hub and it tells us the backup is invalid
                 # we must invalidate the cached backup record and start over.
