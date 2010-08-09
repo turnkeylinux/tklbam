@@ -268,7 +268,7 @@ class Backup:
                 print "\n# " + str(cleanup_command)
 
             if not conf.simulate:
-                cleanup_command.run(passphrase)
+                cleanup_command.run(passphrase, conf.credentials)
 
         opts += [('volsize', conf.volsize),
                  ('full-if-older-than', conf.full_backup),
@@ -282,7 +282,7 @@ class Backup:
                                                    backup_command)
 
         if not conf.simulate:
-            backup_command.run(passphrase)
+            backup_command.run(passphrase, conf.credentials)
 
     def cleanup(self):
         if not self.conf.simulate:

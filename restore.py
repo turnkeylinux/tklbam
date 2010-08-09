@@ -39,7 +39,7 @@ class Restore:
         return title + "\n" + c * len(title) + "\n"
 
     @staticmethod
-    def _duplicity_restore(address, secret, time=None):
+    def _duplicity_restore(address, credentials, secret, time=None):
         tmpdir = TempDir(prefix="tklbam-")
         os.chmod(tmpdir, 0700)
 
@@ -48,14 +48,14 @@ class Restore:
         else:
             opts = []
 
-        duplicity.Command(opts, address, tmpdir).run(secret)
+        duplicity.Command(opts, address, tmpdir).run(secret, credentials)
         sys.stdout.flush()
 
         return tmpdir
 
     def __init__(self, address, secret, limits=[], time=None, credentials=None, rollback=True):
         print "Restoring duplicity archive from " + address
-        backup_archive = self._duplicity_restore(address, secret, time)
+        backup_archive = self._duplicity_restore(address, credentials, secret, time)
 
         extras_path = TempDir(prefix="tklbam-extras-")
         os.rename(backup_archive + backup.Backup.EXTRAS_PATH, extras_path)

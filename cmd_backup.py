@@ -167,9 +167,8 @@ def main():
         try:
             registry.credentials = hb.get_credentials()
         except hb.Error, e:
-            # in the real implementation asking for get_credentials() might fail
-            # if the hub is down. If we already have the credentials we can survive
-            # that.
+            # asking for get_credentials() might fail if the hub is down. 
+            # But If we already have the credentials we can survive that.
             if isinstance(e, hub.NotSubscribedError) or not registry.credentials:
                 raise
             warn(e)

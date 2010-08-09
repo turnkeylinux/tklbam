@@ -8,6 +8,7 @@ from paths import Paths
 
 import shutil
 from utils import AttrDict
+from hub import Credentials
 
 class UNDEFINED:
     pass
@@ -75,14 +76,22 @@ class _Registry(object):
     key = property(key, key)
 
     def credentials(self, val=UNDEFINED):
-        # (accesskey, secretkey, usertoken, producttoken)
-        return self._file_tuple(self.path.credentials, val)
+        if val and val is not UNDEFINED:
+            val = AttrDict({'accesskey': val.accesskey,
+                            'secretkey': val.secretkey,
+                            'usertoken': val.usertoken,
+                            'producttoken': val.producttoken})
+
+        retval = self._file_dict(self.path.credentials, val)
+        if retval:
+            return Credentials(retval)
+
     credentials = property(credentials, credentials)
     
     def hbr(self, val=UNDEFINED):
         if val and val is not UNDEFINED:
-            val = AttrDict({'address':val.address,
-                            'backup_id':val.backup_id})
+            val = AttrDict({'address': val.address,
+                            'backup_id': val.backup_id})
         return self._file_dict(self.path.hbr, val)
     hbr = property(hbr, hbr)
 

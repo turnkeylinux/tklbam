@@ -119,6 +119,13 @@ class BackupRecord(AttrDict):
         # no interface for this in tklbam, so not returned from hub 
         self.sessions = []
 
+class Credentials(AttrDict):
+    def __init__(self, response):
+        self.accesskey = response['accesskey']
+        self.secretkey = response['secretkey']
+        self.usertoken = response['usertoken']
+        self.producttoken = response['producttoken']
+
 class Backups:
     Error = Error
 
@@ -139,8 +146,8 @@ class Backups:
         return response['subkey']
 
     def get_credentials(self):
-        r = self._api('GET', 'credentials/')
-        return r['accesskey'], r['secretkey'], r['usertoken'], r['producttoken']
+        response = self._api('GET', 'credentials/')
+        return Credentials(response)
 
     def get_new_profile(self, turnkey_version, profile_timestamp):
         """
