@@ -139,6 +139,11 @@ class Backups:
     def _api(self, method, uri, attrs={}):
         headers = API_HEADERS.copy()
         headers['subkey'] = str(self.subkey)
+
+        # workaround: http://redmine.lighttpd.net/issues/1017
+        if method == "PUT":
+            headers['Expect'] = ''
+
         return api(method, API_URL + uri, attrs, headers)
 
     @classmethod
