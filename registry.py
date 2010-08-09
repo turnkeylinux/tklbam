@@ -75,7 +75,7 @@ class _Registry(object):
     key = property(key, key)
 
     def credentials(self, val=UNDEFINED):
-        # (accesskey, secretkey)
+        # (accesskey, secretkey, usertoken, producttoken)
         return self._file_tuple(self.path.credentials, val)
     credentials = property(credentials, credentials)
     

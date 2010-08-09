@@ -1,17 +1,70 @@
-import os
-from os.path import *
+"""TurnKey Hub API - Backup
 
-import re
-import struct
+Notes:
+    - Default URL: https://hub.turnkeylinux.org/api/backup/
+    - REST compliant (GET, POST, PUT)
+    - Responses are returned in application/json format
+    - API subkey must be sent in the header for all calls (except subkey/)
+
+subkey/
+    method: GET
+    fields: apikey
+    return: subkey
+
+credentials/
+    method: GET
+    fields:
+    return: accesskey, secretkey, usertoken, producttoken
+
+record/create/
+    method: POST
+    fields: key, turnkey_version, [server_id]
+    return: backuprecord
+
+record/update/
+    method: PUT
+    fields: address
+    return: <response_code>
+
+record/<backup_id>/
+    method: GET
+    fields:
+    return: backuprecord
+
+record/<backup_id>/
+    method: PUT
+    fields: key
+    return: backuprecord
+
+records/
+    method: GET
+    fields:
+    return: [ backuprecord, ... ]
+
+archive/
+    method: GET
+    fields: turnkey_version
+    return: archive_content
+
+archive/timestamp/
+    method: GET
+    fields: turnkey_version
+    return: archive_timestamp
+
+"""
+
+import os
 import base64
-from hashlib import sha1 as sha
-from paths import Paths
-import pickle
-import glob
+import tempfile
+import simplejson as json
 from datetime import datetime
 
 import executil
+from pycurl_wrapper import Curl
 from utils import AttrDict
+
+API_URL = os.getenv('APIURL', 'https://hub.turnkeylinux.org/api/backup/')
+API_HEADERS = {'Accept': 'application/json'}
 
 class Error(Exception):
     pass
@@ -22,257 +75,72 @@ class NotSubscribedError(Error):
 class InvalidBackupError(Error):
     pass
 
-class APIKey:
-    def __init__(self, apikey):
-        apikey = str(apikey)
-        self.encoded = apikey
-        
-        padded = "A" * (20 - len(apikey)) + apikey
-        try:
-            uid, secret = struct.unpack("!L8s", base64.b32decode(padded + "=" * 4))
-        except TypeError:
-            raise Error("Invalid characters in API-KEY")
+def api(method, url, attrs={}, headers={}):
+    c = Curl(url, headers)
+    func = getattr(c, method.lower())
+    func(attrs)
 
-        self.uid = uid
-        self.secret = secret
+    if not c.response_code == 200:
 
-    @classmethod
-    def generate(cls, uid, secret=None):
-        if secret is None:
-            secret = os.urandom(8)
-        else:
-            secret = sha(secret).digest()[:8]
+        if c.response_data.splitlines()[1] == "BackupAccount not subscribed":
+            raise NotSubscribedError("user not subscribed to Backups")
 
-        packed = struct.pack("!L8s", uid, secret)
-        encoded = base64.b32encode(packed).lstrip("A").rstrip("=")
+        if c.response_data.splitlines()[1] == "BackupRecord does not exist":
+            backup_id = url.strip("/").split("/")[-1]
+            raise InvalidBackupError("no such backup (%s)" % backup_id)
 
-        return cls(encoded)
+        raise Error(c.response_code, c.response_data)
 
-    def subkey(self, namespace):
-        return self.generate(self.uid, namespace + self.secret)
+    return json.loads(c.response_data)
 
-    def __str__(self):
-        return self.encoded
-
-    def __repr__(self):
-        return "APIKey(%s)" % `str(self)`
-
-    def __eq__(self, other):
-        return self.encoded == other.encoded
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-class DummyUser(AttrDict):
-    def __init__(self, uid, apikey):
-        self.uid = uid
-        self.apikey = apikey
-        self.credentials = None
-        self.backups = {}
-        self.backups_max = 0
-
-    def subscribe(self):
-        accesskey = base64.b64encode(sha("%d" % self.uid).digest())[:20]
-        secretkey = base64.b64encode(os.urandom(30))[:40]
-
-        self.credentials = accesskey, secretkey
-
-    def unsubscribe(self):
-        self.credentials = None
-
-    def new_backup(self, address, key, turnkey_version, server_id=None):
-        self.backups_max += 1
-
-        id = str(self.backups_max)
-        backup_record = DummyBackupRecord(id, address, key, \
-                                          turnkey_version, server_id)
-
-        self.backups[id] = backup_record
-
-        return backup_record
-
-class DuplicityFile(AttrDict):
-    @classmethod
-    def from_fname(cls, fname):
-        m = re.match(r'duplicity-(.*?)\.(.*?).(?:sigtar|vol.*difftar)', fname)
-        if not m:
+class BackupRecord(AttrDict):
+    @staticmethod
+    def _datetime(s):
+        # return datetime("Y-M-D h:m:s")
+        if not s:
             return None
 
-        type, timestamp = m.groups()
-        m = re.search(r'to\.(.*)', timestamp)
-        if m:
-            timestamp, = m.groups()
+        s = s.replace('-', ' ').replace(':', ' ').split()
+        return datetime(*map(lambda i: int(i), s))
 
-        if 'full' in type:
-            type = 'full'
-        else:
-            type = 'inc'
+    def __init__(self, response):
+        self.key = response['key']
+        self.address = response['address']
+        self.backup_id = response['backup_id']
+        self.server_id = response['server_id']
+        self.turnkey_version = response['turnkey_version']
 
-        try:
-            timestamp = datetime.strptime(timestamp, "%Y%m%dT%H%M%SZ")
-        except ValueError:
-            return
+        self.created = self._datetime(response['date_created'])
+        self.updated = self._datetime(response['date_updated'])
 
-        return cls(type, timestamp)
+        self.size = int(response['size']) # in MBs
+        self.label = response['description']
 
-    def __init__(self, type, timestamp):
-        self.type = type
-        self.timestamp = timestamp
-
-class DummySession(AttrDict):
-    def __init__(self, type, timestamp, size=0):
-        self.type = type
-        self.timestamp = timestamp
-        self.size = size
-
-def _parse_duplicity_sessions(path):
-    sessions = {}
-    for fname in os.listdir(path):
-        fpath = join(path, fname)
-        fsize = os.stat(fpath).st_size
-
-        df = DuplicityFile.from_fname(fname)
-        if not df:
-            continue
-
-        if not df.timestamp in sessions:
-            sessions[df.timestamp] = DummySession(df.type, df.timestamp, fsize)
-        else:
-            sessions[df.timestamp].size += fsize
-
-    return sessions.values()
-
-class DummyBackupRecord(AttrDict):
-    # backup_id, address
-    def __init__(self, backup_id, address, key, turnkey_version, server_id):
-        self.backup_id = backup_id
-        self.address = address
-        self.key = key
-        self.turnkey_version = turnkey_version
-        self.server_id = server_id
-
-        self.created = datetime.now()
-        self.updated = None
-
-        # in MBs
-        self.size = 0
-        self.label = "TurnKey Backup"
-
-        # no user interface for this in the dummy hub
+        # no interface for this in tklbam, so not returned from hub 
         self.sessions = []
 
-    def update(self):
-        self.updated = datetime.now()
-
-        path = self.address[len("file://"):] 
-
-        self.sessions = _parse_duplicity_sessions(path)
-        self.size = sum([ session.size for session in self.sessions ]) / (1024 * 1024)
-
-class _DummyDB(AttrDict):
-    class Paths(Paths):
-        files = ['users', 'profiles']
-
-    @staticmethod
-    def _save(path, obj):
-        pickle.dump(obj, file(path, "w"))
-
-    @staticmethod
-    def _load(path, default=None):
-        if not exists(path):
-            return default
-
-        return pickle.load(file(path))
-
-    def save(self):
-        self._save(self.path.users, self.users)
-
-    def load(self):
-        self.users = self._load(self.path.users, {})
-
-    def __init__(self, path):
-        if not exists(path):
-            os.makedirs(path)
-
-        self.path = self.Paths(path)
-        self.load()
-
-    def get_user(self, uid):
-        if uid not in self.users:
-            return None
-
-        return self.users[uid]
-
-    def add_user(self):
-        if self.users:
-            uid = max(self.users.keys()) + 1
-        else:
-            uid = 1
-
-        apikey = APIKey.generate(uid)
-
-        user = DummyUser(uid, apikey)
-        self.users[uid] = user
-
-        return user
-
-
-    def get_profile(self, turnkey_version):
-        matches = glob.glob("%s/%s.tar.*" % (self.path.profiles, turnkey_version))
-        if not matches:
-            return None
-
-        return matches[0]
-
-dummydb = _DummyDB("/var/tmp/tklbam/db")
-
 class Backups:
-    # For simplicity's sake this implements a dummy version of both
-    # client-side and server-side operations.
-    # 
-    # When translating to a real implementation the interface should remain
-    # but the implementation will change completely as only client-side
-    # operations remain.
-
     Error = Error
-    SUBKEY_NS = "tklbam"
 
-    @classmethod
-    def get_sub_apikey(cls, apikey):
-        """Check that APIKey is valid and return subkey"""
-        apikey = APIKey(apikey)
-        user = dummydb.get_user(apikey.uid)
-
-        if not user or user.apikey != apikey:
-            raise Error("invalid APIKey: %s" % apikey)
-
-        return apikey.subkey(cls.SUBKEY_NS)
-
-    def __init__(self, subkey):
+    def __init__(self, subkey=None):
         if subkey is None:
             raise Error("no APIKEY - tklbam not initialized")
 
-        subkey = APIKey(subkey)
+        self.subkey = subkey
 
-        # the non-dummy implementation should only check the subkey when an
-        # action is performed. (I.e., NOT on initialization). In a REST API
-        # the subkey should probably be passed as an authentication header.
+    def _api(self, method, uri, attrs={}):
+        headers = API_HEADERS.copy()
+        headers['subkey'] = str(self.subkey)
+        return api(method, API_URL + uri, attrs, headers)
 
-        user = dummydb.get_user(subkey.uid)
-        if not user or subkey != user.apikey.subkey(self.SUBKEY_NS):
-            raise Error("invalid authentication subkey: %s" % subkey)
-
-        self.user = user
+    @classmethod
+    def get_sub_apikey(cls, apikey):
+        response = api('GET', API_URL + 'subkey/', {'apikey': apikey}, API_HEADERS)
+        return response['subkey']
 
     def get_credentials(self):
-        if not self.user.credentials:
-            raise NotSubscribedError("user not subscribed to Backups")
-
-        return self.user.credentials
-
-    def update_key(self, backup_id, key):
-        self.get_backup_record(backup_id).key = key
-        dummydb.save()
+        r = self._api('GET', 'credentials/')
+        return r['accesskey'], r['secretkey'], r['usertoken'], r['producttoken']
 
     def get_new_profile(self, turnkey_version, profile_timestamp):
         """
@@ -283,50 +151,47 @@ class Backups:
 
         Raises an exception if no profile exists for turnkey_version.
         """
+        attrs = {'turnkey_version': turnkey_version}
 
-        archive = dummydb.get_profile(turnkey_version)
-        if not archive:
-            raise Error("no profile exists for turnkey_version '%s'" % turnkey_version)
+        response = self._api('GET', 'archive/timestamp/', attrs)
+        archive_timestamp = float(response['archive_timestamp'])
 
-        archive_timestamp = os.stat(archive).st_mtime
         if profile_timestamp and profile_timestamp >= archive_timestamp:
             return None
 
-        return ProfileArchive(archive, archive_timestamp)
+        response = self._api('GET', 'archive/', attrs)
+        content = base64.urlsafe_b64decode(str(response['archive_content']))
+
+        fd, archive_path = tempfile.mkstemp(prefix="archive.")
+        fh = os.fdopen(fd, "w")
+        fh.write(content)
+        fh.close()
+
+        return ProfileArchive(archive_path, archive_timestamp)
 
     def new_backup_record(self, key, turnkey_version, server_id=None):
-        # in the real implementation the hub would create a bucket not a dir...
-        # the real implementation would have to make sure this is unique
-        path = "/var/tmp/duplicity/" + base64.b32encode(os.urandom(10))
-        os.makedirs(path)
-        address = "file://" + path
+        attrs = {'key': key, 'turnkey_version': turnkey_version}
+        if server_id:
+            attrs['server_id'] = server_id
 
-        backup_record = self.user.new_backup(address, key, 
-                                             turnkey_version, server_id)
-
-        dummydb.save()
-
-        return backup_record
+        response = self._api('POST', 'record/create/', attrs)
+        return BackupRecord(response)
 
     def get_backup_record(self, backup_id):
-        if backup_id not in self.user.backups:
-            raise InvalidBackupError("no such backup (%s)" % backup_id)
+        response = self._api('GET', 'record/%s/' % backup_id)
+        return BackupRecord(response)
 
-        return self.user.backups[backup_id]
-
-    def list_backups(self):
-        return self.user.backups.values()
+    def update_key(self, backup_id, key):
+        response = self._api('PUT', 'record/%s/' % backup_id, {'key': key})
+        return BackupRecord(response)
 
     def updated_backup(self, address):
-        # In the real implementation this should add a task which queries S3
-        # with the user's credentials and updates the Hub database (e.g., size,
-        # data on backup sessions, etc.)
+        response = self._api('PUT', 'record/update/', {'address': address})
+        return response
 
-        for backup in self.user.backups.values():
-            if address == backup.address:
-                backup.update()
-                dummydb.save()
-                return
+    def list_backups(self):
+        response = self._api('GET', 'records/')
+        return map(lambda r: BackupRecord(r), response)
 
 class ProfileArchive:
     def __init__(self, archive, timestamp):
@@ -334,4 +199,5 @@ class ProfileArchive:
         self.timestamp = timestamp
 
     def extract(self, path):
-        executil.system("tar -xf %s -C %s" % (self.path_archive, path))
+        executil.system("tar -zxf %s -C %s" % (self.path_archive, path))
+
