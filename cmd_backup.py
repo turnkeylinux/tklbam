@@ -46,6 +46,7 @@ import sys
 import getopt
 
 from string import Template
+from executil import getoutput
 
 import backup
 
@@ -73,7 +74,10 @@ def fatal(e):
     sys.exit(1)
 
 def get_turnkey_version():
-    return file("/etc/turnkey_version").readline().strip()
+    try:
+        return file("/etc/turnkey_version").readline().strip()
+    except:
+        return getoutput("turnkey-version")
 
 from conffile import ConfFile
 
