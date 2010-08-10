@@ -74,9 +74,6 @@ import executil
 from pycurl_wrapper import Curl
 from utils import AttrDict
 
-API_URL = os.getenv('APIURL', 'https://hub.turnkeylinux.org/api/backup/')
-API_HEADERS = {'Accept': 'application/json'}
-
 class Error(Exception):
     pass
 
@@ -138,6 +135,9 @@ class Credentials(AttrDict):
         self.producttoken = response['producttoken']
 
 class Backups:
+    API_URL = os.getenv('APIURL', 'https://hub.turnkeylinux.org/api/backup/')
+    API_HEADERS = {'Accept': 'application/json'}
+
     Error = Error
 
     def __init__(self, subkey=None):
@@ -147,18 +147,18 @@ class Backups:
         self.subkey = subkey
 
     def _api(self, method, uri, attrs={}):
-        headers = API_HEADERS.copy()
+        headers = self.API_HEADERS.copy()
         headers['subkey'] = str(self.subkey)
 
         # workaround: http://redmine.lighttpd.net/issues/1017
         if method == "PUT":
             headers['Expect'] = ''
 
-        return api(method, API_URL + uri, attrs, headers)
+        return api(method, self.API_URL + uri, attrs, headers)
 
     @classmethod
     def get_sub_apikey(cls, apikey):
-        response = api('GET', API_URL + 'subkey/', {'apikey': apikey}, API_HEADERS)
+        response = api('GET', cls.API_URL + 'subkey/', {'apikey': apikey}, cls.API_HEADERS)
         return response['subkey']
 
     def get_credentials(self):
