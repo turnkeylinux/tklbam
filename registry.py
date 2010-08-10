@@ -1,5 +1,15 @@
 # the registry is implemented as a virtual object with properties that are
 # mapped directly to files.
+# 
+# Copyright (c) 2010 Liraz Siri <liraz@turnkeylinux.org>
+# 
+# This file is part of TKLBAM (TurnKey Linux BAckup and Migration).
+# 
+# TKLBAM is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 3 of
+# the License, or (at your option) any later version.
+# 
 
 import sys
 import os
