@@ -1,4 +1,0 @@
-chmod 0755 testdir/subdir
-chmod 0 testdir/chmod
-chown -h 0:0 testdir/subdir/subsubdir
-chown -h 666:0 testdir/chown

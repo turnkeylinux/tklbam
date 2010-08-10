@@ -1,2 +1,0 @@
-# SKIPPING: fobarbar foofoobar
-apt-get install --assume-yes aspell-fa aspell-hy

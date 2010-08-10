@@ -49,9 +49,6 @@ install:
 	install -d $(PATH_BIN) $(PATH_INSTALL_LIB) 
 	cp *.py $(PATH_INSTALL_LIB)
 
-	install -d $(PATH_INSTALL_LIB)/cmd_internals
-	cp cmd_internals/*.py $(PATH_INSTALL_LIB)/cmd_internals
-
 	$(call with-py-executables, \
 	  ln -fs $(call libpath, $$module) $(PATH_BIN)/$(progname), \
 	  ln -fs $(call libpath, $$module) $(PATH_BIN)/$(call subcommand, $$module))

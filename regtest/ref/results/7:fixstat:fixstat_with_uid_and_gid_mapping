@@ -1,7 +1,0 @@
-chmod 0755 testdir/subdir
-chmod 0 testdir/chmod
-chown -h 0:0 testdir/subdir/subsubdir
-chown -h 0:777 testdir/chgrp
-chown -h 0:777 testdir/subdir/file2
-chown -h 777:0 testdir/chown
-chown -h 777:777 testdir/subdir
