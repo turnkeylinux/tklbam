@@ -7,6 +7,8 @@ PATH_BIN = $(prefix)/bin
 PATH_INSTALL_LIB = $(prefix)/lib/$(progname)
 PATH_DIST := $(progname)-$(shell date +%F)
 
+SHELL = /bin/bash
+
 all: help
 
 debug:
@@ -63,4 +65,10 @@ uninstall:
 	  rm -f $(PATH_BIN)/$(call subcommand, $$module))
 
 clean:
-	rm -f *.pyc *.pyo
+	rm -f {,*/}*.pyc {,*/}*.pyo
+
+	@emptydirs=$$(find -type d -empty); \
+	if [ "$$emptydirs" ]; then \
+		echo rmdir $$emptydirs; \
+		rmdir $$emptydirs; \
+	fi
