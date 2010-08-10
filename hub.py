@@ -135,7 +135,7 @@ class Credentials(AttrDict):
         self.producttoken = response['producttoken']
 
 class Backups:
-    API_URL = os.getenv('APIURL', 'https://hub.turnkeylinux.org/api/backup/')
+    API_URL = 'https://hub.turnkeylinux.org/api/backup/'
     API_HEADERS = {'Accept': 'application/json'}
 
     Error = Error
