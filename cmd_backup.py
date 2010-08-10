@@ -208,8 +208,6 @@ def main():
 
         conf.address = registry.hbr.address
 
-    print "backup.Backup(%s)" % (`conf`)
-
     b = backup.Backup(conf)
     try:
         b.run()

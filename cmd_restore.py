@@ -197,12 +197,6 @@ def main():
     key = opt_key if opt_key else hbr.key
     secret = decrypt_key(key)
 
-    print "address: " + `address`
-    print "secret: " + `secret`
-    print "opt_time: " + `opt_time`
-    print "opt_limits: " + `opt_limits`
-    print "credentials: " + `credentials`
-
     if silent:
         log = TempFile()
     else:
