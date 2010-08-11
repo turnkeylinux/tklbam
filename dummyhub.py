@@ -13,6 +13,7 @@ from datetime import datetime
 import executil
 from utils import AttrDict
 
+from hub import Credentials
 from hub import Error, NotSubscribedError, InvalidBackupError
 
 class APIKey:
@@ -65,10 +66,17 @@ class DummyUser(AttrDict):
         self.backups_max = 0
 
     def subscribe(self):
+        import random
+
         accesskey = base64.b64encode(sha("%d" % self.uid).digest())[:20]
         secretkey = base64.b64encode(os.urandom(30))[:40]
+        producttoken = "{ProductToken}" + base64.b64encode("\x00" + os.urandom(2) + "AppTkn" + os.urandom(224))
+        usertoken = "{UserToken}" + base64.b64encode("\x00" + os.urandom(2) + "UserTkn" + os.urandom(288))
 
-        self.credentials = accesskey, secretkey
+        self.credentials = Credentials({'accesskey': accesskey, 
+                                        'secretkey': usertoken, 
+                                        'producttoken': producttoken,
+                                        'usertoken': usertoken})
 
     def unsubscribe(self):
         self.credentials = None
