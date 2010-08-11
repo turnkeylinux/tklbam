@@ -1,5 +1,6 @@
 # 
 # Copyright (c) 2010 Liraz Siri <liraz@turnkeylinux.org>
+# Copyright (c) 2010 Alon Swartz <alon@turnkeylinux.org>
 # 
 # This file is part of TKLBAM (TurnKey Linux BAckup and Migration).
 # 
