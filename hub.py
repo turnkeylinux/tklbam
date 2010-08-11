@@ -228,3 +228,7 @@ class ProfileArchive:
     def __del__(self):
         if os.path.exists(self.path_archive):
             os.remove(self.path_archive)
+
+if os.environ.get("TKLBAM_DUMMYHUB") or exists("/etc/tklbam/dummyhub"):
+    from dummyhub import Backups
+
