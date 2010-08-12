@@ -74,7 +74,7 @@ class DummyUser(AttrDict):
         usertoken = "{UserToken}" + base64.b64encode("\x00" + os.urandom(2) + "UserTkn" + os.urandom(288))
 
         self.credentials = Credentials({'accesskey': accesskey, 
-                                        'secretkey': usertoken, 
+                                        'secretkey': secretkey, 
                                         'producttoken': producttoken,
                                         'usertoken': usertoken})
 
