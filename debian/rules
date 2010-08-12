@@ -1,7 +1,6 @@
 #! /usr/bin/make -f
 
-progname=$(shell awk '/^Source/ {print $$2}' debian/control)
-buildroot=debian/$(progname)
+buildroot=debian/$(shell awk '/^Package/ {print $$2}' debian/control)
 prefix=$(buildroot)/usr
 
 clean:

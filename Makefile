@@ -23,7 +23,9 @@ help:
 	@echo 'clean'
 
 # DRY macros
-truepath = $(shell echo $1 | sed -e 's/^debian\/$(progname)//')
+debbuild=debian/$(shell awk '/^Package/ {print $$2}' debian/control)
+
+truepath = $(shell echo $1 | sed -e 's|^$(debbuild)||')
 libpath = $(call truepath,$(PATH_INSTALL_LIB))/$$(basename $1)
 subcommand = $(progname)-$$(echo $1 | sed 's|.*/||; s/^cmd_//; s/_/-/g; s/.py$$//')
 echo-do = echo $1; $1
