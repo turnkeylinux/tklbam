@@ -97,7 +97,7 @@ def main():
                                                   hbr.updated.strftime("%Y-%m-%d") 
                                                   if hbr.updated else "-",
 
-                                                  hbr.size / 1024.0,
+                                                  hbr.size / (1024.0 * 1024 * 1024),
                                                   hbr.label)
 
 if __name__ == "__main__":
