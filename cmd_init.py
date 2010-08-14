@@ -42,23 +42,29 @@ def usage(e=None):
     if e:
         print >> sys.stderr, "error: " + str(e)
 
-    print >> sys.stderr, "Syntax: %s API-KEY" % sys.argv[0]
+    print >> sys.stderr, "Syntax: %s [ API-KEY ]" % sys.argv[0]
     print >> sys.stderr, __doc__.strip()
     sys.exit(1)
 
 def main():
+    apikey = None
+
     args = sys.argv[1:]
-    if not args or args[0] in ("-h", "--help"):
-        usage()
+    if args:
+        if len(args) != 1 or args[0] in ("-h", "--help"):
+            usage()
 
-    if len(args) != 1:
-        usage("incorrect number of arguments")
-
+        apikey = args[0]
+    
     if registry.sub_apikey:
         print >> sys.stderr, "error: already initialized"
         sys.exit(1)
 
-    apikey = args[0]
+    if not apikey:
+        print "Copy paste the API-KEY from your Hub account's user profile"
+        print
+        apikey = raw_input("API-KEY: ")
+
     sub_apikey = hub.Backups.get_sub_apikey(apikey)
 
     registry.sub_apikey = sub_apikey
