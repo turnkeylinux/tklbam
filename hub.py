@@ -84,23 +84,28 @@ class NotSubscribedError(Error):
 class InvalidBackupError(Error):
     pass
 
-def api(method, url, attrs={}, headers={}):
-    c = Curl(url, headers)
-    func = getattr(c, method.lower())
-    func(attrs)
+class API:
+    ALL_OK = 200
+    NOT_HERE = 410
+    FORBIDDEN = 401
 
-    if not c.response_code == 200:
+    @classmethod
+    def request(cls, method, url, attrs={}, headers={}):
+        c = Curl(url, headers)
+        func = getattr(c, method.lower())
+        func(attrs)
 
-        if c.response_data.splitlines()[1] == "BackupAccount not subscribed":
-            raise NotSubscribedError("user not subscribed to Backups")
-
-        if c.response_data.splitlines()[1] == "BackupRecord does not exist":
+        if c.response_code == cls.NOT_HERE:
             backup_id = url.strip("/").split("/")[-1]
             raise InvalidBackupError("no such backup (%s)" % backup_id)
 
-        raise Error(c.response_code, c.response_data)
+        elif c.response_code == cls.FORBIDDEN:
+            raise NotSubscribedError("user not subscribed to Backups")
 
-    return json.loads(c.response_data)
+        elif c.response_code != cls.ALL_OK:
+            raise Error(c.response_code, c.response_data)
+
+        return json.loads(c.response_data)
 
 class BackupRecord(AttrDict):
     @staticmethod
@@ -155,11 +160,11 @@ class Backups:
         if method == "PUT":
             headers['Expect'] = ''
 
-        return api(method, self.API_URL + uri, attrs, headers)
+        return API.request(method, self.API_URL + uri, attrs, headers)
 
     @classmethod
     def get_sub_apikey(cls, apikey):
-        response = api('GET', cls.API_URL + 'subkey/', {'apikey': apikey}, cls.API_HEADERS)
+        response = API.request('GET', cls.API_URL + 'subkey/', {'apikey': apikey}, cls.API_HEADERS)
         return response['subkey']
 
     def get_credentials(self):
