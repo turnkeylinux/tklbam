@@ -17,8 +17,6 @@ class Error(Exception):
     pass
 
 def fmt_s3_headers(product, user):
-    product = "{ProductToken}" + product
-    user = "{UserToken}" + user
     return "x-amz-security-token=" + ",".join([product,user])
 
 class Command:
