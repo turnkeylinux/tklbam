@@ -25,6 +25,7 @@ Format variables:
     %size                   Aggregate size of backup, in MBs
     %address                Backup target address
     %key                    Base64 encoded encrypted keypacket
+    %kp                     Key passphrase boolean (Y for Yes, N for No)
 
 Examples:
 
@@ -37,6 +38,8 @@ import getopt
 import string
 
 import hub
+import keypacket
+
 from registry import registry
 
 def usage(e=None):
@@ -62,6 +65,16 @@ class Formatter:
     def __call__(self, hbr):
         return self.tpl.substitute(**hbr)
 
+def key_has_passphrase(key):
+    try:
+        keypacket.parse(key, "")
+        return False
+    except keypacket.Error:
+        return True
+
+def fmt_kp(key):
+    return "Y" if key_has_passphrase(key) else "N"
+
 def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], "h", ["help"])
@@ -86,19 +99,21 @@ def main():
     if format:
         format = Formatter(format)
         for hbr in hbrs:
+            hbr.kp = fmt_kp(hbr.key)
             print format(hbr)
 
     elif hbrs:
-        print "# ID  Created     Updated     Size (GB)  Label"
+        print "# ID  KP  Created     Updated     Size (GB)  Label"
         for hbr in hbrs:
-            print "%4s  %s  %-10s  %-8.2f   %s" % (hbr.backup_id,
-                                                  hbr.created.strftime("%Y-%m-%d"),
+            print "%4s  %s   %s  %-10s  %-8.2f   %s" % \
+                    (hbr.backup_id, fmt_kp(hbr.key),
+                     hbr.created.strftime("%Y-%m-%d"),
 
-                                                  hbr.updated.strftime("%Y-%m-%d") 
-                                                  if hbr.updated else "-",
+                     hbr.updated.strftime("%Y-%m-%d") 
+                     if hbr.updated else "-",
 
-                                                  hbr.size / (1024.0 * 1024 * 1024),
-                                                  hbr.label)
+                     hbr.size / (1024.0 * 1024 * 1024),
+                     hbr.label)
 
 if __name__ == "__main__":
     main()
