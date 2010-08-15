@@ -53,6 +53,7 @@ def main():
         passphrase = random_passphrase()
         print passphrase
     else:
+        print "(For no passphrase, just press Enter)"
         passphrase = get_passphrase()
 
     key = keypacket.fmt(registry.secret, passphrase)
@@ -64,6 +65,10 @@ def main():
         try:
             hb.update_key(hbr.backup_id, key)
             registry.key = key
+
+            print ("Updated" if passphrase else "Removed") + \
+                    " passphrase - uploaded key to Hub."
+
         except hub.Error:
             raise
     else:
