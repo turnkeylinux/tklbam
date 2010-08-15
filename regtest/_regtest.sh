@@ -41,7 +41,7 @@ for arg; do
 done
 
 [ -n "$DEBUG" ] && set -x
-rm -rf ./testdir && rsync -a $REF/testdir ./
+rm -rf ./testdir && tar xvf $REF/testdir.tar
 
 # test index creation
 cmd dirindex --create index testdir
