@@ -75,10 +75,12 @@ def main():
         credentials = hub.Backups(sub_apikey).get_credentials()
         registry.credentials = credentials
 
-        print "Successfully linked TKLBAM to your Hub account."
-
-    except hub.Backups.Error, e:
+    except hub.NotSubscribedError, e:
         print >> sys.stderr, NOT_SUBSCRIBED
+        print >> sys.stderr
+
+
+    print "Linked TKLBAM to your Hub account."
 
 if __name__=="__main__":
     main()
