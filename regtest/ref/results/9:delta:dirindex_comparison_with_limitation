@@ -1,0 +1,2 @@
+o	testdir/subdir/file2	0	777
+s	testdir/subdir	777	777	0755
