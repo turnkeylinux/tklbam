@@ -216,6 +216,10 @@ def main():
 
         if not skip_database:
             restore.database()
+
+        print
+        print "We're done. You may want to reboot now to restart all services."
+
     finally:
         redir.close()
 
