@@ -16,7 +16,7 @@ By default uses a built-in format, unless a user-specified format is specified.
 
 Format variables:
     
-    %backup_id              Backup id
+    %id                     Backup id
     %label                  Descriptive label
     %turnkey_version        Appliance version code
     %server_id              Associated server id (- if empty)
@@ -99,6 +99,7 @@ def main():
     if format:
         format = Formatter(format)
         for hbr in hbrs:
+            hbr.id = hbr.backup_id
             hbr.kp = fmt_kp(hbr.key)
             print format(hbr)
 
