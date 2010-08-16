@@ -19,8 +19,13 @@ Options:
 
 """
 import os
+from os.path import *
+
 import sys
 import getopt
+
+from temp import TempDir
+import executil
 
 def usage(e=None):
     if e:
@@ -34,6 +39,21 @@ def fatal(e):
     print >> sys.stderr, "error: " + str(e)
     sys.exit(1)
 
+class MountISO:
+    def __init__(self, iso):
+        cdroot = TempDir()
+        rootfs = TempDir()
+
+        executil.system("mount -o loop", iso, cdroot)
+        executil.system("mount -o loop", join(cdroot, "casper/10root.squashfs"), rootfs)
+
+        self.cdroot = cdroot
+        self.rootfs = rootfs
+
+    def __del__(self):
+        executil.system("umount", self.rootfs)
+        executil.system("umount", self.cdroot)
+    
 def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'h', 
@@ -60,6 +80,10 @@ def main():
         fatal("need a profiles conf dir")
 
     iso_path, output_path = args
+
+    mount = MountISO(iso_path)
+
+    os.system("cd %s; /bin/bash" % mount.rootfs)
 
     print `profiles_conf`
     print `iso_path, output_path`
