@@ -32,7 +32,6 @@ import executil
 from temp import TempDir, TempFile
 from backup import ProfilePaths
 import dirindex
-import debinfo
 
 class Error(Exception):
     pass
@@ -118,9 +117,23 @@ def get_packages(path_rootfs):
         if control.strip():
             yield control
 
+    def parse_control(control):
+        d = {}
+        for line in control.splitlines():
+            if not line or line.startswith(" "):
+                continue
+
+            vals = line.split(': ', 1)
+            if len(vals) != 2:
+                continue
+
+            d[vals[0]] = vals[1]
+
+        return d
+
     packages = []
     for control in parse_status(join(path_rootfs, "var/lib/dpkg/status")):
-        d = debinfo.parse_control(control)
+        d = parse_control(control)
         if d['Status'] == 'install ok installed':
             packages.append(d['Package'])
 
