@@ -87,11 +87,12 @@ class Profile:
         sio = StringIO()
         sio.write(file(path_conf("core")).read())
 
-        if not exists(path_conf(codename)):
-            raise Error("no profile conf file for '%s'" % codename)
+        if codename != "core":
+            if not exists(path_conf(codename)):
+                raise Error("no profile conf file for '%s'" % codename)
 
-        print >> sio
-        print >> sio, "# %s" % codename
+            print >> sio
+            print >> sio, "# %s" % codename
 
         sio.write(file(path_conf(codename)).read())
 
