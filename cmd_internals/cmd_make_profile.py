@@ -27,10 +27,11 @@ import getopt
 import re
 
 from StringIO import StringIO
-from temp import TempDir
 import executil
 
+from temp import TempDir, TempFile
 from backup import ProfilePaths
+import dirindex
 
 class Error(Exception):
     pass
@@ -95,7 +96,18 @@ def make_profile(rootfs, profiles_conf):
     sio.write(file(conf(codename)).read())
 
     file(profile.dirindex_conf, "w").write(sio.getvalue())
+    paths = dirindex.read_paths(file(profile.dirindex_conf))
+    paths = [ re.sub(r'^(-?)', '\\1' + rootfs, path) 
+              for path in paths ]
 
+    tmp = TempFile()
+    dirindex.create(tmp.path, paths)
+
+    dirindex_filtered = [ re.sub(r'^' + rootfs, '', line) 
+                          for line in file(tmp.path).readlines() ]
+
+    file(profile.dirindex, "w").writelines(dirindex_filtered)
+    
     return profile
 
 def main():
