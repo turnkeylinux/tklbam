@@ -189,6 +189,9 @@ def main():
 
     iso_path, output_dir = args
 
+    if not isdir(output_dir):
+        fatal("'%s' is not a directory" % output_dir)
+
     mount = MountISO(iso_path)
 
     profile = Profile(mount.rootfs, profiles_conf)
