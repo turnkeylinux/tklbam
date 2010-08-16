@@ -32,6 +32,7 @@ import executil
 from temp import TempDir, TempFile
 from backup import ProfilePaths
 import dirindex
+import debinfo
 
 class Error(Exception):
     pass
@@ -104,6 +105,28 @@ def get_dirindex(path_dirindex_conf, path_rootfs):
                         for line in file(tmp.path).readlines() ]
     return "".join(filtered)
 
+def get_packages(path_rootfs):
+    def parse_status(path):
+        control = ""
+        for line in file(path).readlines():
+            if not line.strip():
+                yield control
+                control = ""
+            else:
+                control += line
+
+        if control.strip():
+            yield control
+
+    packages = []
+    for control in parse_status(join(path_rootfs, "var/lib/dpkg/status")):
+        d = debinfo.parse_control(control)
+        if d['Status'] == 'install ok installed':
+            packages.append(d['Package'])
+
+    packages.sort()
+    return packages
+
 def make_profile(rootfs, path_profiles_conf):
     version = get_turnkey_version(rootfs)
     codename = get_codename(version)
@@ -115,6 +138,10 @@ def make_profile(rootfs, path_profiles_conf):
 
     di = get_dirindex(profile.dirindex_conf, rootfs)
     file(profile.dirindex, "w").write(di)
+
+    packages = get_packages(rootfs)
+    file(profile.packages, "w").writelines([ package + "\n"
+                                             for package in packages ])
 
     return profile
 
@@ -148,6 +175,7 @@ def main():
     mount = MountISO(iso_path)
 
     path = make_profile(mount.rootfs, profiles_conf)
+    print mount.rootfs
     os.system("cd %s; /bin/bash" % path)
 
 if __name__=="__main__":
