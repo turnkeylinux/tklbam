@@ -10,7 +10,7 @@
 # the License, or (at your option) any later version.
 # 
 """
-Make profile
+Make profile archive
 
 Options:
     
@@ -40,7 +40,7 @@ def usage(e=None):
     if e:
         print >> sys.stderr, "error: " + str(e)
 
-    print >> sys.stderr, "Syntax: %s path/to/appliance.iso path/to/output" % sys.argv[0]
+    print >> sys.stderr, "Syntax: %s path/to/appliance.iso output/dir" % sys.argv[0]
     print >> sys.stderr, __doc__.strip()
     sys.exit(1)
 
