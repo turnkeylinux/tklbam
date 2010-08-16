@@ -24,8 +24,16 @@ from os.path import *
 import sys
 import getopt
 
+import re
+
+from StringIO import StringIO
 from temp import TempDir
 import executil
+
+from backup import ProfilePaths
+
+class Error(Exception):
+    pass
 
 def usage(e=None):
     if e:
@@ -53,7 +61,43 @@ class MountISO:
     def __del__(self):
         executil.system("umount", self.rootfs)
         executil.system("umount", self.cdroot)
-    
+
+def get_turnkey_version(rootfs):
+    return executil.getoutput("turnkey-version", rootfs)
+
+def get_codename(turnkey_version):
+    m = re.match(r'turnkey-(.*?)-([\d\.]+|beta)', turnkey_version)
+    if not m:
+        raise Error("couldn't parse turnkey version '%s'" % turnkey_version)
+
+    codename, release = m.groups()
+    return codename
+
+def make_profile(rootfs, profiles_conf):
+    version = get_turnkey_version(rootfs)
+    codename = get_codename(version)
+
+    profile = ProfilePaths(TempDir())
+
+    def conf(codename):
+        return join(profiles_conf, codename)
+
+    sio = StringIO()
+
+    sio.write(file(conf("core")).read())
+
+    if not exists(conf(codename)):
+        raise Error("no profile conf file for '%s'" % codename)
+
+    print >> sio
+    print >> sio, "# %s" % codename
+
+    sio.write(file(conf(codename)).read())
+
+    file(profile.dirindex_conf, "w").write(sio.getvalue())
+
+    return profile
+
 def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'h', 
@@ -83,10 +127,8 @@ def main():
 
     mount = MountISO(iso_path)
 
-    os.system("cd %s; /bin/bash" % mount.rootfs)
-
-    print `profiles_conf`
-    print `iso_path, output_path`
+    path = make_profile(mount.rootfs, profiles_conf)
+    os.system("cd %s; /bin/bash" % path)
 
 if __name__=="__main__":
     main()
