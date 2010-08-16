@@ -63,91 +63,103 @@ class MountISO:
         executil.system("umount", self.rootfs)
         executil.system("umount", self.cdroot)
 
-def get_turnkey_version(rootfs):
-    return executil.getoutput("turnkey-version", rootfs)
+class Profile:
 
-def get_codename(turnkey_version):
-    m = re.match(r'turnkey-(.*?)-([\d\.]+|beta)', turnkey_version)
-    if not m:
-        raise Error("couldn't parse turnkey version '%s'" % turnkey_version)
+    @staticmethod
+    def _get_turnkey_version(rootfs):
+        return executil.getoutput("turnkey-version", rootfs)
 
-    codename, release = m.groups()
-    return codename
+    @staticmethod
+    def _get_codename(turnkey_version):
+        m = re.match(r'turnkey-(.*?)-([\d\.]+|beta)', turnkey_version)
+        if not m:
+            raise Error("couldn't parse turnkey version '%s'" % turnkey_version)
 
-def get_dirindex_conf(path_profiles_conf, codename):
+        codename, release = m.groups()
+        return codename
 
-    def path_conf(codename):
-        return join(path_profiles_conf, codename)
+    @staticmethod
+    def _get_dirindex_conf(path_profiles_conf, codename):
 
-    sio = StringIO()
-    sio.write(file(path_conf("core")).read())
+        def path_conf(codename):
+            return join(path_profiles_conf, codename)
 
-    if not exists(path_conf(codename)):
-        raise Error("no profile conf file for '%s'" % codename)
+        sio = StringIO()
+        sio.write(file(path_conf("core")).read())
 
-    print >> sio
-    print >> sio, "# %s" % codename
+        if not exists(path_conf(codename)):
+            raise Error("no profile conf file for '%s'" % codename)
 
-    sio.write(file(path_conf(codename)).read())
+        print >> sio
+        print >> sio, "# %s" % codename
 
-    return sio.getvalue()
+        sio.write(file(path_conf(codename)).read())
 
-def get_dirindex(path_dirindex_conf, path_rootfs):
-    paths = dirindex.read_paths(file(path_dirindex_conf))
-    paths = [ re.sub(r'^(-?)', '\\1' + path_rootfs, path) 
-              for path in paths ]
+        return sio.getvalue()
 
-    tmp = TempFile()
-    dirindex.create(tmp.path, paths)
+    @staticmethod
+    def _get_dirindex(path_dirindex_conf, path_rootfs):
+        paths = dirindex.read_paths(file(path_dirindex_conf))
+        paths = [ re.sub(r'^(-?)', '\\1' + path_rootfs, path) 
+                  for path in paths ]
 
-    filtered = [ re.sub(r'^' + path_rootfs, '', line) 
-                        for line in file(tmp.path).readlines() ]
-    return "".join(filtered)
+        tmp = TempFile()
+        dirindex.create(tmp.path, paths)
 
-def get_packages(path_rootfs):
-    def parse_status(path):
-        control = ""
-        for line in file(path).readlines():
-            if not line.strip():
+        filtered = [ re.sub(r'^' + path_rootfs, '', line) 
+                            for line in file(tmp.path).readlines() ]
+        return "".join(filtered)
+
+    @staticmethod
+    def _get_packages(path_rootfs):
+        def parse_status(path):
+            control = ""
+            for line in file(path).readlines():
+                if not line.strip():
+                    yield control
+                    control = ""
+                else:
+                    control += line
+
+            if control.strip():
                 yield control
-                control = ""
-            else:
-                control += line
 
-        if control.strip():
-            yield control
+        def parse_control(control):
+            return dict([ line.split(': ', 1) 
+                          for line in control.splitlines() 
+                          if re.match(r'^Package|Status', line) ])
 
-    def parse_control(control):
-        return dict([ line.split(': ', 1) 
-                      for line in control.splitlines() 
-                      if re.match(r'^Package|Status', line) ])
+        packages = []
+        for control in parse_status(join(path_rootfs, "var/lib/dpkg/status")):
+            d = parse_control(control)
+            if d['Status'] == 'install ok installed':
+                packages.append(d['Package'])
 
-    packages = []
-    for control in parse_status(join(path_rootfs, "var/lib/dpkg/status")):
-        d = parse_control(control)
-        if d['Status'] == 'install ok installed':
-            packages.append(d['Package'])
+        packages.sort()
+        return packages
 
-    packages.sort()
-    return packages
+    def __init__(self, rootfs, path_profiles_conf):
+        version = self._get_turnkey_version(rootfs)
+        codename = self._get_codename(version)
 
-def make_profile(rootfs, path_profiles_conf):
-    version = get_turnkey_version(rootfs)
-    codename = get_codename(version)
+        paths = ProfilePaths(TempDir())
 
-    profile = ProfilePaths(TempDir())
+        dc = self._get_dirindex_conf(path_profiles_conf, codename)
+        file(paths.dirindex_conf, "w").write(dc)
 
-    dc = get_dirindex_conf(path_profiles_conf, codename)
-    file(profile.dirindex_conf, "w").write(dc)
+        di = self._get_dirindex(paths.dirindex_conf, rootfs)
+        file(paths.dirindex, "w").write(di)
 
-    di = get_dirindex(profile.dirindex_conf, rootfs)
-    file(profile.dirindex, "w").write(di)
+        packages = self._get_packages(rootfs)
+        file(paths.packages, "w").writelines([ package + "\n"
+                                               for package in packages ])
 
-    packages = get_packages(rootfs)
-    file(profile.packages, "w").writelines([ package + "\n"
-                                             for package in packages ])
+        self.version = version
+        self.paths = paths
 
-    return profile
+    def write(self, output_dir):
+        path_archive = join(output_dir, "%s.tar.gz" % self.version)
+        executil.system("tar -C %s -zcf %s ." % (self.paths.path, path_archive))
 
 def main():
     try:
@@ -174,13 +186,12 @@ def main():
     if not profiles_conf:
         fatal("need a profiles conf dir")
 
-    iso_path, output_path = args
+    iso_path, output_dir = args
 
     mount = MountISO(iso_path)
 
-    path = make_profile(mount.rootfs, profiles_conf)
-    print mount.rootfs
-    os.system("cd %s; /bin/bash" % path)
+    profile = Profile(mount.rootfs, profiles_conf)
+    profile.write(output_dir)
 
 if __name__=="__main__":
     main()
