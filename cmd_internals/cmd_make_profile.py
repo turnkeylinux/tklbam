@@ -74,40 +74,48 @@ def get_codename(turnkey_version):
     codename, release = m.groups()
     return codename
 
-def make_profile(rootfs, profiles_conf):
-    version = get_turnkey_version(rootfs)
-    codename = get_codename(version)
+def get_dirindex_conf(path_profiles_conf, codename):
 
-    profile = ProfilePaths(TempDir())
-
-    def conf(codename):
-        return join(profiles_conf, codename)
+    def path_conf(codename):
+        return join(path_profiles_conf, codename)
 
     sio = StringIO()
+    sio.write(file(path_conf("core")).read())
 
-    sio.write(file(conf("core")).read())
-
-    if not exists(conf(codename)):
+    if not exists(path_conf(codename)):
         raise Error("no profile conf file for '%s'" % codename)
 
     print >> sio
     print >> sio, "# %s" % codename
 
-    sio.write(file(conf(codename)).read())
+    sio.write(file(path_conf(codename)).read())
 
-    file(profile.dirindex_conf, "w").write(sio.getvalue())
-    paths = dirindex.read_paths(file(profile.dirindex_conf))
-    paths = [ re.sub(r'^(-?)', '\\1' + rootfs, path) 
+    return sio.getvalue()
+
+def get_dirindex(path_dirindex_conf, path_rootfs):
+    paths = dirindex.read_paths(file(path_dirindex_conf))
+    paths = [ re.sub(r'^(-?)', '\\1' + path_rootfs, path) 
               for path in paths ]
 
     tmp = TempFile()
     dirindex.create(tmp.path, paths)
 
-    dirindex_filtered = [ re.sub(r'^' + rootfs, '', line) 
-                          for line in file(tmp.path).readlines() ]
+    filtered = [ re.sub(r'^' + path_rootfs, '', line) 
+                        for line in file(tmp.path).readlines() ]
+    return "".join(filtered)
 
-    file(profile.dirindex, "w").writelines(dirindex_filtered)
-    
+def make_profile(rootfs, path_profiles_conf):
+    version = get_turnkey_version(rootfs)
+    codename = get_codename(version)
+
+    profile = ProfilePaths(TempDir())
+
+    dc = get_dirindex_conf(path_profiles_conf, codename)
+    file(profile.dirindex_conf, "w").write(dc)
+
+    di = get_dirindex(profile.dirindex_conf, rootfs)
+    file(profile.dirindex, "w").write(di)
+
     return profile
 
 def main():
