@@ -118,18 +118,9 @@ def get_packages(path_rootfs):
             yield control
 
     def parse_control(control):
-        d = {}
-        for line in control.splitlines():
-            if not line or line.startswith(" "):
-                continue
-
-            vals = line.split(': ', 1)
-            if len(vals) != 2:
-                continue
-
-            d[vals[0]] = vals[1]
-
-        return d
+        return dict([ line.split(': ', 1) 
+                      for line in control.splitlines() 
+                      if re.match(r'^Package|Status', line) ])
 
     packages = []
     for control in parse_status(join(path_rootfs, "var/lib/dpkg/status")):
