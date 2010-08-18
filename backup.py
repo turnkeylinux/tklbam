@@ -273,6 +273,7 @@ class Backup:
         opts += [('volsize', conf.volsize),
                  ('full-if-older-than', conf.full_backup),
                  ('include', self.extras_paths.path),
+                 ('gpg-options', '--cipher-algo=aes'),
                  ('include-filelist', self.extras_paths.fsdelta_olist),
                  ('exclude', '**')]
 
