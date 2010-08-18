@@ -276,7 +276,7 @@ class Backup:
                  ('include-filelist', self.extras_paths.fsdelta_olist),
                  ('exclude', '**')]
 
-        backup_command = duplicity.Command(opts, '/', conf.address)
+        backup_command = duplicity.Command(opts, '--asynchronous-upload', '/', conf.address)
         if conf.verbose:
             print "\n# PASSPHRASE=$(cat %s) %s" % (conf.secretfile, 
                                                    backup_command)
