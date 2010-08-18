@@ -25,7 +25,7 @@ Format variables:
     %size                   Aggregate size of backup, in MBs
     %address                Backup target address
     %key                    Base64 encoded encrypted keypacket
-    %kp                     Key passphrase boolean (Y for Yes, N for No)
+    %skpp                   Secret Key Passphrase Protection (Yes/No)
 
 Examples:
 
@@ -72,8 +72,8 @@ def key_has_passphrase(key):
     except keypacket.Error:
         return True
 
-def fmt_kp(key):
-    return "Y" if key_has_passphrase(key) else "N"
+def fmt_skpp(key):
+    return "Yes" if key_has_passphrase(key) else "No"
 
 def main():
     try:
@@ -100,14 +100,14 @@ def main():
         format = Formatter(format)
         for hbr in hbrs:
             hbr.id = hbr.backup_id
-            hbr.kp = fmt_kp(hbr.key)
+            hbr.skpp = fmt_skpp(hbr.key)
             print format(hbr)
 
     elif hbrs:
-        print "# ID  KP  Created     Updated     Size (GB)  Label"
+        print "# ID  SKPP  Created     Updated     Size (GB)  Label"
         for hbr in hbrs:
-            print "%4s  %s   %s  %-10s  %-8.2f   %s" % \
-                    (hbr.backup_id, fmt_kp(hbr.key),
+            print "%4s  %-3s   %s  %-10s  %-8.2f   %s" % \
+                    (hbr.backup_id, fmt_skpp(hbr.key),
                      hbr.created.strftime("%Y-%m-%d"),
 
                      hbr.updated.strftime("%Y-%m-%d") 
