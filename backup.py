@@ -2,7 +2,6 @@ import os
 from os.path import *
 
 import re
-import md5
 import shutil
 
 from paths import Paths
