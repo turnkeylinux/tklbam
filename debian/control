@@ -7,7 +7,6 @@ Standards-Version: 3.6.1
 
 Package: tklbam
 Architecture: all
-Pre-Depends: pinning-patch
 Depends: python (>= 2.4), duplicity (>= 0.6), python-boto (>= 1.9b-4turnkey), turnkey-pylib, turnkey-version, python-crypto, pycurl-wrapper, python-simplejson, ca-certificates
 Section: misc
 Description: TurnKey Linux BAckup and Migration agent
