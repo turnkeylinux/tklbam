@@ -62,6 +62,20 @@ archive/timestamp/
     fields: turnkey_version
     return: archive_timestamp
 
+Exceptions::
+
+    400 Request_MissingHeader
+    400 Request_MissingArgument
+    401 HubAccount_Forbidden
+    400 HubAccount_InvalidApiKey
+    400 BackupAccount_InvalidSubKey
+    401 BackupAccount_MalformedSubKey
+    404 BackupAccount_NotFound
+    401 BackupAccount_NotSubscribed
+    404 BackupRecord_NotFound
+    401 BackupRecord_LimitExceeded
+    400 BackupRecord_ServerIDNotFound
+    404 BackupArchive_NotFound
 """
 
 import os
@@ -86,8 +100,8 @@ class InvalidBackupError(Error):
 
 class API:
     ALL_OK = 200
-    NOT_HERE = 410
-    FORBIDDEN = 401
+    CREATED = 201
+    DELETED = 204
 
     @classmethod
     def request(cls, method, url, attrs={}, headers={}):
@@ -95,15 +109,16 @@ class API:
         func = getattr(c, method.lower())
         func(attrs)
 
-        if c.response_code == cls.NOT_HERE:
-            backup_id = url.strip("/").split("/")[-1]
-            raise InvalidBackupError("no such backup (%s)" % backup_id)
+        if not c.response_code in (cls.ALL_OK, cls.CREATED, cls.DELETED):
+            name, description = c.response_data.split(":", 1)
 
-        elif c.response_code == cls.FORBIDDEN:
-            raise NotSubscribedError("user not subscribed to Backups")
+            if name == "BackupRecord_NotFound":
+                raise InvalidBackupError(description)
 
-        elif c.response_code != cls.ALL_OK:
-            raise Error(c.response_code, c.response_data)
+            if name == "BackupAccount_NotSubscribed":
+                raise NotSubscribedError(description)
+
+            raise Error(c.response_code, name, description)
 
         return json.loads(c.response_data)
 
