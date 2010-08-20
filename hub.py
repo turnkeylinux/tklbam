@@ -64,18 +64,18 @@ archive/timestamp/
 
 Exceptions::
 
-    400 Request_MissingHeader
-    400 Request_MissingArgument
-    401 HubAccount_Forbidden
-    400 HubAccount_InvalidApiKey
-    400 BackupAccount_InvalidSubKey
-    401 BackupAccount_MalformedSubKey
-    404 BackupAccount_NotFound
-    401 BackupAccount_NotSubscribed
-    404 BackupRecord_NotFound
-    401 BackupRecord_LimitExceeded
-    400 BackupRecord_ServerIDNotFound
-    404 BackupArchive_NotFound
+    400 Request.MissingHeader
+    400 Request.MissingArgument
+    401 HubAccount.Forbidden
+    400 HubAccount.InvalidApiKey
+    400 BackupAccount.InvalidSubKey
+    401 BackupAccount.MalformedSubKey
+    404 BackupAccount.NotFound
+    401 BackupAccount.NotSubscribed
+    404 BackupRecord.NotFound
+    401 BackupRecord.LimitExceeded
+    400 BackupRecord.ServerIDNotFound
+    404 BackupArchive.NotFound
 """
 
 import os
@@ -112,10 +112,10 @@ class API:
         if not c.response_code in (cls.ALL_OK, cls.CREATED, cls.DELETED):
             name, description = c.response_data.split(":", 1)
 
-            if name == "BackupRecord_NotFound":
+            if name == "BackupRecord.NotFound":
                 raise InvalidBackupError(description)
 
-            if name == "BackupAccount_NotSubscribed":
+            if name == "BackupAccount.NotSubscribed":
                 raise NotSubscribedError(description)
 
             raise Error(c.response_code, name, description)
