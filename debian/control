@@ -10,4 +10,4 @@ Conflicts: tklbam
 Architecture: all
 Depends: python (>= 2.4), tklbam-duplicity, tklbam-python-boto, turnkey-pylib, turnkey-version, python-crypto, pycurl-wrapper, python-simplejson, ca-certificates
 Section: misc
-Description: TurnKey Linux BAckup and Migration agent
+Description: TurnKey Linux Backup and Migration agent
