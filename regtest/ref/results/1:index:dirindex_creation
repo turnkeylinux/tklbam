@@ -5,7 +5,7 @@ testdir/chown	81a4	3e7	3e7	0	-1c20
 testdir/donttouchme	81a4	3e7	3e7	6	-1c20
 testdir/emptydir	41ed	3e7	3e7	30	-1c20
 testdir/file	81a4	3e7	3e7	6	-1c20
-testdir/link	a1ff	3e7	3e7	4	-1c20
+testdir/link	a1ff	3e7	3e7	4	-1c20	file
 testdir/subdir	41ed	3e7	3e7	68	-1c20
 testdir/subdir/file2	81a4	3e7	3e7	c	-1c20
 testdir/subdir/subsubdir	41ed	3e7	3e7	48	-1c20
