@@ -94,7 +94,7 @@ class Profile:
             print >> sio
             print >> sio, "# %s" % codename
 
-        sio.write(file(path_conf(codename)).read())
+            sio.write(file(path_conf(codename)).read())
 
         return sio.getvalue()
 
