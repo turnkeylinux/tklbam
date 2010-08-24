@@ -9,14 +9,30 @@
 # the License, or (at your option) any later version.
 # 
 import os
+from os.path import *
+
 import sys
 
 from subprocess import *
 
+def _find_duplicity_pylib(path):
+    if not isdir(path):
+        return None
+
+    for fpath, dnames, fnames in os.walk(path):
+        if 'duplicity' in dnames:
+            return fpath
+
+    return None
+
+PATH_DEPS = os.environ.get('TKLBAM_DEPS', '/usr/lib/tklbam/deps')
+PATH_DEPS_BIN = join(PATH_DEPS, "bin")
+PATH_DEPS_PYLIB = _find_duplicity_pylib(PATH_DEPS)
+
 class Error(Exception):
     pass
 
-def fmt_s3_headers(product, user):
+def _fmt_s3_headers(product, user):
     return "x-amz-security-token=" + ",".join([product,user])
 
 class Command:
@@ -44,9 +60,15 @@ class Command:
             os.environ['AWS_ACCESS_KEY_ID'] = creds.accesskey
             os.environ['AWS_SECRET_ACCESS_KEY'] = creds.secretkey
 
-            s3_headers = fmt_s3_headers(creds.producttoken, 
-                                        creds.usertoken)
+            s3_headers = _fmt_s3_headers(creds.producttoken, 
+                                         creds.usertoken)
             os.environ['AWS_S3_HEADERS'] = s3_headers
+
+        if PATH_DEPS_BIN not in os.environ['PATH'].split(':'):
+            os.environ['PATH'] = PATH_DEPS_BIN + ':' + os.environ['PATH']
+
+        if PATH_DEPS_PYLIB:
+            os.environ['PYTHONPATH'] = PATH_DEPS_PYLIB
 
         os.environ['PASSPHRASE'] = passphrase
         child = Popen(self.command)
