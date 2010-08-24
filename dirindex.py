@@ -20,39 +20,50 @@ class Error(Exception):
 
 class DirIndex(dict):
     class Record:
-        def __init__(self, path, mod, uid, gid, size, mtime):
+        def __init__(self, path, mod, uid, gid, size, mtime, 
+                     symlink=None):
             self.path = path
             self.mod = mod
             self.uid = uid
             self.gid = gid
             self.size = size
             self.mtime = mtime
+            self.symlink = symlink
 
         @classmethod
         def frompath(cls, path):
             st = os.lstat(path)
+
+            symlink = os.readlink(path) \
+                      if stat.S_ISLNK(st.st_mode) else None
+
             rec = cls(path, 
                       st.st_mode, 
                       st.st_uid, st.st_gid, 
-                      st.st_size, st.st_mtime)
+                      st.st_size, st.st_mtime, 
+                      symlink)
             return rec
 
         @classmethod
         def fromline(cls, line):
             vals = line.strip().split('\t')
-            if len(vals) != 6:
+            if len(vals) not in (6, 7):
                 raise Error("bad index record: " + line)
 
             path = vals[0]
             del vals[0]
 
-            vals = [ int(val, 16) for val in vals ]
+            vals = [ int(val, 16) for val in vals[:5] ] + vals[5:]
+
             return cls(path, *vals)
 
         def fmt(self):
             vals = [ self.path ] 
             for val in ( self.mod, self.uid, self.gid, self.size, self.mtime ):
                 vals.append("%x" % val)
+
+            if self.symlink:
+                vals.append(self.symlink)
 
             return "\t".join(vals)
 
@@ -151,9 +162,16 @@ class DirIndex(dict):
 
             return True
 
+        def symlink_equal(a, b):
+            if a.symlink and (a.symlink == b.symlink):
+                return True
+
+            return False
+
         for path in paths_in_both:
             if not attrs_equal(('size', 'mtime'), self[path], other[path]):
-                if not stat.S_ISDIR(other[path].mod):
+                if not stat.S_ISDIR(other[path].mod) \
+                   and not symlink_equal(self[path], other[path]):
                     files_edited.append(path)
                     continue
 
