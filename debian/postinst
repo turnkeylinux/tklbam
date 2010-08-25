@@ -1,8 +1,18 @@
 #!/bin/bash
 
+is_online() {
+	if 2>&1 host -h | grep -q -- -W; then
+		command="host -W 1"
+	else
+		command="host -s 1"
+	fi
+
+	$command ntp.ubuntu.com >& /dev/null
+}
+
 [ -x /usr/sbin/ntpdate-debian ] || exit 0
 
-if host -s 1 ntp.ubuntu.com >& /dev/null; then
+if is_online; then
 	
 	[ -x /etc/init.d/ntp ] && /etc/init.d/ntp stop
 	/usr/sbin/ntpdate-debian
