@@ -1,4 +1,11 @@
-#!/bin/sh
+#!/bin/bash
 
-#DEBHELPER#
-exit 0
+[ -x /usr/sbin/ntpdate-debian ] || exit 0
+
+if host -s 1 ntp.ubuntu.com >& /dev/null; then
+	
+	[ -x /etc/init.d/ntp ] && /etc/init.d/ntp stop
+	/usr/sbin/ntpdate-debian
+	[ -x /etc/init.d/ntp ] && /etc/init.d/ntp start
+
+fi
