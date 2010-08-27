@@ -56,12 +56,13 @@ import sys
 import getopt
 
 from string import Template
-from executil import getoutput
 
 import backup
 
 import hub
 from registry import registry
+
+from version import get_turnkey_version
 
 def usage(e=None):
     if e:
@@ -82,12 +83,6 @@ def warn(e):
 def fatal(e):
     print >> sys.stderr, "error: " + str(e)
     sys.exit(1)
-
-def get_turnkey_version():
-    try:
-        return file("/etc/turnkey_version").readline().strip()
-    except:
-        return getoutput("turnkey-version")
 
 from conffile import ConfFile
 

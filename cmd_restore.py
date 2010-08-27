@@ -49,6 +49,8 @@ Options:
     --no-rollback                     Disable rollback
     --silent                          Disable feedback
 
+    --force                           Disable sanity checking
+
 """
 
 import sys
@@ -67,8 +69,42 @@ import keypacket
 
 import passphrase
 
+from version import get_turnkey_version, codename
+
 class Error(Exception):
     pass
+
+def do_compatibility_check(backup_turnkey_version):
+
+    backup_codename = codename(backup_turnkey_version)
+    local_codename = codename(get_turnkey_version())
+
+    if local_codename == backup_codename:
+        return
+
+    def fmt(codename):
+        return codename.upper().replace("-", " ")
+
+    backup_codename = fmt(backup_codename)
+    local_codename = fmt(local_codename)
+
+    print "WARNING: INCOMPATIBLE APPLIANCE BACKUP"
+    print "======================================"
+    print
+    print "Restoring a %s backup to a %s appliance is not recommended." % (backup_codename, local_codename)
+    print "For best results, restore to a fresh %s installation instead." % backup_codename
+    print
+    print "(Use --force to suppress this check)"
+    print
+
+    while True:
+        answer = raw_input("Do you want to continue? [yes/no] ")
+        if answer:
+            break
+
+    if answer.lower() not in ('y', 'yes'):
+        print "You didn't answer 'yes'. Aborting!"
+        sys.exit(1)
 
 def get_backup_record(arg):
     hb = hub.Backups(registry.sub_apikey)
@@ -117,6 +153,7 @@ def usage(e=None):
     sys.exit(1)
 
 def main():
+    opt_force = False
     opt_time = None
     opt_limits = []
     opt_key = None
@@ -131,6 +168,7 @@ def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'h', 
                                        ['limits=', 'address=', 'keyfile=', 
+                                        'force',
                                         'time=',
                                         'silent',
                                         'skip-files', 'skip-database', 'skip-packages',
@@ -161,6 +199,8 @@ def main():
             no_rollback = True
         elif opt == '--silent':
             silent = True
+        elif opt == '--force':
+            opt_force = True
         elif opt == '-h':
             usage()
 
@@ -190,9 +230,14 @@ def main():
 
     address = hbr.address if hbr else opt_address
 
-    if hbr and opt_key and \
-       keypacket.fingerprint(hbr.key) != keypacket.fingerprint(opt_key):
-        fatal("invalid escrow key for the selected backup")
+    if hbr:
+        if not opt_force:
+            do_compatibility_check(hbr.turnkey_version)
+
+        if opt_key and \
+           keypacket.fingerprint(hbr.key) != keypacket.fingerprint(opt_key):
+
+            fatal("invalid escrow key for the selected backup")
 
     key = opt_key if opt_key else hbr.key
     secret = decrypt_key(key)
