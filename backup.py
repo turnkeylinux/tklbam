@@ -180,6 +180,13 @@ def _rmdir(path):
     if exists(path):
         shutil.rmtree(path)
 
+def _fpaths(dpath):
+    arr = []
+    for dpath, dnames, fnames in os.walk(dpath):
+        for fname in fnames:
+            arr.append(join(dpath, fname))
+    return arr
+
 class Backup:
     EXTRAS_PATH = "/TKLBAM"
 
@@ -249,6 +256,25 @@ class Backup:
         else:
             if conf.verbose:
                 print "RE-USING " + extras_paths.path
+
+        if conf.verbose:
+
+            # files in /TKLBAM + /TKLBAM/fsdelta-olist
+            fpaths= _fpaths(extras_paths.path) + \
+                            file(extras_paths.fsdelta_olist).read().splitlines()
+
+            size = sum([ os.lstat(fpath).st_size 
+                         for fpath in fpaths ])
+
+            if size > 1024 * 1024 * 1024:
+                size_fmt = "%.2f GB" % (float(size) / (1024 * 1024 * 1024))
+            elif size > 1024 * 1024:
+                size_fmt = "%.2f MB" % (float(size) / (1024 * 1024))
+            else:
+                size_fmt = "%.2f KB" % (float(size) / 1024)
+
+            print "FULL UNCOMPRESSED FOOTPRINT: %s in %d files" % (size_fmt,
+                                                                   len(fpaths))
 
         self.conf = conf
         self.extras_paths = extras_paths
