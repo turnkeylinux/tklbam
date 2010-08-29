@@ -1,0 +1,56 @@
+###########################
+# TKLBAM BACKUP OVERRIDES #
+###########################
+#
+# FILESYSTEM OVERRIDES
+# 
+#   Override default configurations in /var/lib/tklbam/profile/dirindex.conf
+#   
+#   This includes or excludes additional files and directories from being 
+#   backed up if they've changed since installation.
+# 
+# Format
+#
+#   -?/path/to/include/or/exclude
+# 
+# Gotchas
+# 
+#   * If you add a directory handled by package management this may break
+#     package management on the system you restore to.
+#   
+#   * Only changes (e.g., new files, edited files, deleted files) from the 
+#     base installation are included in a backup.
+#
+# Examples
+#
+#   (exclude log files in /var/www) 
+#   -/var/www/*/logs
+#   
+#   (ignores changes to webmin configuration) 
+#   -/etc/webmin
+#   
+#   (include the contents of an external hard disk...) 
+#   /mnt/images
+ 
+ 
+# DATABASE OVERRIDES
+# 
+#   By default ALL databases are backed up. Adding a positive override 
+#   changes the default behavior so that only the database or table 
+#   specified in the override is included in the backup.
+#   
+#   You can mix positive overrides with negative overrides.
+# 
+# Format
+#
+#   -?mysql:database[/table]
+# 
+# Examples
+# 
+#   (exclude Drupal6 sessions table) 
+#   -mysql:drupal6/sessions
+# 
+#   (only include drupal6 database) 
+#   mysql:drupal6
+
+

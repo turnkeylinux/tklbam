@@ -1,0 +1,19 @@
+###############################
+# TKLBAM BACKUP CONFIGURATION #
+###############################
+
+# volsize: size of backup volumes in MBs
+
+volsize 50
+
+# full-backup: time frequency of full backup
+# (in between full backups we do incremental backups)
+#
+#   format := <int>[DWM]
+#     
+#     e.g.,
+#     3D - three days
+#     2W - two weeks
+#     1M - one month
+
+full-backup 1M
