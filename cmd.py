@@ -23,7 +23,7 @@ class CliWrapper(CliWrapper):
                             '',
                             'passphrase', 'escrow',
                             '',
-                            'backup', 'list', 'restore', 'restore_rollback',
+                            'backup', 'list', 'restore', 'restore-rollback',
                             '',
                             'internal']
 

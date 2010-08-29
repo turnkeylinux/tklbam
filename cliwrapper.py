@@ -22,14 +22,14 @@ class _Commands(dict):
                 m = re.match(r'^cmd_(.*)\.py[co]?$', file)
                 if not m:
                     continue
-                command = m.group(1)
+                command = m.group(1).replace("_", "-")
                 commands.add(command)
 
         return commands
 
     @staticmethod
     def _get_internals_module(name, path):
-        modname = "cmd_" + name
+        modname = "cmd_" + name.replace("-", "_")
         args = imp.find_module(modname, path)
         return imp.load_module(modname, *args)
 
