@@ -34,7 +34,7 @@ Options:
 
     --limits="LIMIT-1 .. LIMIT-N"     Restore filesystem or database limitations
 
-      LIMIT := -?( /path/to/add/or/remove | mysql:database[/table] )
+      LIMIT := -?( /path/to/include/or/exclude | mysql:database[/table] )
 
     --keyfile=KEYFILE                 Path to escrow keyfile.
                                       default: Hub provides this automatically.

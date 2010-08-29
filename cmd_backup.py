@@ -13,7 +13,7 @@
 Backup the current system
 
 Arguments:
-    <override> := -?( /path/to/add/or/remove | mysql:database[/table] )
+    <override> := -?( /path/to/include/or/exclude | mysql:database[/table] )
 
     Default overrides read from $CONF_OVERRIDES
 
