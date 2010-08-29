@@ -36,3 +36,10 @@ class AttrDict(dict):
     def __setattr__(self, name, val):
         self[name] = val
 
+def is_writeable(fpath):
+    try:
+        file(fpath, "w+")
+        return True
+    except IOError:
+        return False
+

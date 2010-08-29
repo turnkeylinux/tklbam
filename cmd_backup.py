@@ -21,8 +21,11 @@ Options:
     --address=TARGET_URL      manual backup target URL
                               default: automatically configured via Hub
 
-    -q --quiet                Be less verbose
     -s --simulate             Simulate operation. Don't actually backup.
+
+    -q --quiet                Be less verbose
+    --logfile=PATH            Path of file to log to
+                              default: $LOGFILE
 
 Configurable options:
     --volsize MB              Size of backup volume in MBs
@@ -60,9 +63,16 @@ from string import Template
 import backup
 
 import hub
+import datetime
+
 from registry import registry
 
 from version import get_turnkey_version
+from stdtrap import UnitedStdTrap
+
+from utils import is_writeable
+
+PATH_LOGFILE = "/var/log/tklbam-backup"
 
 def usage(e=None):
     if e:
@@ -74,7 +84,8 @@ def usage(e=None):
     print >> sys.stderr, tpl.substitute(CONF_PATH=conf.paths.conf,
                                         CONF_OVERRIDES=conf.paths.overrides,
                                         CONF_VOLSIZE=conf.volsize,
-                                        CONF_FULL_BACKUP=conf.full_backup)
+                                        CONF_FULL_BACKUP=conf.full_backup,
+                                        LOGFILE=PATH_LOGFILE)
     sys.exit(1)
 
 def warn(e):
@@ -122,12 +133,15 @@ def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'qsh', 
                                        ['help',
+                                        'logfile=',
                                         'simulate', 'quiet', 
                                         'checkpoint-restore',
                                         'profile=', 'secretfile=', 'address=',
                                         'volsize=', 'full-backup='])
     except getopt.GetoptError, e:
         usage(e)
+
+    opt_logfile = PATH_LOGFILE
 
     conf = backup.BackupConf()
     conf.secretfile = registry.path.secret
@@ -158,6 +172,11 @@ def main():
 
         elif opt == '--checkpoint-restore':
             conf.checkpoint_restore = True
+
+        elif opt == '--logfile':
+            if not is_writeable(val):
+                fatal("logfile '%s' is not writeable" % val)
+            opt_logfile = val
 
         elif opt in ('-h', '--help'):
             usage()
@@ -205,7 +224,21 @@ def main():
 
     b = backup.Backup(conf)
     try:
-        b.run()
+        trap = UnitedStdTrap(transparent=True)
+        try:
+            b.run()
+        finally:
+            trap.close()
+            fh = file(opt_logfile, "a")
+
+            timestamp = "### %s ###" % datetime.datetime.now().ctime()
+            print >> fh, "#" * len(timestamp)
+            print >> fh, timestamp
+            print >> fh, "#" * len(timestamp)
+
+            fh.write(trap.std.read())
+            fh.close()
+            
     except:
         if not conf.checkpoint_restore:
             b.cleanup()

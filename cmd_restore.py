@@ -46,8 +46,12 @@ Options:
     --skip-database                   Don't restore databases
     --skip-packages                   Don't restore new packages
 
+    --logfile=PATH                    Path to log file
+                                      default: /var/log/tklbam-restore
+
     --no-rollback                     Disable rollback
     --silent                          Disable feedback
+
 
     --force                           Disable sanity checking
 
@@ -60,7 +64,8 @@ import re
 
 from os.path import *
 from restore import Restore
-from redirect import RedirectOutput
+
+from stdtrap import UnitedStdTrap
 from temp import TempFile
 
 import hub
@@ -70,6 +75,9 @@ import keypacket
 import passphrase
 
 from version import get_turnkey_version, codename
+from utils import is_writeable
+
+PATH_LOGFILE = "/var/log/tklbam-restore"
 
 class Error(Exception):
     pass
@@ -158,6 +166,7 @@ def main():
     opt_limits = []
     opt_key = None
     opt_address = None
+    opt_logfile = PATH_LOGFILE
 
     skip_files = False
     skip_database = False
@@ -168,6 +177,7 @@ def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'h', 
                                        ['limits=', 'address=', 'keyfile=', 
+                                        'logfile=',
                                         'force',
                                         'time=',
                                         'silent',
@@ -201,6 +211,11 @@ def main():
             silent = True
         elif opt == '--force':
             opt_force = True
+        elif opt == '--logfile':
+            if not is_writeable(val):
+                fatal("logfile '%s' is not writeable" % val)
+            opt_logfile = val
+
         elif opt == '-h':
             usage()
 
@@ -242,12 +257,7 @@ def main():
     key = opt_key if opt_key else hbr.key
     secret = decrypt_key(key)
 
-    if silent:
-        log = TempFile()
-    else:
-        log = sys.stdout
-
-    redir = RedirectOutput(log)
+    trap = UnitedStdTrap(transparent=(False if silent else True))
     try:
         restore = Restore(address, secret, opt_limits, opt_time,
                           credentials=credentials,
@@ -263,10 +273,12 @@ def main():
             restore.database()
 
         print
-        print "We're done. You may want to reboot now to restart all services."
 
     finally:
-        redir.close()
+        trap.close()
+        file(opt_logfile, "w").write(trap.std.read())
+
+    print "We're done. You may want to reboot now to restart all services."
 
 if __name__=="__main__":
     main()
