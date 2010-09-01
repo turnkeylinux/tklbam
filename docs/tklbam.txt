@@ -42,44 +42,44 @@ versions.
 Key elements
 ------------
 
-* `TurnKey Hub`: a web service which provides the front-end for backup
-  management. The user links an appliance to a specific Hub account
-  identified by an API KEY.
-  
-* `Backup profile`: describes the installation state for a specific type
-  and version of appliance. An appropriate profile is downloaded from
-  the Hub the first time you backup, or as required if there is a
-  profile update (e.g., bugfix).
+`TurnKey Hub`: a web service which provides the front-end for backup
+management. The user links an appliance to a specific Hub account
+identified by an API KEY.
 
-* `Delta`: a set of changes since installation to files, users, databases
-  and package management state. This is calculated at backup time by
-  comparing the current system state to the installation state described
-  by the backup profile.
-  
-* `Encryption key`: generated locally on your server and used to directly
-  encrypt your backup volumes. By default key management is handled
-  transparently by the Hub. For extra security, the encryption key may
-  be passphrase protected cryptographically. An escrow key can be
-  created to protect against data loss in case the password is
-  forgotten.
-  
-* `Duplicity`: back-end primitive that the backup and restore operations
-  invoke to encode, transfer and decode encrypted backup volumes which
-  contain the delta. It communicates directly with the storage target
-  (e.g., Amazon S3). In normal usage the storage target is
-  auto-configured by the Hub. Duplicity uses the rsync algorithm to
-  support efficient incremental backups. It uses GnuPG for symmetric
-  encryption (AES).
+`Backup profile`: describes the installation state for a specific type
+and version of appliance. An appropriate profile is downloaded from
+the Hub the first time you backup, or as required if there is a
+profile update (e.g., bugfix).
 
-* `Amazon S3`: a highly-durable cloud storage service where encrypted
-  backup volumes are uploaded to by default. To improve network
-  performance, backups are routed to the closest datacenter, based on
-  a GeoIP lookup table. 
+`Delta`: a set of changes since installation to files, users, databases
+and package management state. This is calculated at backup time by
+comparing the current system state to the installation state described
+by the backup profile.
 
-  Any storage target supported by Duplicity can be forced but this
-  complicates usage as the Hub can only work with S3. This means
-  backups, encryption keys and authentication credentials will need to
-  be managed by hand. 
+`Encryption key`: generated locally on your server and used to directly
+encrypt your backup volumes. By default key management is handled
+transparently by the Hub. For extra security, the encryption key may
+be passphrase protected cryptographically. An escrow key can be
+created to protect against data loss in case the password is
+forgotten.
+
+`Duplicity`: back-end primitive that the backup and restore operations
+invoke to encode, transfer and decode encrypted backup volumes which
+contain the delta. It communicates directly with the storage target
+(e.g., Amazon S3). In normal usage the storage target is
+auto-configured by the Hub. Duplicity uses the rsync algorithm to
+support efficient incremental backups. It uses GnuPG for symmetric
+encryption (AES).
+
+`Amazon S3`: a highly-durable cloud storage service where encrypted
+backup volumes are uploaded to by default. To improve network
+performance, backups are routed to the closest datacenter, based on
+a GeoIP lookup table. 
+
+Any storage target supported by Duplicity can be forced but this
+complicates usage as the Hub can only work with S3. This means
+backups, encryption keys and authentication credentials will need to
+be managed by hand. 
 
 Principle of operation
 ----------------------
