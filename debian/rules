@@ -22,6 +22,7 @@ install:
 	cp contrib/example-conf $(buildroot)/etc/tklbam/conf
 	cp contrib/example-overrides $(buildroot)/etc/tklbam/overrides
 	cp contrib/example-hook $(buildroot)/etc/tklbam/hooks.d/example
+	cp contrib/fixclock-hook $(buildroot)/etc/tklbam/hooks.d/fixclock
 
 binary-indep: install
 	dh_testdir
