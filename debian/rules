@@ -26,6 +26,7 @@ binary-indep: install
 	dh_testdir
 	dh_testroot
 	dh_installdocs
+	dh_installman
 	dh_installdeb
 	dh_gencontrol
 	dh_md5sums
