@@ -34,14 +34,66 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .sp
 tklbam\-backup [ \-options ] [ override ... ]
 .SH ARGUMENTS
-.INDENT 0.0
-.TP
-.B \fI<override>\fP :=
 .sp
-\-?( /path/to/include/or/exclude | mysql:database[/table] )
+\fI<override>\fP := \fB<filesystem\-override>\fP | \fB<database\-override>\fP
+.sp
+Overrides are usually configured in /etc/tklbam/overrides.
+.SS Filesystem overrides
+.sp
+\fB<filesystem\-override>\fP := \-?/path/to/include/or/exclude
+.sp
+This includes or excludes additional files and directories from being
+backed up if they\(aqve changed since installation.
+.sp
+Overrides defaults in /var/lib/tklbam/profile/dirindex.conf
+.sp
+Gotchas:
+.INDENT 0.0
+.IP \(bu 2
+.
+If you add a directory handled by package management this may break
+package management on the system you restore to.
+.IP \(bu 2
+.
+Only changes (e.g., new files, edited files, deleted files) from the
+base installation are included in a backup.
 .UNINDENT
 .sp
-Default overrides read from /etc/tklbam/overrides
+Examples:
+.sp
+.nf
+.ft C
+# exclude log files in /var/www
+\-/var/www/*/logs
+
+# ignores changes to webmin configuration
+\-/etc/webmin
+
+# include the contents of an external hard disk...
+/mnt/images
+.ft P
+.fi
+.SS Database overrides
+.sp
+\fB<database\-override>\fP := \-?mysql:database[/table]
+.sp
+By default ALL databases are backed up. Adding a positive override
+changes the default behavior so that only the database or table
+specified in the override is included in the backup.
+.sp
+You can mix positive overrides with negative overrides.
+.sp
+Examples:
+.sp
+.nf
+.ft C
+# exclude Drupal6 sessions table
+\-mysql:drupal6/sessions
+
+# only include drupal6 database
+mysql:drupal6
+.ft P
+.fi
 .SH OPTIONS
 .INDENT 0.0
 .TP
