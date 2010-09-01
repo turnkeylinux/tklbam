@@ -47,6 +47,9 @@ Don\(aqt encrypt escrow key with a passphrase
 .
 Choose a secure random passphrase (and print it)
 .UNINDENT
+.SH SEE ALSO
+.sp
+\fBtklbam\fP (8), \fBtklbam\-faq\fP (7)
 .SH AUTHOR
 Liraz Siri <liraz@turnkeylinux.org>
 .SH COPYRIGHT

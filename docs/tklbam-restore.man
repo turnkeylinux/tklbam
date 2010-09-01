@@ -121,6 +121,9 @@ Disable feedback
 .
 Disable sanity checking
 .UNINDENT
+.SH SEE ALSO
+.sp
+\fBtklbam\fP (8), \fBtklbam\-faq\fP (7)
 .SH AUTHOR
 Liraz Siri <liraz@turnkeylinux.org>
 .SH COPYRIGHT

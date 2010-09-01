@@ -27,3 +27,8 @@ OPTIONS
 
 --no-passphrase, -P    Don't encrypt escrow key with a passphrase
 --random-passphrase    Choose a secure random passphrase (and print it)
+
+SEE ALSO
+========
+
+``tklbam`` (8), ``tklbam-faq`` (7)

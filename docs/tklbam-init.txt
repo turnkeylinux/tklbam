@@ -24,3 +24,8 @@ ARGUMENTS
 
 If you do not provide the API-KEY as a command line argument you will be
 prompted for it interactively.
+
+SEE ALSO
+========
+
+``tklbam`` (8), ``tklbam-faq`` (7)

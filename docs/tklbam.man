@@ -277,11 +277,8 @@ matter to Alon either way. It\(aqs all automagic.
 /var/lib/tklbam: the registry
 .UNINDENT
 .SH SEE ALSO
-.INDENT 0.0
-.IP \(bu 2
-.
+.sp
 \fBtklbam\-faq\fP (7)
-.UNINDENT
 .SH AUTHOR
 Liraz Siri <liraz@turnkeylinux.org>
 .SH COPYRIGHT

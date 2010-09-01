@@ -64,3 +64,8 @@ Resolution order for configurable options:
       <option-name> <value>
 
 3) built-in default (lowest precedence)
+
+SEE ALSO
+========
+
+``tklbam`` (8), ``tklbam-faq`` (7)

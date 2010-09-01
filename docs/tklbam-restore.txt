@@ -70,3 +70,7 @@ OPTIONS
 
 --force                           Disable sanity checking
 
+SEE ALSO
+========
+
+``tklbam`` (8), ``tklbam-faq`` (7)

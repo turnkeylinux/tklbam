@@ -280,6 +280,9 @@ For more details see the tklbam\-restore documentation.
 Yes \- but only manually. Just remember the Hub won\(aqt know anything about
 these backups so you\(aqll have manage keys and authentication credentials
 by hand.
+.SH SEE ALSO
+.sp
+\fBtklbam\fP (8)
 .SH AUTHOR
 Liraz Siri <liraz@turnkeylinux.org>
 .SH COPYRIGHT

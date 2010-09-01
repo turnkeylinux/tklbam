@@ -59,6 +59,9 @@ Format variables:
 list
 .sp
 list "backup_id=%backup_id label=%label size=%{size}MB"
+.SH SEE ALSO
+.sp
+\fBtklbam\fP (8), \fBtklbam\-faq\fP (7)
 .SH AUTHOR
 Liraz Siri <liraz@turnkeylinux.org>
 .SH COPYRIGHT

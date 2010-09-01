@@ -22,3 +22,8 @@ OPTIONS
 
 --random    Choose a secure random password (and print it)
 
+SEE ALSO
+========
+
+``tklbam`` (8), ``tklbam-faq`` (7)
+

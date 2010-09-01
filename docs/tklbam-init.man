@@ -39,6 +39,9 @@ tklbam\-init [ \fIAPI\-KEY\fP ]
 .sp
 If you do not provide the API\-KEY as a command line argument you will be
 prompted for it interactively.
+.SH SEE ALSO
+.sp
+\fBtklbam\fP (8), \fBtklbam\-faq\fP (7)
 .SH AUTHOR
 Liraz Siri <liraz@turnkeylinux.org>
 .SH COPYRIGHT

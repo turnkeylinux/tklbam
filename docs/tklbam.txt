@@ -217,5 +217,5 @@ FILES
 SEE ALSO
 ========
 
-* ``tklbam-faq`` (7)
+``tklbam-faq`` (7)
 

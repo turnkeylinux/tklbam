@@ -112,6 +112,9 @@ configuration file (/etc/tklbam/conf):
 .
 built\-in default (lowest precedence)
 .UNINDENT
+.SH SEE ALSO
+.sp
+\fBtklbam\fP (8), \fBtklbam\-faq\fP (7)
 .SH AUTHOR
 Liraz Siri <liraz@turnkeylinux.org>
 .SH COPYRIGHT
