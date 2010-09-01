@@ -156,11 +156,11 @@ Alon is developing a new web site. He starts by deploying TurnKey LAMP
 to a virtual machine running on his laptop. This will serve as his local
 development server. He names it DevBox.
 .sp
-He customizes DevBox as follows:
+He customizes DevBox by:
 .INDENT 0.0
 .IP \(bu 2
 .
-creates user alon.
+creating user \(aqalon\(aq.
 .IP \(bu 2
 .
 extracting an archive of his web application to /var/www
