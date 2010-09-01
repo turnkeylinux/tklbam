@@ -194,6 +194,22 @@ tklbam\-passphrase
 .ft P
 .fi
 .SH AMAZON S3 QUESTIONS
+.SS Do I have to use Amazon S3 for storage?
+.sp
+No. Any storage target supported by Duplicity can be forced by adding
+the \-\-address option when you backup and restore, but consider yourself
+warned...
+.sp
+Here Be Dragons!
+.sp
+Doing this complicates usage as the Hub only helps you manage your
+backups when it auto\-configures the storage address. If you specify a
+manual address you are on your own. You will need to manage backups,
+encryption keys and authentication credentials by hand.  You may also
+run into unexpected bugs because this functionality has received limited
+attention so far.
+.sp
+In short. Many things can go wrong so please be extra careful.
 .SS Why can\(aqt I access TKLBAM storage buckets with other Amazon S3 tools?
 .sp
 TKLBAM doesn\(aqt store it\(aqs data in generic S3 buckets, but in an isolated
