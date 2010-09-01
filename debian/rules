@@ -18,9 +18,10 @@ install:
 	$(MAKE) install prefix=$(prefix)
 	mkdir -p $(buildroot)/etc/cron.daily
 	cp contrib/cron.sh $(buildroot)/etc/cron.daily/tklbam-backup
-	mkdir -p $(buildroot)/etc/tklbam
+	mkdir -p $(buildroot)/etc/tklbam/hooks.d
 	cp contrib/example-conf $(buildroot)/etc/tklbam/conf
 	cp contrib/example-overrides $(buildroot)/etc/tklbam/overrides
+	cp contrib/example-hook $(buildroot)/etc/tklbam/hooks.d/example
 
 binary-indep: install
 	dh_testdir

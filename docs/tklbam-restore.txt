@@ -70,6 +70,11 @@ OPTIONS
 
 --force                           Disable sanity checking
 
+FILES
+=====
+
+:Hooks: /etc/tklbam/hooks.d
+
 SEE ALSO
 ========
 

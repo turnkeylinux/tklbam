@@ -166,8 +166,16 @@ configuration file (/etc/tklbam/conf):
 built\-in default (lowest precedence)
 .UNINDENT
 .SH FILES
-.sp
-/etc/tklbam/overrides, /etc/tklbam/conf, /var/lib/tklbam/profile
+.INDENT 0.0
+.TP
+.B Configuration files
+.
+/etc/tklbam/overrides, /etc/tklbam/conf, /etc/tklbam/hooks.d
+.TP
+.B Local cache of profile
+.
+/var/lib/tklbam/profile
+.UNINDENT
 .SH SEE ALSO
 .sp
 \fBtklbam\fP (8), \fBtklbam\-faq\fP (7)

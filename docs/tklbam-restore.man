@@ -121,6 +121,13 @@ Disable feedback
 .
 Disable sanity checking
 .UNINDENT
+.SH FILES
+.INDENT 0.0
+.TP
+.B Hooks
+.
+/etc/tklbam/hooks.d
+.UNINDENT
 .SH SEE ALSO
 .sp
 \fBtklbam\fP (8), \fBtklbam\-faq\fP (7)

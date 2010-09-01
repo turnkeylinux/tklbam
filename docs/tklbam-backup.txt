@@ -116,7 +116,9 @@ Resolution order for configurable options:
 FILES
 =====
 
-/etc/tklbam/overrides, /etc/tklbam/conf, /var/lib/tklbam/profile
+:Configuration files: /etc/tklbam/overrides, /etc/tklbam/conf, /etc/tklbam/hooks.d
+
+:Local cache of profile: /var/lib/tklbam/profile
 
 SEE ALSO
 ========

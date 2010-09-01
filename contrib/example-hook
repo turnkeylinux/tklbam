@@ -1,0 +1,24 @@
+#!/bin/bash -e
+# This is a disabled hook example. 
+# To enable, make it executable: chmod +x /etc/tklbam/hooks.d/example
+
+# hooks are always called with two arguments
+op=$1
+state=$2
+
+if [ "$op" = "restore" ]; then
+    echo -n "A restore operation called this hook "
+elif [ "$op" = "backup" ]; then
+    echo -n "A backup operation called this hook "
+fi
+
+if [ "$state" = "pre" ]; then
+    echo "right BEFORE duplicity was invoked"
+elif [ "$state" = "post" ]; then
+    echo "AFTER the $op operation finished"
+fi
+
+# `false` returns a non-zero exitcode
+# Uncomment the next line to raise an error
+
+#false
