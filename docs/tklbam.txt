@@ -1,0 +1,221 @@
+========
+ TKLBAM
+========
+
+----------------------------------
+TurnKey Linux Backup and Migration
+----------------------------------
+
+:Author: Liraz Siri <liraz@turnkeylinux.org>
+:Date:   2010-09-01
+:Copyright: GPL3
+:Manual section: 8
+:Manual group: backup
+
+SYNOPSIS
+========
+
+tklbam <command> [arguments]
+
+DESCRIPTION
+===========
+
+TKLBAM (TurnKey Linux Backup and Migration), is a smart automated backup
+and restore facility for the TurnKey Linux Virtual Appliance Library.
+
+Goals
+-----
+
+TKLBAM is designed to provide an efficient system-level backup of
+changed files, users, databases and package management state. This
+system-level backup can be restored automatically on any installation of
+the same type of virtual appliance, regardless of the underlying
+hardware or location. The intended result is a functionally equivalent
+copy of the original system.
+
+It is also designed to assist in migration of data and system
+configurations between different versions of the same type of virtual
+appliance though for some applications, additional manual steps, such as
+a database schema update, may be required to complete migration between
+versions.
+
+Key elements
+------------
+
+* `TurnKey Hub`: a web service which provides the front-end for backup
+  management. The user links an appliance to a specific Hub account
+  identified by an API KEY.
+  
+* `Backup profile`: describes the installation state for a specific type
+  and version of appliance. An appropriate profile is downloaded from
+  the Hub the first time you backup, or as required if there is a
+  profile update (e.g., bugfix).
+
+* `Delta`: a set of changes since installation to files, users, databases
+  and package management state. This is calculated at backup time by
+  comparing the current system state to the installation state described
+  by the backup profile.
+  
+* `Encryption key`: generated locally on your server and used to directly
+  encrypt your backup volumes. By default key management is handled
+  transparently by the Hub. For extra security, the encryption key may
+  be passphrase protected cryptographically. An escrow key can be
+  created to protect against data loss in case the password is
+  forgotten.
+  
+* `Duplicity`: back-end primitive that the backup and restore operations
+  invoke to encode, transfer and decode encrypted backup volumes which
+  contain the delta. It communicates directly with the storage target
+  (e.g., Amazon S3). In normal usage the storage target is
+  auto-configured by the Hub. Duplicity uses the rsync algorithm to
+  support efficient incremental backups. It uses GnuPG for symmetric
+  encryption (AES).
+
+* `Amazon S3`: a highly-durable cloud storage service where encrypted
+  backup volumes are uploaded to by default. To improve network
+  performance, backups are routed to the closest datacenter, based on
+  a GeoIP lookup table. 
+
+  Any storage target supported by Duplicity can be forced but this
+  complicates usage as the Hub can only work with S3. This means
+  backups, encryption keys and authentication credentials will need to
+  be managed by hand. 
+
+Principle of operation
+----------------------
+
+Every TKLBAM-supported TurnKey appliance has a corresponding backup
+profile that describes installation state and includes an
+appliance-specific list of files and directories to check for changes.
+This list does not include any files or directories maintained by the
+package management system.
+
+A delta (I.e., changeset) is calculated by comparing the current system
+state to the installation state. Only this delta is backed up and only
+this delta is re-applied on restore.
+
+An exception is made with regards to database contents. These are backed
+up and restored whole, unless otherwise configured by the user.
+
+In addition to direct filesystem changes to user writeable directories
+(e.g., /etc, /var/www, /home) the backup delta is calculated to include
+a list of any new packages not originally in the appliance's
+installation manifest. During restore, the package management system is
+leveraged to install these new packages from the configured software
+repositories.
+
+Users and groups from the backed up system are merged on restore. If
+necessary, uids / gids of restored files and directories are remapped to
+maintain correct ownership.
+
+Similarly, permissions for files and directories are adjusted as
+necessary to match permissions on the backed up system.
+
+COMMANDS
+========
+
+:init:               Initialization (start here)
+:passphrase:         Change passphrase of backup encryption key
+:escrow:             Create a backup escrow key (Save this somewhere safe)
+:backup:             Backup the current system
+:list:               List backup records
+:restore:            Restore a backup
+:restore-rollback:   Rollback last restore
+
+EXAMPLE USAGE SCENARIO
+======================
+
+Alon is developing a new web site. He starts by deploying TurnKey LAMP
+to a virtual machine running on his laptop. This will serve as his local
+development server. He names it DevBox.
+
+He customizes DevBox as follows:
+
+* creates user alon.
+* extracting an archive of his web application to /var/www
+* tweaking Apache configuration directives in /etc/apache2/httpd.conf
+  until his web application works.
+* installing php5-xcache via the package manager
+* enabling xcache by editing a section in /etc/php5/apache2/php.ini
+* creating a new database user with reduced privileges for his web
+  application.
+* configuring and installing the web application, which creates a new
+  MySQL database.
+
+After a few days of hacking on the web application, Alon is ready to
+show off a prototype of his creation to some friends from out of town.
+
+He logs into the TurnKey Hub and launches a new TurnKey LAMP server in
+the Amazon EC2 cloud. He names it CloudBox. 
+
+On both DevBox and CloudBox Alon installs and initializes TKLBAM with
+the following commands::
+
+    apt-get update
+    apt-get install tklbam
+
+    # The API Key is needed to link tklbam to Alon's Hub account
+    tklbam-init QPINK3GD7HHT3A
+
+On DevBox Alon runs a backup::
+
+    root@DevBox:~# tklbam-backup
+
+Behind the scenes, TKLBAM downoads from the Hub a profile for the
+version of TurnKey LAMP Alon is using. The profile describes the state
+of DevBox right after installation, before Alon customized it. This
+allows TKLBAM to detect all the files and directories that Alon has
+added or edited since. Any new packages Alon installed are similarly
+detected.
+
+As for his MySQL databases, it's all taken care of transparently but if
+Alon dug deeper he would discover that their full contents are being
+serialized and encoded into a special file structure optimized for
+efficiency on subsequent incremental backups. Between backups Alon
+usually only updates a handful of tables and rows, so the following
+incremental backups are very small, just a few KBs!
+
+When TKLBAM is done calculating the delta and serializing database
+contents, it invokes Duplicity to encode backup contents into a chain of
+encrypted backup volumes which are uploaded to Amazon S3.
+
+When Alon's first backup is complete, a new record shows up in the
+Backups section of his TurnKey Hub account.
+
+Now to restore the DevBox backup on CloudBox::
+
+    root@CloudBox:~# tklbam-list
+    # ID  SKPP  Created     Updated     Size (GB)  Label
+       1  No    2010-09-01  2010-09-01  0.02       TurnKey LAMP
+
+    root@CloudBox:~# tklbam-restore 1
+
+When the restore is done Alon points his browser to CloudBox's IP
+address and is delighted to see his web application running there,
+exactly the same as it does on DevBox.
+
+Alon, a tinkerer at heart, is curious to learn more about how the backup
+and restore process works. By default, the restore process reports what
+it's doing verbosely to the screen. But Alon had a hard time following
+the output in real time, because everything happened so fast!
+Thankfully, all the output is also saved to a log file at
+/var/log/tklbam-restore. 
+
+Alon consults the log file and can see that only the files he added or
+changed on DevBox were restored to CloudBox. Database state was
+unserialized. The xcache package was installed via the package manager.
+User alon was recreated. It's uid didn't conflict with any other
+existing user on CloudBox so the restore process didn't need to remap it
+to another uid and fix ownership of Alon's files. Not that it would
+matter to Alon either way. It's all automagic.
+
+FILES
+=====
+
+* /var/lib/tklbam: the registry
+
+SEE ALSO
+========
+
+* ``tklbam-faq`` (7)
+
