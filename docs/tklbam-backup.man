@@ -105,6 +105,7 @@ Default: automatically configured via Hub
 .B \-\-simulate,  \-s
 .
 Simulate operation. Don\(aqt actually backup.
+Useful for inspecting /TKLBAM by hand.
 .TP
 .B \-\-quiet,  \-q
 .

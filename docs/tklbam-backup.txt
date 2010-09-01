@@ -79,6 +79,7 @@ OPTIONS
                           Default: automatically configured via Hub
 
 --simulate, -s            Simulate operation. Don't actually backup.
+                          Useful for inspecting /TKLBAM by hand.
 
 --quiet, -q               Be less verbose
 

@@ -22,6 +22,7 @@ Options:
                               default: automatically configured via Hub
 
     -s --simulate             Simulate operation. Don't actually backup.
+                              Useful for inspecting /TKLBAM by hand.
 
     -q --quiet                Be less verbose
     --logfile=PATH            Path of file to log to
