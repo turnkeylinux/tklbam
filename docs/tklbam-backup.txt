@@ -113,6 +113,11 @@ Resolution order for configurable options:
 
 3) built-in default (lowest precedence)
 
+FILES
+=====
+
+/etc/tklbam/overrides, /etc/tklbam/conf, /var/lib/tklbam/profile
+
 SEE ALSO
 ========
 
