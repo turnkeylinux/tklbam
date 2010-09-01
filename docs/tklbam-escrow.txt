@@ -1,0 +1,29 @@
+=============
+tklbam-escrow
+=============
+
+-----------------------------------------------------
+Create a backup escrow key (Save this somewhere safe)
+-----------------------------------------------------
+
+:Author: Liraz Siri <liraz@turnkeylinux.org>
+:Date:   2010-09-01
+:Copyright: GPL3
+:Manual section: 8
+:Manual group: backup
+
+SYNOPSIS
+========
+
+tklbam-escrow [ -options ] `KEYFILE`
+
+ARGUMENTS
+=========
+
+`KEYFILE` File path to save the escrow key (- for stdout)
+
+OPTIONS
+=======
+
+--no-passphrase, -P    Don't encrypt escrow key with a passphrase
+--random-passphrase    Choose a secure random passphrase (and print it)

@@ -1,0 +1,26 @@
+===========
+tklbam-init
+===========
+
+--------------------------------------------
+Initialization (links TKLBAM to Hub account)
+--------------------------------------------
+
+:Author: Liraz Siri <liraz@turnkeylinux.org>
+:Date:   2010-09-01
+:Copyright: GPL3
+:Manual section: 8
+:Manual group: backup
+
+SYNOPSIS
+========
+
+tklbam-init [ `API-KEY` ]
+
+ARGUMENTS
+=========
+
+`API-KEY`   Cut and paste this from your Hub account's user profile.
+
+If you do not provide the API-KEY as a command line argument you will be
+prompted for it interactively.

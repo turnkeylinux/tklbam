@@ -1,0 +1,45 @@
+===========
+tklbam-list
+===========
+
+-------------------
+List backup records
+-------------------
+
+:Author: Liraz Siri <liraz@turnkeylinux.org>
+:Date:   2010-09-01
+:Copyright: GPL3
+:Manual section: 8
+:Manual group: backup
+
+SYNOPSIS
+========
+
+tklbam-list  [ <format> ]
+
+ARGUMENTS
+=========
+
+By default uses a built-in format, unless a user-specified format is
+specified.
+
+Format variables::
+
+    %id                     Backup id
+    %label                  Descriptive label
+    %turnkey_version        Appliance version code
+    %server_id              Associated server id (- if empty)
+    %created                Date the backup record was created
+    %updated                Date the backup record was last updated
+    %size                   Aggregate size of backup, in MBs
+    %address                Backup target address
+    %key                    Base64 encoded encrypted keypacket
+    %skpp                   Secret Key Passphrase Protection (Yes/No)
+
+USAGE EXAMPLES
+==============
+
+list
+
+list "backup_id=%backup_id label=%label size=%{size}MB"
+

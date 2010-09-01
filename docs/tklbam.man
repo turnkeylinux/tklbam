@@ -1,0 +1,291 @@
+.\" Man page generated from reStructeredText.
+.
+.TH TKLBAM 8 "2010-09-01" "" "backup"
+.SH NAME
+TKLBAM \- TurnKey Linux Backup and Migration
+.
+.nr rst2man-indent-level 0
+.
+.de1 rstReportMargin
+\\$1 \\n[an-margin]
+level \\n[rst2man-indent-level]
+level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
+-
+\\n[rst2man-indent0]
+\\n[rst2man-indent1]
+\\n[rst2man-indent2]
+..
+.de1 INDENT
+.\" .rstReportMargin pre:
+. RS \\$1
+. nr rst2man-indent\\n[rst2man-indent-level] \\n[an-margin]
+. nr rst2man-indent-level +1
+.\" .rstReportMargin post:
+..
+.de UNINDENT
+. RE
+.\" indent \\n[an-margin]
+.\" old: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.nr rst2man-indent-level -1
+.\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.in \\n[rst2man-indent\\n[rst2man-indent-level]]u
+..
+.SH SYNOPSIS
+.sp
+tklbam <command> [arguments]
+.SH DESCRIPTION
+.sp
+TKLBAM (TurnKey Linux Backup and Migration), is a smart automated backup
+and restore facility for the TurnKey Linux Virtual Appliance Library.
+.SS Goals
+.sp
+TKLBAM is designed to provide an efficient system\-level backup of
+changed files, users, databases and package management state. This
+system\-level backup can be restored automatically on any installation of
+the same type of virtual appliance, regardless of the underlying
+hardware or location. The intended result is a functionally equivalent
+copy of the original system.
+.sp
+It is also designed to assist in migration of data and system
+configurations between different versions of the same type of virtual
+appliance though for some applications, additional manual steps, such as
+a database schema update, may be required to complete migration between
+versions.
+.SS Key elements
+.INDENT 0.0
+.IP \(bu 2
+.
+\fITurnKey Hub\fP: a web service which provides the front\-end for backup
+management. The user links an appliance to a specific Hub account
+identified by an API KEY.
+.IP \(bu 2
+.
+\fIBackup profile\fP: describes the installation state for a specific type
+and version of appliance. An appropriate profile is downloaded from
+the Hub the first time you backup, or as required if there is a
+profile update (e.g., bugfix).
+.IP \(bu 2
+.
+\fIDelta\fP: a set of changes since installation to files, users, databases
+and package management state. This is calculated at backup time by
+comparing the current system state to the installation state described
+by the backup profile.
+.IP \(bu 2
+.
+\fIEncryption key\fP: generated locally on your server and used to directly
+encrypt your backup volumes. By default key management is handled
+transparently by the Hub. For extra security, the encryption key may
+be passphrase protected cryptographically. An escrow key can be
+created to protect against data loss in case the password is
+forgotten.
+.IP \(bu 2
+.
+\fIDuplicity\fP: back\-end primitive that the backup and restore operations
+invoke to encode, transfer and decode encrypted backup volumes which
+contain the delta. It communicates directly with the storage target
+(e.g., Amazon S3). In normal usage the storage target is
+auto\-configured by the Hub. Duplicity uses the rsync algorithm to
+support efficient incremental backups. It uses GnuPG for symmetric
+encryption (AES).
+.IP \(bu 2
+.
+\fIAmazon S3\fP: a highly\-durable cloud storage service where encrypted
+backup volumes are uploaded to by default. To improve network
+performance, backups are routed to the closest datacenter, based on
+a GeoIP lookup table.
+.sp
+Any storage target supported by Duplicity can be forced but this
+complicates usage as the Hub can only work with S3. This means
+backups, encryption keys and authentication credentials will need to
+be managed by hand.
+.UNINDENT
+.SS Principle of operation
+.sp
+Every TKLBAM\-supported TurnKey appliance has a corresponding backup
+profile that describes installation state and includes an
+appliance\-specific list of files and directories to check for changes.
+This list does not include any files or directories maintained by the
+package management system.
+.sp
+A delta (I.e., changeset) is calculated by comparing the current system
+state to the installation state. Only this delta is backed up and only
+this delta is re\-applied on restore.
+.sp
+An exception is made with regards to database contents. These are backed
+up and restored whole, unless otherwise configured by the user.
+.sp
+In addition to direct filesystem changes to user writeable directories
+(e.g., /etc, /var/www, /home) the backup delta is calculated to include
+a list of any new packages not originally in the appliance\(aqs
+installation manifest. During restore, the package management system is
+leveraged to install these new packages from the configured software
+repositories.
+.sp
+Users and groups from the backed up system are merged on restore. If
+necessary, uids / gids of restored files and directories are remapped to
+maintain correct ownership.
+.sp
+Similarly, permissions for files and directories are adjusted as
+necessary to match permissions on the backed up system.
+.SH COMMANDS
+.INDENT 0.0
+.TP
+.B init
+.
+Initialization (links TKLBAM to Hub account)
+.TP
+.B passphrase
+.
+Change passphrase of backup encryption key
+.TP
+.B escrow
+.
+Create a backup escrow key (Save this somewhere safe)
+.TP
+.B backup
+.
+Backup the current system
+.TP
+.B list
+.
+List backup records
+.TP
+.B restore
+.
+Restore a backup
+.TP
+.B restore\-rollback
+.
+Rollback last restore
+.UNINDENT
+.SH EXAMPLE USAGE SCENARIO
+.sp
+Alon is developing a new web site. He starts by deploying TurnKey LAMP
+to a virtual machine running on his laptop. This will serve as his local
+development server. He names it DevBox.
+.sp
+He customizes DevBox as follows:
+.INDENT 0.0
+.IP \(bu 2
+.
+creates user alon.
+.IP \(bu 2
+.
+extracting an archive of his web application to /var/www
+.IP \(bu 2
+.
+tweaking Apache configuration directives in /etc/apache2/httpd.conf
+until his web application works.
+.IP \(bu 2
+.
+installing php5\-xcache via the package manager
+.IP \(bu 2
+.
+enabling xcache by editing a section in /etc/php5/apache2/php.ini
+.IP \(bu 2
+.
+creating a new database user with reduced privileges for his web
+application.
+.IP \(bu 2
+.
+configuring and installing the web application, which creates a new
+MySQL database.
+.UNINDENT
+.sp
+After a few days of hacking on the web application, Alon is ready to
+show off a prototype of his creation to some friends from out of town.
+.sp
+He logs into the TurnKey Hub and launches a new TurnKey LAMP server in
+the Amazon EC2 cloud. He names it CloudBox.
+.sp
+On both DevBox and CloudBox Alon installs and initializes TKLBAM with
+the following commands:
+.sp
+.nf
+.ft C
+apt\-get update
+apt\-get install tklbam
+
+# The API Key is needed to link tklbam to Alon\(aqs Hub account
+tklbam\-init QPINK3GD7HHT3A
+.ft P
+.fi
+.sp
+On DevBox Alon runs a backup:
+.sp
+.nf
+.ft C
+root@DevBox:~# tklbam\-backup
+.ft P
+.fi
+.sp
+Behind the scenes, TKLBAM downoads from the Hub a profile for the
+version of TurnKey LAMP Alon is using. The profile describes the state
+of DevBox right after installation, before Alon customized it. This
+allows TKLBAM to detect all the files and directories that Alon has
+added or edited since. Any new packages Alon installed are similarly
+detected.
+.sp
+As for his MySQL databases, it\(aqs all taken care of transparently but if
+Alon dug deeper he would discover that their full contents are being
+serialized and encoded into a special file structure optimized for
+efficiency on subsequent incremental backups. Between backups Alon
+usually only updates a handful of tables and rows, so the following
+incremental backups are very small, just a few KBs!
+.sp
+When TKLBAM is done calculating the delta and serializing database
+contents, it invokes Duplicity to encode backup contents into a chain of
+encrypted backup volumes which are uploaded to Amazon S3.
+.sp
+When Alon\(aqs first backup is complete, a new record shows up in the
+Backups section of his TurnKey Hub account.
+.sp
+Now to restore the DevBox backup on CloudBox:
+.sp
+.nf
+.ft C
+root@CloudBox:~# tklbam\-list
+# ID  SKPP  Created     Updated     Size (GB)  Label
+   1  No    2010\-09\-01  2010\-09\-01  0.02       TurnKey LAMP
+
+root@CloudBox:~# tklbam\-restore 1
+.ft P
+.fi
+.sp
+When the restore is done Alon points his browser to CloudBox\(aqs IP
+address and is delighted to see his web application running there,
+exactly the same as it does on DevBox.
+.sp
+Alon, a tinkerer at heart, is curious to learn more about how the backup
+and restore process works. By default, the restore process reports what
+it\(aqs doing verbosely to the screen. But Alon had a hard time following
+the output in real time, because everything happened so fast!
+Thankfully, all the output is also saved to a log file at
+/var/log/tklbam\-restore.
+.sp
+Alon consults the log file and can see that only the files he added or
+changed on DevBox were restored to CloudBox. Database state was
+unserialized. The xcache package was installed via the package manager.
+User alon was recreated. It\(aqs uid didn\(aqt conflict with any other
+existing user on CloudBox so the restore process didn\(aqt need to remap it
+to another uid and fix ownership of Alon\(aqs files. Not that it would
+matter to Alon either way. It\(aqs all automagic.
+.SH FILES
+.INDENT 0.0
+.IP \(bu 2
+.
+/var/lib/tklbam: the registry
+.UNINDENT
+.SH SEE ALSO
+.INDENT 0.0
+.IP \(bu 2
+.
+\fBtklbam\-faq\fP (7)
+.UNINDENT
+.SH AUTHOR
+Liraz Siri <liraz@turnkeylinux.org>
+.SH COPYRIGHT
+GPL3
+.\" Generated by docutils manpage writer.
+.\" 
+.

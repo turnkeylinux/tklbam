@@ -1,6 +1,6 @@
-========
- TKLBAM
-========
+======
+TKLBAM
+======
 
 ----------------------------------
 TurnKey Linux Backup and Migration
@@ -114,7 +114,7 @@ necessary to match permissions on the backed up system.
 COMMANDS
 ========
 
-:init:               Initialization (start here)
+:init:               Initialization (links TKLBAM to Hub account)
 :passphrase:         Change passphrase of backup encryption key
 :escrow:             Create a backup escrow key (Save this somewhere safe)
 :backup:             Backup the current system

@@ -1,0 +1,66 @@
+=============
+tklbam-backup
+=============
+
+-------------------------
+Backup the current system
+-------------------------
+
+:Author: Liraz Siri <liraz@turnkeylinux.org>
+:Date:   2010-09-01
+:Copyright: GPL3
+:Manual section: 8
+:Manual group: backup
+
+SYNOPSIS
+========
+
+tklbam-backup [ -options ] [ override ... ]
+
+ARGUMENTS
+=========
+
+`<override>` := 
+    -?( /path/to/include/or/exclude | mysql:database[/table] )
+
+Default overrides read from /etc/tklbam/overrides
+
+OPTIONS
+=======
+
+--address=TARGET_URL      manual backup target URL.
+                          Default: automatically configured via Hub
+
+--simulate, -s            Simulate operation. Don't actually backup.
+
+--quiet, -q               Be less verbose
+
+--logfile=PATH            Path of file to log output to.
+                          Default: /var/log/tklbam-backup
+
+Configurable options
+--------------------
+
+--volsize MB              Size of backup volume in MBs.
+                          Default: 50
+
+--full-backup FREQUENCY   Time frequency of full backup.
+                          Default: 1M
+
+                          <frequency> := <int>[DWM]
+
+                            e.g.,::
+
+                                3D - three days
+                                2W - two weeks
+                                1M - one month
+
+Resolution order for configurable options:
+
+1) comand line (highest precedence)
+2) configuration file (/etc/tklbam/conf)::
+
+      # comment
+      <option-name> <value>
+
+3) built-in default (lowest precedence)

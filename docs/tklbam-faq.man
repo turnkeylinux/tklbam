@@ -1,0 +1,273 @@
+.\" Man page generated from reStructeredText.
+.
+.TH TKLBAM-FAQ 7 "2010-09-01" "" "backup"
+.SH NAME
+TKLBAM-FAQ \- Frequently Asked Questions
+.
+.nr rst2man-indent-level 0
+.
+.de1 rstReportMargin
+\\$1 \\n[an-margin]
+level \\n[rst2man-indent-level]
+level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
+-
+\\n[rst2man-indent0]
+\\n[rst2man-indent1]
+\\n[rst2man-indent2]
+..
+.de1 INDENT
+.\" .rstReportMargin pre:
+. RS \\$1
+. nr rst2man-indent\\n[rst2man-indent-level] \\n[an-margin]
+. nr rst2man-indent-level +1
+.\" .rstReportMargin post:
+..
+.de UNINDENT
+. RE
+.\" indent \\n[an-margin]
+.\" old: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.nr rst2man-indent-level -1
+.\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.in \\n[rst2man-indent\\n[rst2man-indent-level]]u
+..
+.SH GENERAL QUESTIONS
+.SS How much does it cost?
+.sp
+TKLBAM (and TurnKey Hub) are currently free for private beta users.
+You are only charged $0.15/GB per month for Amazon S3 storage fees.
+.SS Is TKLBAM open source?
+.sp
+Yes, TKLBAM is licensed under the GPL3. You don\(aqt have to care about
+free software ideology to appreciate the advantages. Any code running on
+your server doing something as critical as encrypted backups should be
+available for peer review and modification.
+.SS Can I backup a non\-TurnKey Linux system with TKLBAM?
+.sp
+Currently, no. TKLBAM is short for TurnKey Linux Backup and Migration.
+It\(aqs designed specifically for TurnKey Linux and depends on many
+system\-level details that don\(aqt apply to other Linux distributions
+(e.g., installation method, versioning signatures, etc.).
+.SS Which TurnKey appliances are supported?
+.sp
+With a few exceptions, all TurnKey appliances images from the
+2009.02 release batch onwards will work with TKLBAM, including the
+recent Lucid and Lenny based Core betas.
+.sp
+Unfortunately, at this time Zimbra and the PostgreSQL based appliances
+(PostgreSQL, LAPP, OpenBravo) are not yet supported.
+.sp
+PostgreSQL support is in the works but it\(aqs not ready yet.
+.SS Which databases are supported?
+.sp
+Currently only MySQL. PostgreSQL support is under development.
+Support for additional databases will be added as needed. Currently
+TurnKey appliances only include MySQL and PostgreSQL databases.
+.SH USAGE QUESTIONS
+.SS How does TKLBAM know what to backup on my system?
+.sp
+Every TurnKey appliance that TKLBAM supports has a corresponding
+backup profile, which is downloaded from the Hub the first time you
+backup an appliance. When required the profile can be updated on
+demand (e.g., if we need to fix the profile)
+.sp
+The profile is stored in /var/lib/tklbam/profile and contains the
+following text files:
+.INDENT 0.0
+.IP 1. 3
+.
+dirindex.conf: a list of directories to check for changes by default.
+This list does not include any files or directories maintained by the
+package management system.
+.IP 2. 3
+.
+dirindex: appliance installation state \- filesystem index
+.IP 3. 3
+.
+packages: appliance installation state \- list of packages
+.UNINDENT
+.sp
+Users can override which files and directories are checked for changes by
+configuring overrides (See below).
+.SS How do I remove a file or directory from being included in my backup?
+.sp
+By adding a negative override to /etc/tklbam/overrides:
+.sp
+.nf
+.ft C
+echo \-/var/www/*/logs >> /etc/tklbam/overrides
+.ft P
+.fi
+.SS How do I add a directory to my backup?
+.sp
+By adding an override to /etc/tklbam/overrides:
+.sp
+.nf
+.ft C
+echo /mnt/images >> /etc/tklbam/overrides
+.ft P
+.fi
+.sp
+Make sure you understand the implications of doing this. For example, if
+you add a directory handled by package management this may break package
+management on the system you restore to.
+.SS How do I exclude a database or table from my backup?
+.sp
+By adding a negative database override to /etc/tklbam/overrides:
+.sp
+.nf
+.ft C
+# exclude drupal5 database
+echo \-mysql:drupal5 >> /etc/tklbam/overrides
+
+# exclude sessions table in drupal6 database
+echo \-mysql:drupal6/sessions >> /etc/tklbam/overrides
+.ft P
+.fi
+.sp
+By default ALL databases are backed up so adding a negative database
+override override excludes only that database or table from the backup.
+.sp
+By contrast, a positive database override changes the default behavior
+so that only the database or table specified in the override is included
+in the backup.
+.sp
+You can mix positive overrides with negative overrides.
+.SS What\(aqs the difference between a full backup and an incremental backup?
+.sp
+A full backup is a backup that can be restored independently of any
+backup other backup. An incremental backup links with the last backup
+before it and only includes changes made since.
+.sp
+Backup chains are links of backup sessions which start with a full
+backup, and then a series of incremental backups each recording only the
+changes made since the backup before it. Incremental backups are useful
+because they are fast and efficient.
+.sp
+Restoring an incremental backup requires retrieving the volumes of all
+backup sessions made before it, up to and including the full backup that
+started the chain. The longer the backup chain, the more time it will
+take to restore.
+.SS How often does a does a full backup happen, how can I configure this?
+.sp
+By default, a full backup will happen if the last full backup is
+older than 30 days. Between full backups, all backup sessions are
+incremental.
+.sp
+We recommend enabling the daily backup cron job so that daily
+incremental backups happen automatically:
+.sp
+.nf
+.ft C
+chmod +x /etc/cron.daily/tklbam\-backup
+.ft P
+.fi
+.sp
+You can override the default by setting the full\-backup parameter in
+the tklbam configuration:
+.sp
+.nf
+.ft C
+# create a full backup every 14 days
+echo full\-backup 14D >> /etc/tklbam/conf
+.ft P
+.fi
+.SS I forgot my passphrase, and I "lost" my escrow key. Can you help me?
+.sp
+Sorry, if your server is gone (e.g., terminated EC2 instance) nobody can
+help you. Next time either save an escrow key somewhere[s] safe or don\(aqt
+set a passphrase.
+.sp
+Don\(aqt misunderstand, we\(aqd love to help if we could, but we can\(aqt. The
+encryption key for your backup was generated locally on your server not
+ours. We designed passphrase protection to use special cryptographic
+countermeasures to make typical cracking techniques (e.g., dictionary
+attacks) very difficult even for someone with access to massive amounts
+of computer resources.
+.sp
+Note, if the system you backed up is still available, just log into it
+as root and change the passphrase (you don\(aqt need to know the old
+passphrase):
+.sp
+.nf
+.ft C
+tklbam\-passphrase
+.ft P
+.fi
+.SH AMAZON S3 QUESTIONS
+.SS Why can\(aqt I access TKLBAM storage buckets with other Amazon S3 tools?
+.sp
+TKLBAM doesn\(aqt store it\(aqs data in generic S3 buckets, but in an isolated
+TKLBAM\-specific area on S3. This means generic S3 tools such as the AWS
+management console, or S3Fox will not be able to access the storage
+buckets in which TKLBAM backup volumes reside.
+.SS What are the advantages of isolating TKLBAM Amazon S3 storage?
+.INDENT 0.0
+.IP 1. 3
+.
+Easier sign up process. Users don\(aqt need to know anything about S3
+API keys or understand the implications of giving them to us.
+.IP 2. 3
+.
+Security: you don\(aqt need to give us access to your generic S3
+account. If someone compromises your regular AWS API Key they still
+can\(aqt get to your encrypted backup volumes and say...  delete them.
+.IP 3. 3
+.
+Cost transparency: TKLBAM related storage charges show up separately
+from your generic S3 storage.
+.UNINDENT
+.SS What happens if my payment method to Amazon is invalidated?
+.sp
+Amazon supports payment by credit card and bank account. We recommend
+heavy users add a bank account as their payment method, as it\(aqs usually
+more permanent than a credit card.
+.sp
+In any case, if your payment method is invalidated (e.g., cancelled or
+expired credit card), billing will fail and Amazon will attempt to
+contact you (e.g., by e\-mail) to provide a new, valid payment method.
+.SH FAULT TOLERANCE FOR THE PARANOID IT GUY
+.SS Is the Hub TKLBAM\(aqs central point of failure?
+.sp
+Yes and no. On one hand, much of the streamlined usability of TKLBAM
+depends on the availability of the Hub. On the other hand, we designed
+TKLBAM to degrade gracefully if the Hub ever goes down (it shouldn\(aqt!).
+.sp
+As we scale the Hub we will gradually add capacity and build in
+additional layers of fault tolerance.
+.sp
+We have monitoring in place which alerts us immediately if anything
+unexpected happens.
+.SS If the Hub goes down, will my backup cron jobs still work?
+.sp
+Yes. Backups which have already been configured will continue to work
+normally. If TKLBAM can\(aqt reach the Hub it just uses the locally cached
+profile and S3 address.
+.SS If my connection to the Hub goes down, can I still restore?
+.sp
+Yes \- manually. It just won\(aqt be as easy. You\(aqll need to do a couple of
+steps by hand:
+.INDENT 0.0
+.IP 1. 3
+.
+transfer the escrow key to the restore target.
+.sp
+This means you\(aqll need to have stored the escrow key somewhere safe
+or be able to create it on the backed up machine.
+.IP 2. 3
+.
+specify the S3 address and the key manually when you restore.
+.sp
+For more details see the tklbam\-restore documentation.
+.UNINDENT
+.SS If the Hub goes down, can I still create a new backup?
+.sp
+Yes \- but only manually. Just remember the Hub won\(aqt know anything about
+these backups so you\(aqll have manage keys and authentication credentials
+by hand.
+.SH AUTHOR
+Liraz Siri <liraz@turnkeylinux.org>
+.SH COPYRIGHT
+GPL3
+.\" Generated by docutils manpage writer.
+.\" 
+.

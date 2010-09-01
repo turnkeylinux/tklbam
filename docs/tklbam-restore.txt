@@ -1,0 +1,72 @@
+==============
+tklbam-restore
+==============
+
+----------------
+Restore a backup
+----------------
+
+:Author: Liraz Siri <liraz@turnkeylinux.org>
+:Date:   2010-09-01
+:Copyright: GPL3
+:Manual section: 8
+:Manual group: backup
+
+SYNOPSIS
+========
+
+tklbam-restore [ -options ] [ <hub-backup> ]
+
+ARGUMENTS
+=========
+
+`<hub-backup>` := backup-id || unique label pattern
+
+OPTIONS
+=======
+
+--time=TIME                       Time to restore from
+
+  TIME := YYYY-MM-DD | YYYY-MM-DDThh:mm:ss | <int>[mhDWMY]
+    
+    e.g.,::
+
+          2010-08-06 - 2010, August 6th, 00:00
+
+          2010-08-07T14:00 - 2010, August 7th 14:00 UTC
+
+          6m - 6 minutes
+          5h - 5 hours
+          4D - 4 days ago
+          3W - 3 weeks ago
+          2M - 2 months ago
+          1Y - 1 year ago
+
+--limits=LIMITS                    Restore filesystem or database limitations
+
+  `LIMITS` := "``LIMIT``-1 .. ``LIMIT``-N"
+  
+  ``LIMIT`` :=  
+  
+    -?( /path/to/include/or/exclude | mysql:database[/table] )
+
+--keyfile=KEYFILE                 Path to escrow keyfile.
+                                  
+                                  Default: Hub provides this automatically.
+
+--address=TARGET_URL              manual backup target URL (needs --keyfile).
+                                  
+                                  Default: Hub provides this automatically.
+
+--skip-files                      Don't restore filesystem
+--skip-database                   Don't restore databases
+--skip-packages                   Don't restore new packages
+
+--logfile=PATH                    Path to log file.
+                                  Default: /var/log/tklbam-restore
+
+--no-rollback                     Disable rollback
+--silent                          Disable feedback
+
+--force                           Disable sanity checking
+
