@@ -59,13 +59,12 @@ from os.path import *
 import sys
 import getopt
 
+import datetime
 from string import Template
 
-import backup
-
 import hub
-import datetime
-
+import backup
+import hooks
 from registry import registry
 
 from version import get_turnkey_version
@@ -227,7 +226,9 @@ def main():
     try:
         trap = UnitedStdTrap(transparent=True)
         try:
+            hooks.backup.pre()
             b.run()
+            hooks.backup.post()
         finally:
             trap.close()
             fh = file(opt_logfile, "a")

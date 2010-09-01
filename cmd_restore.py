@@ -69,10 +69,11 @@ from stdtrap import UnitedStdTrap
 from temp import TempFile
 
 import hub
-from registry import registry
 import keypacket
-
 import passphrase
+import hooks
+
+from registry import registry
 
 from version import get_turnkey_version, codename
 from utils import is_writeable
@@ -259,6 +260,7 @@ def main():
 
     trap = UnitedStdTrap(transparent=(False if silent else True))
     try:
+        hooks.restore.pre()
         restore = Restore(address, secret, opt_limits, opt_time,
                           credentials=credentials,
                           rollback=not no_rollback)
@@ -273,6 +275,7 @@ def main():
             restore.database()
 
         print
+        hooks.restore.post()
 
     finally:
         trap.close()
