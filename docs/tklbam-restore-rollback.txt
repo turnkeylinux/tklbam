@@ -8,7 +8,6 @@ Rollback last restore
 
 :Author: Liraz Siri <liraz@turnkeylinux.org>
 :Date:   2010-09-01
-:Copyright: GPL3
 :Manual section: 8
 :Manual group: backup
 
