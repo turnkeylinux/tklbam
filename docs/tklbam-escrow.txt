@@ -2,9 +2,9 @@
 tklbam-escrow
 =============
 
------------------------------------------------------
-Create a backup escrow key (Save this somewhere safe)
------------------------------------------------------
+--------------------------
+Create a backup escrow key
+--------------------------
 
 :Author: Liraz Siri <liraz@turnkeylinux.org>
 :Date:   2010-09-01
@@ -16,6 +16,12 @@ SYNOPSIS
 ========
 
 tklbam-escrow [ -options ] `KEYFILE`
+
+DESCRIPTION
+===========
+
+Creates an escrow key you can pass directly to the restore command. Save
+this somewhere safe.
 
 ARGUMENTS
 =========

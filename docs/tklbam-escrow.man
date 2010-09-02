@@ -2,7 +2,7 @@
 .
 .TH TKLBAM-ESCROW 8 "2010-09-01" "" "backup"
 .SH NAME
-tklbam-escrow \- Create a backup escrow key (Save this somewhere safe)
+tklbam-escrow \- Create a backup escrow key
 .
 .nr rst2man-indent-level 0
 .
@@ -33,6 +33,10 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .SH SYNOPSIS
 .sp
 tklbam\-escrow [ \-options ] \fIKEYFILE\fP
+.SH DESCRIPTION
+.sp
+Creates an escrow key you can pass directly to the restore command. Save
+this somewhere safe.
 .SH ARGUMENTS
 .sp
 \fIKEYFILE\fP File path to save the escrow key (\- for stdout)
