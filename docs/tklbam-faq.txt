@@ -227,7 +227,7 @@ In any case, if your payment method is invalidated (e.g., cancelled or
 expired credit card), billing will fail and Amazon will attempt to
 contact you (e.g., by e-mail) to provide a new, valid payment method. 
 
-FAULT TOLERANCE FOR THE PARANOID it GUY
+FAULT TOLERANCE FOR THE PARANOID IT GUY
 =======================================
 
 Is the Hub TKLBAM's central point of failure?

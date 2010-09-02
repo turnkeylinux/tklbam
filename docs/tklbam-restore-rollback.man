@@ -1,8 +1,8 @@
 .\" Man page generated from reStructeredText.
 .
-.TH TKLBAM-BACKUP 8 "2010-09-01" "" "backup"
+.TH TKLBAM-RESTORE-ROLLBACK 8 "2010-09-01" "" "backup"
 .SH NAME
-tklbam-backup \- Backup the current system
+tklbam-restore-rollback \- Rollback last restore
 .
 .nr rst2man-indent-level 0
 .
@@ -32,85 +32,13 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 ..
 .SH SYNOPSIS
 .sp
-tklbam\-backup [ \-options ] [ override ... ]
-.SH ARGUMENTS
-.INDENT 0.0
-.TP
-.B \fI<override>\fP :=
-.sp
-\-?( /path/to/include/or/exclude | mysql:database[/table] )
-.UNINDENT
-.sp
-Default overrides read from /etc/tklbam/overrides
+tklbam\-restore\-rollback [ \-options ]
 .SH OPTIONS
 .INDENT 0.0
 .TP
-.BI \-\-address\fB= TARGET_URL
+.B \-\-force
 .
-manual backup target URL.
-Default: automatically configured via Hub
-.TP
-.B \-\-simulate,  \-s
-.
-Simulate operation. Don\(aqt actually backup.
-.TP
-.B \-\-quiet,  \-q
-.
-Be less verbose
-.TP
-.BI \-\-logfile\fB= PATH
-.
-Path of file to log output to.
-Default: /var/log/tklbam\-backup
-.UNINDENT
-.SS Configurable options
-.INDENT 0.0
-.TP
-.BI \-\-volsize \ MB
-.
-Size of backup volume in MBs.
-Default: 50
-.TP
-.BI \-\-full\-backup \ FREQUENCY
-.
-Time frequency of full backup.
-Default: 1M
-.sp
-<frequency> := <int>[DWM]
-.INDENT 7.0
-.INDENT 3.5
-.sp
-e.g.,:
-.sp
-.nf
-.ft C
-3D \- three days
-2W \- two weeks
-1M \- one month
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
-.UNINDENT
-.sp
-Resolution order for configurable options:
-.INDENT 0.0
-.IP 1. 3
-.
-comand line (highest precedence)
-.IP 2. 3
-.
-configuration file (/etc/tklbam/conf):
-.sp
-.nf
-.ft C
-# comment
-<option\-name> <value>
-.ft P
-.fi
-.IP 3. 3
-.
-built\-in default (lowest precedence)
+Don\(aqt ask for confirmation (caution)
 .UNINDENT
 .SH SEE ALSO
 .sp
