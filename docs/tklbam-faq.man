@@ -135,8 +135,8 @@ You can mix positive overrides with negative overrides.
 .SS What\(aqs the difference between a full backup and an incremental backup?
 .sp
 A full backup is a backup that can be restored independently of any
-backup other backup. An incremental backup links with the last backup
-before it and only includes changes made since.
+other backup. An incremental backup links with the last backup before it
+and only includes changes made since.
 .sp
 Backup chains are links of backup sessions which start with a full
 backup, and then a series of incremental backups each recording only the
