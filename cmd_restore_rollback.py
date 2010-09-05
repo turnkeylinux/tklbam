@@ -63,7 +63,7 @@ def main():
         print
 
         while True:
-            answer = raw_input("Is really this what you want? [yes/no] ")
+            answer = raw_input("Is this really what you want? [yes/no] ")
             if answer:
                 break
 
