@@ -199,8 +199,8 @@ class MyFS_Writer(MyFS):
                     continue
 
                 table_name = _match_name(statement)
+                table = self.Table(database, table_name, statement)
                 if (database.name, table_name) in self.limits:
-                    table = self.Table(database, table_name, statement)
                     if callback:
                         callback(table)
                 else:
