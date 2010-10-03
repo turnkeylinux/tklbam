@@ -22,7 +22,7 @@ Format variables:
     %server_id              Associated server id (- if empty)
     %created                Date the backup record was created
     %updated                Date the backup record was last updated
-    %size                   Aggregate size of backup, in MBs
+    %size                   Aggregate size of backup, in bytes
     %address                Backup target address
     %key                    Base64 encoded encrypted keypacket
     %skpp                   Secret Key Passphrase Protection (Yes/No)
