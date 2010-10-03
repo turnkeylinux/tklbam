@@ -82,7 +82,11 @@ def main():
     if not apikey:
         print "Copy paste the API-KEY from your Hub account's user profile"
         print
-        apikey = raw_input("API-KEY: ")
+
+        while True:
+            apikey = raw_input("API-KEY: ").strip()
+            if apikey:
+                break
 
     sub_apikey = hub.Backups.get_sub_apikey(apikey)
 
