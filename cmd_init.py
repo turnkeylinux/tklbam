@@ -18,7 +18,7 @@ Arguments:
 
 Options:
 
-    --force    Force re-initialization.
+    --force    Force re-initialization with new API-KEY.
 
 """
 
