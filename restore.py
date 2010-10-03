@@ -13,6 +13,8 @@ import sys
 import os
 from os.path import *
 
+import resource
+
 import shutil
 import commands
 
@@ -33,6 +35,21 @@ import duplicity
 
 class Error(Exception):
     pass
+
+RLIMIT_NOFILE_MAX = 8192
+
+def raise_rlimit(type, newlimit):
+    soft, hard = resource.getrlimit(type)
+    if soft > newlimit:
+        return
+
+    if hard > newlimit:
+        return resource.setrlimit(type, (newlimit, hard))
+
+    try:
+        resource.setrlimit(type, (newlimit, newlimit))
+    except ValueError:
+        return
 
 def system(command):
     sys.stdout.flush()
@@ -58,6 +75,7 @@ class Restore:
         else:
             opts = []
 
+        raise_rlimit(resource.RLIMIT_NOFILE, RLIMIT_NOFILE_MAX)
         duplicity.Command(opts, address, tmpdir).run(secret, credentials)
         sys.stdout.flush()
 
