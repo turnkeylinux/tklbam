@@ -32,13 +32,20 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 ..
 .SH SYNOPSIS
 .sp
-tklbam\-init [ \fIAPI\-KEY\fP ]
+tklbam\-init [ \-\-force ] [ \fIAPI\-KEY\fP ]
 .SH ARGUMENTS
 .sp
 \fIAPI\-KEY\fP   Cut and paste this from your Hub account\(aqs user profile.
 .sp
 If you do not provide the API\-KEY as a command line argument you will be
 prompted for it interactively.
+.SH OPTIONS
+.INDENT 0.0
+.TP
+.B \-\-force
+.
+Force re\-initialization with new API\-KEY
+.UNINDENT
 .SH SEE ALSO
 .sp
 \fBtklbam\fP (8), \fBtklbam\-faq\fP (7)

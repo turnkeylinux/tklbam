@@ -31,22 +31,73 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
 .SH GENERAL QUESTIONS
-.SS How much does it cost?
-.sp
-TKLBAM (and TurnKey Hub) are currently free for private beta users.
-You are only charged $0.15/GB per month for Amazon S3 storage fees.
 .SS Is TKLBAM open source?
 .sp
 Yes, TKLBAM is licensed under the GPL3. You don\(aqt have to care about
 free software ideology to appreciate the advantages. Any code running on
 your server doing something as critical as encrypted backups should be
 available for peer review and modification.
-.SS Can I backup a non\-TurnKey Linux system with TKLBAM?
+.SS Where can I use TKLBAM?
 .sp
-Currently, no. TKLBAM is short for TurnKey Linux Backup and Migration.
-It\(aqs designed specifically for TurnKey Linux and depends on many
-system\-level details that don\(aqt apply to other Linux distributions
-(e.g., installation method, versioning signatures, etc.).
+On any system descended from a TurnKey Linux installation, regardless of
+hardware or location. Storing backups to Amazon S3 is easiest because
+authentication and key management are automatic. You just need to run:
+.sp
+.nf
+.ft C
+tklbam\-backup
+.ft P
+.fi
+.sp
+But you can also backup to any storage target supported by TKLBAM\(aqs
+back\-end Duplicity including the local filesystem, NFS, Rsync, SSH, FTP,
+WebDAV, Rackspace CloudFiles and even IMAP.
+.sp
+The local filesystem is one of the easier storage targets to use because
+you don\(aqt need to mess around with authentication credentials.
+.sp
+So assuming you want to store your backup at /mnt/otherdisk:
+.sp
+.nf
+.ft C
+tklbam\-backup \-\-address file:///mnt/otherdisk/tklbam/backup
+tklbam\-escrow /mnt/otherdisk/tklbam/key
+.ft P
+.fi
+.sp
+And restore like this:
+.sp
+.nf
+.ft C
+tklbam\-restore \-\-address file:///mnt/otherdisk/tklbam/backup \e
+               \-\-keyfile=/mnt/otherdisk/tklbam/key
+.ft P
+.fi
+.sp
+Not as easy as the Hub\-enabled "automatic" mode, but still vastly easier
+than your conventional backup process. The disadvantage is that you
+won\(aqt be able to restore/test your backup in the cloud, or from a VM
+running in another office branch (for example). Also keep in mind that a
+physical hard disk, even a RAID array, provides much much lower data
+reliability compared with Amazon S3.
+.sp
+For this reason we recommend users use local backups to supplement cloud
+backups (e.g., providing fast local access).
+.SS Why can\(aqt I backup a non\-TurnKey Linux system with TKLBAM?
+.sp
+TKLBAM is short for \(aqTurnKey Linux\(aq Backup and Migration. It\(aqs designed
+specifically for TurnKey Linux and depends on many system\-level details
+that don\(aqt necessarily apply to other Linux distributions (e.g.,
+installation method, versioning signatures, etc.).
+.sp
+In the future, we may figure out how to extend the design to support
+additional operating systems, but it\(aqs not trivial and we don\(aqt have a
+timeline on when, or even if, that will happen.
+.sp
+In the meantime, if you really want to use TKLBAM, consider
+virtualization\-based workarounds. For example, if you install a TurnKey
+Linux VM on top of a Windows Server installation, you could use TKLBAM
+to backup anything that goes into the TurnKey Linux VM.
 .SS Which TurnKey appliances are supported?
 .sp
 With a few exceptions, all TurnKey appliances images from the
@@ -62,6 +113,44 @@ PostgreSQL support is in the works but it\(aqs not ready yet.
 Currently only MySQL. PostgreSQL support is under development.
 Support for additional databases will be added as needed. Currently
 TurnKey appliances only include MySQL and PostgreSQL databases.
+.SH PRICING QUESTIONS
+.SS How much does this cost?
+.sp
+TKLBAM (and the TurnKey Hub) are currently free for private beta users.
+Amazon S3 storage fees are around $0.15/GB per month. Full details of
+Amazon S3 pricing can be found here.
+.sp
+You can use simulation mode to calculate how much uncompressed data
+TKLBAM is going to store in a full backup:
+.sp
+.nf
+.ft C
+$ tklbam\-backup \-\-simulate
+CREATING /TKLBAM
+FULL UNCOMPRESSED FOOTPRINT: 148.30 MB in 6186 files
+.ft P
+.fi
+.sp
+In practice, the actual footprint of a full backup will usually be
+smaller due to compression, but this depends on the type of data being
+compressed (e.g., text compresses very well, video very poorly).
+.sp
+By default, a full backup is performed if one month has passed since the
+last full backup. In between, incremental backups will be performed
+which only record changes since the last backup. The full backup
+frequency can be customized. See this manual page for details.
+.SS The Hub says my backup costs $0.00, what am I really paying?
+.sp
+If you notice $0.00 in the backups console, there\(aqs no need to open a
+support request. It\(aqs not a bug. At 15 cents per gigabyte, if you have
+just a few megabytes of data Amazon doesn\(aqt charge you anything.
+.sp
+Backups start from about 10KB for a freshly installed TurnKey appliance.
+Remember, TKLBAM only saves changes you\(aqve made since the appliance was
+installed.
+.sp
+In fact, a significant number of users are being charged less than 1
+cent a month.
 .SH USAGE QUESTIONS
 .SS How does TKLBAM know what to backup on my system?
 .sp

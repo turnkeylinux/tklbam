@@ -14,7 +14,7 @@ Initialization (links TKLBAM to Hub account)
 SYNOPSIS
 ========
 
-tklbam-init [ `API-KEY` ]
+tklbam-init [ --force ] [ `API-KEY` ]
 
 ARGUMENTS
 =========
@@ -23,6 +23,11 @@ ARGUMENTS
 
 If you do not provide the API-KEY as a command line argument you will be
 prompted for it interactively.
+
+OPTIONS
+=======
+
+--force    Force re-initialization with new API-KEY
 
 SEE ALSO
 ========

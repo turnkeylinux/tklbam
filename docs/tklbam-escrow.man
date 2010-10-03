@@ -47,7 +47,7 @@ this somewhere safe.
 .
 Don\(aqt encrypt escrow key with a passphrase
 .TP
-.B \-\-random\-passphrase
+.B \-\-random\-passphrase,  \-R
 .
 Choose a secure random passphrase (and print it)
 .UNINDENT
