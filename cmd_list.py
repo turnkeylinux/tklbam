@@ -75,6 +75,14 @@ def key_has_passphrase(key):
 def fmt_skpp(key):
     return "Yes" if key_has_passphrase(key) else "No"
 
+def fmt_size(bytes):
+    if bytes < (10 * 1024):
+        return "0.01"
+    if bytes > (1024 * 1024 * 1000 * 99.99):
+        return "%d" % (bytes / (1024 * 1024))
+    else:
+        return "%-.2f" % (bytes / (1024 * 1024.0))
+
 def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], "h", ["help"])
@@ -104,16 +112,16 @@ def main():
             print format(hbr)
 
     elif hbrs:
-        print "# ID  SKPP  Created     Updated     Size (GB)  Label"
+        print "# ID  SKPP  Created     Updated     Size (MB)  Label"
         for hbr in hbrs:
-            print "%4s  %-3s   %s  %-10s  %-8.2f   %s" % \
+            print "%4s  %-3s   %s  %-10s  %-8s   %s" % \
                     (hbr.backup_id, fmt_skpp(hbr.key),
                      hbr.created.strftime("%Y-%m-%d"),
 
                      hbr.updated.strftime("%Y-%m-%d") 
                      if hbr.updated else "-",
 
-                     hbr.size / (1024.0 * 1024 * 1024),
+                     fmt_size(hbr.size),
                      hbr.label)
 
 if __name__ == "__main__":
