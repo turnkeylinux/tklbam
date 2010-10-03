@@ -16,6 +16,10 @@ Arguments:
 
     API-KEY    Cut and paste this from your Hub account's user profile.
 
+Options:
+
+    --force    Force re-initialization.
+
 """
 
 import sys
@@ -27,6 +31,8 @@ from registry import registry
 import os
 import base64
 import hashlib
+import getopt
+import shutil
 
 NOT_SUBSCRIBED = """\
 Warning: backups are not yet enabled for your TurnKey Hub account. Log
@@ -47,16 +53,29 @@ def usage(e=None):
     sys.exit(1)
 
 def main():
-    apikey = None
+    try:
+        opts, args = getopt.gnu_getopt(sys.argv[1:], "h", ["help", "force"])
+    except getopt.GetoptError, e:
+        usage(e)
 
-    args = sys.argv[1:]
+    apikey = None
+    force = False
+
+    for opt, val in opts:
+        if opt in ('-h', '--help'):
+            usage()
+
+        if opt == '--force':
+            force = True
+
     if args:
-        if len(args) != 1 or args[0] in ("-h", "--help"):
+        if len(args) != 1:
             usage()
 
         apikey = args[0]
-    
-    if registry.sub_apikey:
+
+
+    if not force and registry.sub_apikey:
         print >> sys.stderr, "error: already initialized"
         sys.exit(1)
 
@@ -66,6 +85,11 @@ def main():
         apikey = raw_input("API-KEY: ")
 
     sub_apikey = hub.Backups.get_sub_apikey(apikey)
+
+    if force:
+        if os.path.exists(registry.path):
+            shutil.rmtree(registry.path)
+            os.mkdir(registry.path)
 
     registry.sub_apikey = sub_apikey
     registry.secret = generate_secret()
