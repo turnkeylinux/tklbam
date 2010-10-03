@@ -115,7 +115,8 @@ class API:
             if name == "BackupRecord.NotFound":
                 raise InvalidBackupError(description)
 
-            if name == "BackupAccount.NotSubscribed":
+            if name in ("BackupAccount.NotSubscribed",
+                        "BackupAccount.NotFound"): 
                 raise NotSubscribedError(description)
 
             raise Error(c.response_code, name, description)
