@@ -38,7 +38,7 @@ def usage(e=None):
 
 def main():
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hRP", ["help", "no-passphrase", "random-passphrase"])
+        opts, args = getopt.gnu_getopt(sys.argv[1:], "hRP", ["help", "no-passphrase", "random-passphrase"])
     except getopt.GetoptError, e:
         usage(e)
 
