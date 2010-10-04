@@ -247,7 +247,8 @@ def main():
         raise
 
     b.cleanup()
-    hb.updated_backup(conf.address)
+    if not conf.simulate:
+        hb.updated_backup(conf.address)
 
 if __name__=="__main__":
     main()
