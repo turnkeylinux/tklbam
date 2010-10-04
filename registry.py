@@ -16,6 +16,8 @@ import os
 from os.path import *
 from paths import Paths
 
+from datetime import datetime
+
 import shutil
 from utils import AttrDict
 from hub import Credentials
@@ -99,10 +101,20 @@ class _Registry(object):
     credentials = property(credentials, credentials)
     
     def hbr(self, val=UNDEFINED):
+        format = "%Y-%m-%d %H:%M:%S"
         if val and val is not UNDEFINED:
             val = AttrDict({'address': val.address,
-                            'backup_id': val.backup_id})
-        return self._file_dict(self.path.hbr, val)
+                            'backup_id': val.backup_id,
+                            'updated': datetime.now().strftime(format)})
+
+        retval = self._file_dict(self.path.hbr, val)
+        if retval:
+            if 'updated' not in retval:
+                retval.updated = None
+            else:
+                retval.updated = datetime.strptime(retval.updated, format)
+            return retval
+
     hbr = property(hbr, hbr)
 
     def profile(self, val=UNDEFINED):

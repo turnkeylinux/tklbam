@@ -25,7 +25,7 @@ class CliWrapper(CliWrapper):
                             '',
                             'backup', 'list', 'restore', 'restore-rollback',
                             '',
-                            'internal']
+                            'status', 'internal']
 
 if __name__ == "__main__":
     CliWrapper.main()
