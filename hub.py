@@ -125,13 +125,12 @@ class API:
 
 class BackupRecord(AttrDict):
     @staticmethod
-    def _datetime(s):
+    def _parse_datetime(s):
         # return datetime("Y-M-D h:m:s")
         if not s:
             return None
 
-        s = s.replace('-', ' ').replace(':', ' ').split()
-        return datetime(*map(lambda i: int(i), s))
+        return datetime.strptime(s, "%Y-%m-%d %H:%M:%S")
 
     def __init__(self, response):
         self.key = response['key']
@@ -140,8 +139,8 @@ class BackupRecord(AttrDict):
         self.server_id = response['server_id']
         self.turnkey_version = response['turnkey_version']
 
-        self.created = self._datetime(response['date_created'])
-        self.updated = self._datetime(response['date_updated'])
+        self.created = self._parse_datetime(response['date_created'])
+        self.updated = self._parse_datetime(response['date_updated'])
 
         self.size = int(response['size']) # in MBs
         self.label = response['description']
