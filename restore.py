@@ -120,9 +120,6 @@ class Restore:
         packages = file(newpkgs_file).read().strip().split('\n')
         installer = Installer(packages, self.PACKAGES_BLACKLIST)
 
-        if self.rollback:
-            self.rollback.save_new_packages(installer.installable)
-
         print "\n" + self._title("apt-get install", '-')
         if installer.skipping:
             print "SKIPPING: " + " ".join(installer.skipping) + "\n"
@@ -136,6 +133,9 @@ class Restore:
             exitcode = installer()
             if exitcode != 0:
                 print "# WARNING: non-zero exitcode (%d)" % exitcode
+
+            if self.rollback:
+                self.rollback.save_new_packages(installer.installed)
 
         except installer.Error:
             pass

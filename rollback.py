@@ -147,9 +147,12 @@ class Rollback:
                     self._move_to_originals(change.path)
         di.save(self.paths.dirindex)
 
-    def save_new_packages(self, installable):
+    def save_new_packages(self, packages):
+        packages = list(packages)
+        packages.sort()
+
         fh = file(self.paths.newpkgs, "w")
-        for package in installable:
+        for package in packages:
             print >> fh, package
         fh.close()
 

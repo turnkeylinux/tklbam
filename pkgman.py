@@ -133,6 +133,7 @@ class Installer:
 
     def __init__(self, packages, blacklist=None):
         self.installable, self.skipping = installable(packages, blacklist)
+        self.installed = None
 
         self.installable.sort()
         self.skipping.sort()
@@ -154,4 +155,10 @@ class Installer:
 
         sys.stdout.flush()
         sys.stderr.flush()
-        return os.system(command)
+
+        packages_before = Packages()
+        retval = os.system(command)
+        packages_after = Packages()
+
+        self.installed = packages_after - packages_before
+        return retval
