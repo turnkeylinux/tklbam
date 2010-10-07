@@ -127,7 +127,7 @@ testresult ./delete "delete repeated - nothing to do"
 rm -rf testdir
 rm -f index index.orig delta delta.orig fixstat delete
 
-cmd merge_userdb $REF/old-passwd $REF/old-group $REF/new-passwd $REF/new-group merged-passwd merged-group > merge-maps
+cmd merge-userdb $REF/old-passwd $REF/old-group $REF/new-passwd $REF/new-group merged-passwd merged-group > merge-maps
 
 testresult-exact merged-passwd "merge-userdb passwd"
 testresult-exact merged-group "merge-userdb group"
@@ -139,7 +139,7 @@ cmd newpkgs $REF/base-packages $REF/old-packages | sort > delta-packages
 testresult-exact ./delta-packages "newpkgs"
 rm -f delta-packages
 
-cmd newpkgs_install -s -i $REF/newpkgs_install > newpkgs-install
+cmd newpkgs-install -s -i $REF/newpkgs_install > newpkgs-install
 testresult-exact ./newpkgs-install "newpkgs-install simulation"
 rm -f newpkgs-install
 
