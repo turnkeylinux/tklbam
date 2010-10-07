@@ -124,21 +124,17 @@ class Restore:
         if installer.skipping:
             print "SKIPPING: " + " ".join(installer.skipping) + "\n"
 
-        if installer.command:
-            print installer.command
-        else:
+        if not installer.command:
             print "NO NEW INSTALLABLE PACKAGES"
+            return
 
-        try:
-            exitcode = installer()
-            if exitcode != 0:
-                print "# WARNING: non-zero exitcode (%d)" % exitcode
+        print installer.command
+        exitcode = installer()
+        if exitcode != 0:
+            print "# WARNING: non-zero exitcode (%d)" % exitcode
 
-            if self.rollback:
-                self.rollback.save_new_packages(installer.installed)
-
-        except installer.Error:
-            pass
+        if self.rollback:
+            self.rollback.save_new_packages(installer.installed)
 
     @staticmethod
     def _userdb_merge(old_etc, new_etc):
