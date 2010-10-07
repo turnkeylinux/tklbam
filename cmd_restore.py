@@ -258,7 +258,7 @@ def main():
     key = opt_key if opt_key else hbr.key
     secret = decrypt_key(key)
 
-    trap = UnitedStdTrap(transparent=(False if silent else True))
+    trap = UnitedStdTrap(usepty=True, transparent=(False if silent else True))
     try:
         hooks.restore.pre()
         restore = Restore(address, secret, opt_limits, opt_time,
