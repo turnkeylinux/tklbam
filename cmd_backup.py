@@ -193,8 +193,14 @@ def main():
         except hb.Error, e:
             # asking for get_credentials() might fail if the hub is down. 
             # But If we already have the credentials we can survive that.
-            if isinstance(e, hub.NotSubscribedError) or not registry.credentials:
-                raise
+            
+            if isinstance(e, hub.NotSubscribedError):
+                print >> sys.stderr, "Error: " + str(e)
+                sys.exit(1)
+            
+            if not registry.credentials:
+                pass
+
             warn(e)
 
         conf.credentials = registry.credentials

@@ -267,7 +267,7 @@ class Backups:
 
     def get_credentials(self):
         if not self.user.credentials:
-            raise NotSubscribedError("user not subscribed to Backups")
+            raise NotSubscribedError()
 
         return self.user.credentials
 

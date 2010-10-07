@@ -34,10 +34,6 @@ import hashlib
 import getopt
 import shutil
 
-NOT_SUBSCRIBED = """\
-Warning: backups are not yet enabled for your TurnKey Hub account. Log
-into the Hub and go to the "Backups" section for instructions."""
-
 def generate_secret():
     # effective is key size: 160-bits (SHA1)
     # base64 encoding to ensure cli safeness
@@ -104,9 +100,8 @@ def main():
         registry.credentials = credentials
 
     except hub.NotSubscribedError, e:
-        print >> sys.stderr, NOT_SUBSCRIBED
+        print >> sys.stderr, "Warning: " + str(e)
         print >> sys.stderr
-
 
     print "Linked TKLBAM to your Hub account."
 

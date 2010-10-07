@@ -93,7 +93,12 @@ class Error(Exception):
     pass
 
 class NotSubscribedError(Error):
-    pass
+    DESC = """\
+Backups are not yet enabled for your TurnKey Hub account. Log
+into the Hub and go to the "Backups" section for instructions."""
+
+    def __init__(self, desc=DESC):
+        Error.__init__(self, desc)
 
 class InvalidBackupError(Error):
     pass
@@ -117,7 +122,7 @@ class API:
 
             if name in ("BackupAccount.NotSubscribed",
                         "BackupAccount.NotFound"): 
-                raise NotSubscribedError(description)
+                raise NotSubscribedError()
 
             raise Error(c.response_code, name, description)
 
