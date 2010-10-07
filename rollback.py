@@ -80,6 +80,9 @@ class Rollback:
         self._move(source, dest)
 
     def rollback_files(self):
+        if not exists(self.paths.fsdelta):
+            return
+
         changes = Changes.fromfile(self.paths.fsdelta)
         dirindex = DirIndex(self.paths.dirindex)
 
