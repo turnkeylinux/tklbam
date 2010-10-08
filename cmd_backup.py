@@ -62,6 +62,8 @@ import getopt
 import datetime
 from string import Template
 
+from pidlock import PidLock
+
 import hub
 import backup
 import hooks
@@ -183,6 +185,12 @@ def main():
 
     conf.overrides += args
 
+    lock = PidLock("/var/run/tklbam-backup.pid", nonblock=True)
+    try:
+        lock.lock()
+    except lock.Locked:
+        fatal("a previous backup is still in progress")
+
     hb = hub.Backups(registry.sub_apikey)
     if not conf.profile:
         conf.profile = get_profile(hb)
@@ -195,8 +203,7 @@ def main():
             # But If we already have the credentials we can survive that.
             
             if isinstance(e, hub.NotSubscribedError):
-                print >> sys.stderr, "Error: " + str(e)
-                sys.exit(1)
+                fatal(e)
             
             if not registry.credentials:
                 pass
