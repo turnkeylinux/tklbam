@@ -19,8 +19,8 @@ Options:
 Exitcode:
 
     0           OK
-    1           NO BACKUP
-    2           NO APIKEY
+    10          NO BACKUP
+    11          NO APIKEY
 
 """
 import sys
@@ -31,8 +31,8 @@ from registry import registry
 
 class Status:
     OK = 0
-    NO_BACKUP = 1
-    NO_APIKEY = 2
+    NO_BACKUP = 10
+    NO_APIKEY = 11
 
     @classmethod
     def get(cls):
