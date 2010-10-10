@@ -14,7 +14,7 @@ Print a helpful status message
 
 Options:
 
-    --opt_short     The opt_short version.
+    --short     The short version.
 
 Exitcode:
 
@@ -58,7 +58,7 @@ def usage(e=None):
 def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], "h", 
-                                       [ "opt_short", "help" ])
+                                       [ "short", "help" ])
     except getopt.GetoptError, e:
         usage(e)
 
@@ -67,7 +67,7 @@ def main():
         if opt in ('-h', '--help'):
             usage()
 
-        if opt == '--opt_short':
+        if opt == '--short':
             opt_short = True
 
     status = Status.get()
