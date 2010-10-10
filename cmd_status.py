@@ -14,7 +14,13 @@ Print a helpful status message
 
 Options:
 
-    --short     The short version.
+    --opt_short     The opt_short version.
+
+Exitcode:
+
+    0           OK
+    1           NO BACKUP
+    2           NO APIKEY
 
 """
 import sys
@@ -23,51 +29,36 @@ from StringIO import StringIO
 
 from registry import registry
 
+class Status:
+    OK = 0
+    NO_BACKUP = 1
+    NO_APIKEY = 2
+
+    @classmethod
+    def get(cls):
+
+        if not registry.sub_apikey:
+            return cls.NO_APIKEY
+
+        elif not registry.hbr:
+            return cls.NO_BACKUP
+
+        else:
+            return cls.OK
+
 def usage(e=None):
     if e:
         print >> sys.stderr, "error: " + str(e)
 
     print >> sys.stderr, "Syntax: %s [ -options ]" % (sys.argv[0])
-    print >> sys.stderr, __doc__
+    print >> sys.stderr, __doc__.strip()
 
     sys.exit(1)
-
-def status(short=False):
-    fh = StringIO()
-
-    if not registry.sub_apikey:
-        print >> fh, "TKLBAM (Backup and Migration):  NOT INITIALIZED"
-        if not short:
-            print >> fh
-            print >> fh, '  To initialize TKLBAM, run the "tklbam-init" command to link this'
-            print >> fh, '  system to your TurnKey Hub account. For details see the man page or'
-            print >> fh, '  go to:'
-            print >> fh
-            print >> fh, '      http://www.turnkeylinux.org/docs/tklbam'
-
-    elif not registry.hbr:
-        print >> fh, "TKLBAM (Backup and Migration):  NO BACKUPS"
-        if not short:
-            print >> fh
-            print >> fh, '  To backup for the first time run the "tklbam-backup" command. For'
-            print >> fh, '  details see the man page or go to:'
-            print >> fh
-            print >> fh, '      http://www.turnkeylinux.org/docs/tklbam'
-
-    else:
-        hbr = registry.hbr
-        status = "TKLBAM:  Backup ID #%s" % hbr.backup_id
-        if registry.hbr.updated:
-            status += ", Updated %s" % hbr.updated.strftime("%a %Y-%m-%d %H:%M")
-
-        print >> fh, status
-
-    return fh.getvalue()
 
 def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], "h", 
-                                       [ "short", "help" ])
+                                       [ "opt_short", "help" ])
     except getopt.GetoptError, e:
         usage(e)
 
@@ -76,10 +67,39 @@ def main():
         if opt in ('-h', '--help'):
             usage()
 
-        if opt == '--short':
+        if opt == '--opt_short':
             opt_short = True
 
-    print status(opt_short),
+    status = Status.get()
+
+    if status == Status.NO_APIKEY:
+        print "TKLBAM (Backup and Migration):  NOT INITIALIZED"
+        if not opt_short:
+            print 
+            print '  To initialize TKLBAM, run the "tklbam-init" command to link this'
+            print '  system to your TurnKey Hub account. For details see the man page or'
+            print '  go to:'
+            print 
+            print '      http://www.turnkeylinux.org/docs/tklbam'
+
+    elif status == Status.NO_BACKUP:
+        print "TKLBAM (Backup and Migration):  NO BACKUPS"
+        if not opt_short:
+            print 
+            print '  To backup for the first time run the "tklbam-backup" command. For'
+            print '  details see the man page or go to:'
+            print 
+            print '      http://www.turnkeylinux.org/docs/tklbam'
+
+    elif status == Status.OK:
+        hbr = registry.hbr
+        s = "TKLBAM:  Backup ID #%s" % hbr.backup_id
+        if registry.hbr.updated:
+            s += ", Updated %s" % hbr.updated.strftime("%a %Y-%m-%d %H:%M")
+
+        print s
+
+    sys.exit(status)
 
 if __name__ == "__main__":
     main()
