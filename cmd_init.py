@@ -30,15 +30,29 @@ from registry import registry
 
 import os
 import base64
+import struct
 import hashlib
 import getopt
 import shutil
+
+def is_valid_apikey(apikey):
+    padded = "A" * (20 - len(apikey)) + apikey
+    try:
+        struct.unpack("!L8s", base64.b32decode(padded + "=" * 4))
+    except TypeError:
+        return False
+
+    return True
 
 def generate_secret():
     # effective is key size: 160-bits (SHA1)
     # base64 encoding to ensure cli safeness
     # urandom guarantees we won't block. Redundant randomness just in case.
     return base64.b64encode(hashlib.sha1(os.urandom(32)).digest()).rstrip("=")
+
+def fatal(e):
+    print >> sys.stderr, "error: " + str(e)
+    sys.exit(1)
 
 def usage(e=None):
     if e:
@@ -72,8 +86,7 @@ def main():
 
 
     if not force and registry.sub_apikey:
-        print >> sys.stderr, "error: already initialized"
-        sys.exit(1)
+        fatal("already initialized")
 
     if not apikey:
         print "Copy paste the API-KEY from your Hub account's user profile"
@@ -83,6 +96,9 @@ def main():
             apikey = raw_input("API-KEY: ").strip()
             if apikey:
                 break
+
+    if not is_valid_apikey(apikey):
+        fatal("'%s' is an invalid API-KEY" % apikey)
 
     sub_apikey = hub.Backups.get_sub_apikey(apikey)
 
