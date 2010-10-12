@@ -89,6 +89,7 @@ def main():
         fh = sys.stdout
     else:
         fh = file(keyfile, "w")
+        os.chmod(keyfile, 0600)
 
     print >> fh, key
     
