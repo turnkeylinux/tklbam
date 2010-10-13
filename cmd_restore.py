@@ -57,6 +57,7 @@ Options:
 
 """
 
+import os
 import sys
 import getopt
 
@@ -147,6 +148,9 @@ def decrypt_key(key):
         try:
             return keypacket.parse(key, passphrase.get_passphrase(confirm=False))
         except keypacket.Error:
+            if not os.isatty(sys.stdin.fileno()):
+                fatal("Incorrect passphrase")
+
             print >> sys.stderr, "Incorrect passphrase, try again"
 
 def fatal(e):
