@@ -11,6 +11,9 @@
 import re
 from executil import getoutput
 
+class Error(Exception):
+    pass
+
 def get_turnkey_version():
     try:
         return file("/etc/turnkey_version").readline().strip()
