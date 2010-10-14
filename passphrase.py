@@ -21,9 +21,16 @@ def random_passphrase():
 
     return "-".join(parts)
 
+class Error(Exception):
+    pass
+
 def get_passphrase(confirm=True):
     if not os.isatty(sys.stdin.fileno()):
-        return sys.stdin.readline().rstrip()
+        input = sys.stdin.readline()
+        if not input:
+            raise Error("can't get passphrase - broken input")
+
+        return input.rstrip()
 
     while True:
         passphrase = getpass.getpass("Passphrase: ")
