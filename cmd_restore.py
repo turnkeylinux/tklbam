@@ -53,6 +53,7 @@ Options:
     --silent                          Disable feedback
 
 
+    --noninteractive                  Disable interactive user prompts
     --force                           Disable sanity checking
 
 """
@@ -84,7 +85,12 @@ PATH_LOGFILE = "/var/log/tklbam-restore"
 class Error(Exception):
     pass
 
-def do_compatibility_check(backup_turnkey_version):
+class ExitCode:
+    OK = 0
+    INCOMPATIBLE = 10
+    BADPASSPHRASE = 11
+
+def do_compatibility_check(backup_turnkey_version, interactive=True):
 
     backup_codename = codename(backup_turnkey_version)
     local_codename = codename(get_turnkey_version())
@@ -103,6 +109,10 @@ def do_compatibility_check(backup_turnkey_version):
     print
     print "Restoring a %s backup to a %s appliance is not recommended." % (backup_codename, local_codename)
     print "For best results, restore to a fresh %s installation instead." % backup_codename
+
+    if not interactive:
+        sys.exit(ExitCode.INCOMPATIBLE)
+
     print
     print "(Use --force to suppress this check)"
     print
@@ -113,8 +123,7 @@ def do_compatibility_check(backup_turnkey_version):
             break
 
     if answer.lower() not in ('y', 'yes'):
-        print "You didn't answer 'yes'. Aborting!"
-        sys.exit(1)
+        fatal("You didn't answer 'yes'. Aborting!")
 
 def get_backup_record(arg):
     hb = hub.Backups(registry.sub_apikey)
@@ -138,7 +147,7 @@ def get_backup_record(arg):
 
     return matches[0]
 
-def decrypt_key(key):
+def decrypt_key(key, interactive=True):
     try:
         return keypacket.parse(key, "")
     except keypacket.Error:
@@ -146,10 +155,13 @@ def decrypt_key(key):
 
     while True:
         try:
-            return keypacket.parse(key, passphrase.get_passphrase(confirm=False))
+            p = passphrase.get_passphrase(confirm=False)
+            return keypacket.parse(key, p)
+
         except keypacket.Error:
-            if not os.isatty(sys.stdin.fileno()):
-                fatal("Incorrect passphrase")
+            if not interactive:
+                print >> sys.stderr, "Incorrect passphrase"
+                sys.exit(ExitCode.BADPASSPHRASE)
 
             print >> sys.stderr, "Incorrect passphrase, try again"
 
@@ -178,6 +190,7 @@ def main():
     skip_packages = False
     no_rollback = False
     silent = False
+    interactive = True
 
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'h', 
@@ -186,6 +199,7 @@ def main():
                                         'force',
                                         'time=',
                                         'silent',
+                                        'noninteractive',
                                         'skip-files', 'skip-database', 'skip-packages',
                                         'no-rollback'])
                                         
@@ -221,6 +235,9 @@ def main():
                 fatal("logfile '%s' is not writeable" % val)
             opt_logfile = val
 
+        elif opt == '--noninteractive':
+            interactive = False
+
         elif opt == '-h':
             usage()
 
@@ -252,7 +269,7 @@ def main():
 
     if hbr:
         if not opt_force:
-            do_compatibility_check(hbr.turnkey_version)
+            do_compatibility_check(hbr.turnkey_version, interactive)
 
         if opt_key and \
            keypacket.fingerprint(hbr.key) != keypacket.fingerprint(opt_key):
@@ -260,7 +277,7 @@ def main():
             fatal("invalid escrow key for the selected backup")
 
     key = opt_key if opt_key else hbr.key
-    secret = decrypt_key(key)
+    secret = decrypt_key(key, interactive)
 
     trap = UnitedStdTrap(usepty=True, transparent=(False if silent else True))
     try:
