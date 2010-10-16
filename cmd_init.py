@@ -84,7 +84,6 @@ def main():
 
         apikey = args[0]
 
-
     if not force and registry.sub_apikey:
         fatal("already initialized")
 
@@ -100,7 +99,10 @@ def main():
     if not is_valid_apikey(apikey):
         fatal("'%s' is an invalid API-KEY" % apikey)
 
-    sub_apikey = hub.Backups.get_sub_apikey(apikey)
+    try:
+        sub_apikey = hub.Backups.get_sub_apikey(apikey)
+    except Exception, e:
+        fatal(e)
 
     if force:
         if os.path.exists(registry.path):
