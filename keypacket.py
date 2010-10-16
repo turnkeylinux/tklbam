@@ -71,8 +71,11 @@ def fmt(secret, passphrase):
     return base64.b64encode(packet)
 
 def parse(packet, passphrase):
-    packet = base64.b64decode(packet)
-    version, khr, kcr = struct.unpack("!BHH", packet[:5])
+    try:
+        packet = base64.b64decode(packet)
+        version, khr, kcr = struct.unpack("!BHH", packet[:5])
+    except (TypeError, struct.error), e:
+        raise Error("can't parse key packet: " + str(e))
 
     if version != KEY_VERSION:
         raise Error("unknown key version (%d)" % version)
