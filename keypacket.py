@@ -70,23 +70,33 @@ def fmt(secret, passphrase):
 
     return base64.b64encode(packet)
 
-def parse(packet, passphrase):
+def _parse(packet):
     try:
         packet = base64.b64decode(packet)
         version, khr, kcr = struct.unpack("!BHH", packet[:5])
     except (TypeError, struct.error), e:
         raise Error("can't parse key packet: " + str(e))
 
+    minimum_len = (5 + FINGERPRINT_LEN + 16)
+    if len(packet) < minimum_len:
+        raise Error("key packet length (%d) smaller than minimum (%d)" % (len(packet), minimum_len))
+
     if version != KEY_VERSION:
         raise Error("unknown key version (%d)" % version)
+
+    fingerprint = packet[5:5 + FINGERPRINT_LEN]
+    ciphertext = packet[5 + FINGERPRINT_LEN:]
+
+    return khr, kcr, fingerprint, ciphertext
+
+def parse(packet, passphrase):
+    khr, kcr, fingerprint, ciphertext = _parse(packet)
 
     if not passphrase:
         hash_repeats = cipher_repeats = 1
     else:
         hash_repeats = khr * 1000 + 1
         cipher_repeats = kcr * 1000 + 1
-
-    ciphertext = packet[5 + FINGERPRINT_LEN:]
 
     cipher_key = _cipher_key(passphrase, hash_repeats)
     decrypted = _repeat(lambda v: _cipher(cipher_key).decrypt(v),
@@ -104,5 +114,4 @@ def parse(packet, passphrase):
     return secret
 
 def fingerprint(packet):
-    fingerprint = base64.b64decode(packet)[5:5 + FINGERPRINT_LEN]
-    return base64.b16encode(fingerprint)
+    return base64.b16encode(_parse(packet)[2])
