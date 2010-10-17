@@ -155,7 +155,12 @@ def decrypt_key(key, interactive=True):
 
     while True:
         try:
-            p = passphrase.get_passphrase(confirm=False)
+            if interactive:
+                p = passphrase.get_passphrase(confirm=False)
+            else:
+                print "Passphrase: "
+                p = sys.stdin.readline().strip()
+
             return keypacket.parse(key, p)
 
         except keypacket.Error:
