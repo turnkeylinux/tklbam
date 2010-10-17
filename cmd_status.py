@@ -80,7 +80,7 @@ def main():
             print '  system to your TurnKey Hub account. For details see the man page or'
             print '  go to:'
             print 
-            print '      http://www.turnkeylinux.org/docs/tklbam'
+            print '      http://www.turnkeylinux.org/tklbam'
 
     elif status == Status.NO_BACKUP:
         print "TKLBAM (Backup and Migration):  NO BACKUPS"
@@ -89,7 +89,7 @@ def main():
             print '  To backup for the first time run the "tklbam-backup" command. For'
             print '  details see the man page or go to:'
             print 
-            print '      http://www.turnkeylinux.org/docs/tklbam'
+            print '      http://www.turnkeylinux.org/tklbam'
 
     elif status == Status.OK:
         hbr = registry.hbr
