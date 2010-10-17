@@ -1,0 +1,40 @@
+==================
+v1.1 Release Notes
+==================
+
+* UI fixes
+
+  - init
+  
+    - aded --force option to support re-initialization of TKLBAM
+    - increased robustness of stdin input of APIKEY
+    - added API-KEY validity check to tklbam-init (save round-trip)
+    - catch scary looking tracebacks on initialization
+
+  - backup
+  
+    - handle BackupAccount.NotFound error, raise NotSubscribedError
+    - removed --asynchronous-upload option (trade off better performance
+      on high speed networks with improved transparency)
+    - If user isn't subscribed, print out instructions, not a traceback
+
+  - restore: 
+  
+    - usepty=True in restore to prevent dpkg output from going crazy
+    - support --noninteractive mode (e.g., don't prompt or retry passphrases)
+
+  - added new status command (improve TKLBAM-Core integration)
+  - escrow: added -R flag as shortcut for --random-passphrase (convenience)
+  - list: size in megabytes instead of gigabytes (better resolution)
+
+* bugfixes
+
+  - increase nofile rlimit to 8192 (needed by long backup chains)
+  - don't tell the Hub to update the backup in simulate mode!
+  - add --allow-source-mismatch option to duplicity (otherwise Duplicity
+    refuses to backup if the hostname changes)
+  - if we skipped restoring files, don't try to rollback files
+  - rollback not just packages but package dependencies as well
+  - pidlock tklbam-backup so it doesn't run more than once
+  - chmod 600 the contents of the escrow key (may be sensitive)
+  - workaround for webmin getpass.getpass bug on Lucid
