@@ -316,7 +316,9 @@ class Backups:
         return self.user.backups[backup_id]
 
     def list_backups(self):
-        return self.user.backups.values()
+        backups = self.user.backups.values()
+        return sorted(self.user.backups.values(), 
+                      lambda a,b: cmp(int(a.backup_id), int(b.backup_id)))
 
     def updated_backup(self, address):
         # In the real implementation this should add a task which queries S3
