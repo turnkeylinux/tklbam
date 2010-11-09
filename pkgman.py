@@ -37,7 +37,7 @@ def installed():
     for control in parse_status("/var/lib/dpkg/status"):
         d = dict([ re.split(':\s*', line, 1) 
                    for line in control.split('\n') 
-                   if line and line[0] != ' ' ])
+                   if line and (':' in line) and (line[0] != ' ') ])
 
         if "ok installed" in d['Status']:
             packages.append(d['Package'])
