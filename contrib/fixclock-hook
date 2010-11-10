@@ -24,6 +24,8 @@ $ERROR
 """
 
 def fixclock():
+    os.environ['PATH'] += ':/usr/sbin'
+
     command = "ntpdate -u " + NTPSERVER
 
     try:
