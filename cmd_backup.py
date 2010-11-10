@@ -101,13 +101,12 @@ from conffile import ConfFile
 
 class ServerConf(ConfFile):
     CONF_FILE="/var/lib/hubclient/server.conf"
-    REQUIRED=['serverid']
 
 def get_server_id():
-    if not exists(ServerConf.CONF_FILE):
+    try:
+        return ServerConf()['serverid']
+    except KeyError:
         return None
-
-    return ServerConf()['serverid']
 
 def get_profile(hb):
     """Get a new profile if we don't have a profile in the registry or the Hub
