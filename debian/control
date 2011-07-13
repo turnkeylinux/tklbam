@@ -8,6 +8,6 @@ Standards-Version: 3.6.1
 Package: tklbam-testing
 Conflicts: tklbam
 Architecture: all
-Depends: python (>= 2.4), tklbam-duplicity, tklbam-python-boto, turnkey-pylib (>= 0.2), turnkey-version, python-crypto, pycurl-wrapper, python-simplejson, ca-certificates, ntpdate
+Depends: python (>= 2.4), tklbam-duplicity, tklbam-python-boto, turnkey-pylib (>= 0.3), turnkey-version, python-crypto, pycurl-wrapper, python-simplejson, ca-certificates, ntpdate
 Section: misc
 Description: TurnKey Linux Backup and Migration agent
