@@ -1,0 +1,631 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
+<title>TKLBAM-FAQ</title>
+<meta name="author" content="Liraz Siri &lt;liraz&#64;turnkeylinux.org&gt;" />
+<meta name="date" content="2010-09-01" />
+<style type="text/css">
+
+/*
+:Author: David Goodger (goodger@python.org)
+:Id: $Id: html4css1.css 6253 2010-03-02 00:24:53Z milde $
+:Copyright: This stylesheet has been placed in the public domain.
+
+Default cascading style sheet for the HTML output of Docutils.
+
+See http://docutils.sf.net/docs/howto/html-stylesheets.html for how to
+customize this style sheet.
+*/
+
+/* used to remove borders from tables and images */
+.borderless, table.borderless td, table.borderless th {
+  border: 0 }
+
+table.borderless td, table.borderless th {
+  /* Override padding for "table.docutils td" with "! important".
+     The right padding separates the table cells. */
+  padding: 0 0.5em 0 0 ! important }
+
+.first {
+  /* Override more specific margin styles with "! important". */
+  margin-top: 0 ! important }
+
+.last, .with-subtitle {
+  margin-bottom: 0 ! important }
+
+.hidden {
+  display: none }
+
+a.toc-backref {
+  text-decoration: none ;
+  color: black }
+
+blockquote.epigraph {
+  margin: 2em 5em ; }
+
+dl.docutils dd {
+  margin-bottom: 0.5em }
+
+/* Uncomment (and remove this text!) to get bold-faced definition list terms
+dl.docutils dt {
+  font-weight: bold }
+*/
+
+div.abstract {
+  margin: 2em 5em }
+
+div.abstract p.topic-title {
+  font-weight: bold ;
+  text-align: center }
+
+div.admonition, div.attention, div.caution, div.danger, div.error,
+div.hint, div.important, div.note, div.tip, div.warning {
+  margin: 2em ;
+  border: medium outset ;
+  padding: 1em }
+
+div.admonition p.admonition-title, div.hint p.admonition-title,
+div.important p.admonition-title, div.note p.admonition-title,
+div.tip p.admonition-title {
+  font-weight: bold ;
+  font-family: sans-serif }
+
+div.attention p.admonition-title, div.caution p.admonition-title,
+div.danger p.admonition-title, div.error p.admonition-title,
+div.warning p.admonition-title {
+  color: red ;
+  font-weight: bold ;
+  font-family: sans-serif }
+
+/* Uncomment (and remove this text!) to get reduced vertical space in
+   compound paragraphs.
+div.compound .compound-first, div.compound .compound-middle {
+  margin-bottom: 0.5em }
+
+div.compound .compound-last, div.compound .compound-middle {
+  margin-top: 0.5em }
+*/
+
+div.dedication {
+  margin: 2em 5em ;
+  text-align: center ;
+  font-style: italic }
+
+div.dedication p.topic-title {
+  font-weight: bold ;
+  font-style: normal }
+
+div.figure {
+  margin-left: 2em ;
+  margin-right: 2em }
+
+div.footer, div.header {
+  clear: both;
+  font-size: smaller }
+
+div.line-block {
+  display: block ;
+  margin-top: 1em ;
+  margin-bottom: 1em }
+
+div.line-block div.line-block {
+  margin-top: 0 ;
+  margin-bottom: 0 ;
+  margin-left: 1.5em }
+
+div.sidebar {
+  margin: 0 0 0.5em 1em ;
+  border: medium outset ;
+  padding: 1em ;
+  background-color: #ffffee ;
+  width: 40% ;
+  float: right ;
+  clear: right }
+
+div.sidebar p.rubric {
+  font-family: sans-serif ;
+  font-size: medium }
+
+div.system-messages {
+  margin: 5em }
+
+div.system-messages h1 {
+  color: red }
+
+div.system-message {
+  border: medium outset ;
+  padding: 1em }
+
+div.system-message p.system-message-title {
+  color: red ;
+  font-weight: bold }
+
+div.topic {
+  margin: 2em }
+
+h1.section-subtitle, h2.section-subtitle, h3.section-subtitle,
+h4.section-subtitle, h5.section-subtitle, h6.section-subtitle {
+  margin-top: 0.4em }
+
+h1.title {
+  text-align: center }
+
+h2.subtitle {
+  text-align: center }
+
+hr.docutils {
+  width: 75% }
+
+img.align-left, .figure.align-left, object.align-left {
+  clear: left ;
+  float: left ;
+  margin-right: 1em }
+
+img.align-right, .figure.align-right, object.align-right {
+  clear: right ;
+  float: right ;
+  margin-left: 1em }
+
+img.align-center, .figure.align-center, object.align-center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.align-left {
+  text-align: left }
+
+.align-center {
+  clear: both ;
+  text-align: center }
+
+.align-right {
+  text-align: right }
+
+/* reset inner alignment in figures */
+div.align-right {
+  text-align: left }
+
+/* div.align-center * { */
+/*   text-align: left } */
+
+ol.simple, ul.simple {
+  margin-bottom: 1em }
+
+ol.arabic {
+  list-style: decimal }
+
+ol.loweralpha {
+  list-style: lower-alpha }
+
+ol.upperalpha {
+  list-style: upper-alpha }
+
+ol.lowerroman {
+  list-style: lower-roman }
+
+ol.upperroman {
+  list-style: upper-roman }
+
+p.attribution {
+  text-align: right ;
+  margin-left: 50% }
+
+p.caption {
+  font-style: italic }
+
+p.credits {
+  font-style: italic ;
+  font-size: smaller }
+
+p.label {
+  white-space: nowrap }
+
+p.rubric {
+  font-weight: bold ;
+  font-size: larger ;
+  color: maroon ;
+  text-align: center }
+
+p.sidebar-title {
+  font-family: sans-serif ;
+  font-weight: bold ;
+  font-size: larger }
+
+p.sidebar-subtitle {
+  font-family: sans-serif ;
+  font-weight: bold }
+
+p.topic-title {
+  font-weight: bold }
+
+pre.address {
+  margin-bottom: 0 ;
+  margin-top: 0 ;
+  font: inherit }
+
+pre.literal-block, pre.doctest-block {
+  margin-left: 2em ;
+  margin-right: 2em }
+
+span.classifier {
+  font-family: sans-serif ;
+  font-style: oblique }
+
+span.classifier-delimiter {
+  font-family: sans-serif ;
+  font-weight: bold }
+
+span.interpreted {
+  font-family: sans-serif }
+
+span.option {
+  white-space: nowrap }
+
+span.pre {
+  white-space: pre }
+
+span.problematic {
+  color: red }
+
+span.section-subtitle {
+  /* font-size relative to parent (h1..h6 element) */
+  font-size: 80% }
+
+table.citation {
+  border-left: solid 1px gray;
+  margin-left: 1px }
+
+table.docinfo {
+  margin: 2em 4em }
+
+table.docutils {
+  margin-top: 0.5em ;
+  margin-bottom: 0.5em }
+
+table.footnote {
+  border-left: solid 1px black;
+  margin-left: 1px }
+
+table.docutils td, table.docutils th,
+table.docinfo td, table.docinfo th {
+  padding-left: 0.5em ;
+  padding-right: 0.5em ;
+  vertical-align: top }
+
+table.docutils th.field-name, table.docinfo th.docinfo-name {
+  font-weight: bold ;
+  text-align: left ;
+  white-space: nowrap ;
+  padding-left: 0 }
+
+h1 tt.docutils, h2 tt.docutils, h3 tt.docutils,
+h4 tt.docutils, h5 tt.docutils, h6 tt.docutils {
+  font-size: 100% }
+
+ul.auto-toc {
+  list-style-type: none }
+
+</style>
+</head>
+<body>
+<div class="document" id="tklbam-faq">
+<h1 class="title">TKLBAM-FAQ</h1>
+<h2 class="subtitle" id="frequently-asked-questions">Frequently Asked Questions</h2>
+<table class="docinfo" frame="void" rules="none">
+<col class="docinfo-name" />
+<col class="docinfo-content" />
+<tbody valign="top">
+<tr><th class="docinfo-name">Author:</th>
+<td>Liraz Siri &lt;<a class="reference external" href="mailto:liraz&#64;turnkeylinux.org">liraz&#64;turnkeylinux.org</a>&gt;</td></tr>
+<tr><th class="docinfo-name">Date:</th>
+<td>2010-09-01</td></tr>
+<tr class="field"><th class="docinfo-name">Manual section:</th><td class="field-body">7</td>
+</tr>
+<tr class="field"><th class="docinfo-name">Manual group:</th><td class="field-body">backup</td>
+</tr>
+</tbody>
+</table>
+<div class="section" id="general-questions">
+<h1>GENERAL QUESTIONS</h1>
+<div class="section" id="is-tklbam-open-source">
+<h2>Is TKLBAM open source?</h2>
+<p>Yes, TKLBAM is licensed under the GPL3. You don't have to care about
+free software ideology to appreciate the advantages. Any code running on
+your server doing something as critical as encrypted backups should be
+available for peer review and modification.</p>
+</div>
+<div class="section" id="where-can-i-use-tklbam">
+<h2>Where can I use TKLBAM?</h2>
+<p>On any system descended from a TurnKey Linux installation, regardless of
+hardware or location. Storing backups to Amazon S3 is easiest because
+authentication and key management are automatic. You just need to run:</p>
+<pre class="literal-block">
+tklbam-backup
+</pre>
+<p>But you can also backup to any storage target supported by TKLBAM's
+back-end Duplicity including the local filesystem, NFS, Rsync, SSH, FTP,
+WebDAV, Rackspace CloudFiles and even IMAP.</p>
+<p>The local filesystem is one of the easier storage targets to use because
+you don't need to mess around with authentication credentials.</p>
+<p>So assuming you want to store your backup at /mnt/otherdisk:</p>
+<pre class="literal-block">
+tklbam-backup --address file:///mnt/otherdisk/tklbam/backup
+tklbam-escrow /mnt/otherdisk/tklbam/key
+</pre>
+<p>And restore like this:</p>
+<pre class="literal-block">
+tklbam-restore --address file:///mnt/otherdisk/tklbam/backup \
+               --keyfile=/mnt/otherdisk/tklbam/key
+</pre>
+<p>Not as easy as the Hub-enabled &quot;automatic&quot; mode, but still vastly easier
+than your conventional backup process. The disadvantage is that you
+won't be able to restore/test your backup in the cloud, or from a VM
+running in another office branch (for example). Also keep in mind that a
+physical hard disk, even a RAID array, provides much much lower data
+reliability compared with Amazon S3.</p>
+<p>For this reason we recommend users use local backups to supplement cloud
+backups (e.g., providing fast local access).</p>
+</div>
+<div class="section" id="why-can-t-i-backup-a-non-turnkey-linux-system-with-tklbam">
+<h2>Why can't I backup a non-TurnKey Linux system with TKLBAM?</h2>
+<p>TKLBAM is short for 'TurnKey Linux' Backup and Migration. It's designed
+specifically for TurnKey Linux and depends on many system-level details
+that don't necessarily apply to other Linux distributions (e.g.,
+installation method, versioning signatures, etc.).</p>
+<p>In the future, we may figure out how to extend the design to support
+additional operating systems, but it's not trivial and we don't have a
+timeline on when, or even if, that will happen.</p>
+<p>In the meantime, if you really want to use TKLBAM, consider
+virtualization-based workarounds. For example, if you install a TurnKey
+Linux VM on top of a Windows Server installation, you could use TKLBAM
+to backup anything that goes into the TurnKey Linux VM.</p>
+</div>
+<div class="section" id="which-turnkey-appliances-are-supported">
+<h2>Which TurnKey appliances are supported?</h2>
+<p>With a few exceptions, all TurnKey appliances images from the
+2009.02 release batch onwards will work with TKLBAM, including the
+recent Lucid and Lenny based Core betas.</p>
+<p>Unfortunately, at this time Zimbra and the PostgreSQL based appliances
+(PostgreSQL, LAPP, OpenBravo) are not yet supported.</p>
+<p>PostgreSQL support is in the works but it's not ready yet.</p>
+</div>
+<div class="section" id="which-databases-are-supported">
+<h2>Which databases are supported?</h2>
+<p>Currently only MySQL. PostgreSQL support is under development.
+Support for additional databases will be added as needed. Currently
+TurnKey appliances only include MySQL and PostgreSQL databases.</p>
+</div>
+</div>
+<div class="section" id="pricing-questions">
+<h1>PRICING QUESTIONS</h1>
+<div class="section" id="how-much-does-this-cost">
+<h2>How much does this cost?</h2>
+<p>TKLBAM (and the TurnKey Hub) are currently free for private beta users.
+Amazon S3 storage fees are around $0.15/GB per month. Full details of
+Amazon S3 pricing can be found here.</p>
+<p>You can use simulation mode to calculate how much uncompressed data
+TKLBAM is going to store in a full backup:</p>
+<pre class="literal-block">
+$ tklbam-backup --simulate
+CREATING /TKLBAM
+FULL UNCOMPRESSED FOOTPRINT: 148.30 MB in 6186 files
+</pre>
+<p>In practice, the actual footprint of a full backup will usually be
+smaller due to compression, but this depends on the type of data being
+compressed (e.g., text compresses very well, video very poorly).</p>
+<p>By default, a full backup is performed if one month has passed since the
+last full backup. In between, incremental backups will be performed
+which only record changes since the last backup. The full backup
+frequency can be customized. See this manual page for details.</p>
+</div>
+<div class="section" id="the-hub-says-my-backup-costs-0-00-what-am-i-really-paying">
+<h2>The Hub says my backup costs $0.00, what am I really paying?</h2>
+<p>If you notice $0.00 in the backups console, there's no need to open a
+support request. It's not a bug. At 15 cents per gigabyte, if you have
+just a few megabytes of data Amazon doesn't charge you anything.</p>
+<p>Backups start from about 10KB for a freshly installed TurnKey appliance.
+Remember, TKLBAM only saves changes you've made since the appliance was
+installed.</p>
+<p>In fact, a significant number of users are being charged less than 1
+cent a month.</p>
+</div>
+</div>
+<div class="section" id="usage-questions">
+<h1>USAGE QUESTIONS</h1>
+<div class="section" id="how-does-tklbam-know-what-to-backup-on-my-system">
+<h2>How does TKLBAM know what to backup on my system?</h2>
+<p>Every TurnKey appliance that TKLBAM supports has a corresponding
+backup profile, which is downloaded from the Hub the first time you
+backup an appliance. When required the profile can be updated on
+demand (e.g., if we need to fix the profile)</p>
+<p>The profile is stored in /var/lib/tklbam/profile and contains the
+following text files:</p>
+<ol class="arabic simple">
+<li>dirindex.conf: a list of directories to check for changes by default.
+This list does not include any files or directories maintained by the
+package management system.</li>
+<li>dirindex: appliance installation state - filesystem index</li>
+<li>packages: appliance installation state - list of packages</li>
+</ol>
+<p>Users can override which files and directories are checked for changes by
+configuring overrides (See below).</p>
+</div>
+<div class="section" id="how-do-i-remove-a-file-or-directory-from-being-included-in-my-backup">
+<h2>How do I remove a file or directory from being included in my backup?</h2>
+<p>By adding a negative override to /etc/tklbam/overrides:</p>
+<pre class="literal-block">
+echo -/var/www/*/logs &gt;&gt; /etc/tklbam/overrides
+</pre>
+</div>
+<div class="section" id="how-do-i-add-a-directory-to-my-backup">
+<h2>How do I add a directory to my backup?</h2>
+<p>By adding an override to /etc/tklbam/overrides:</p>
+<pre class="literal-block">
+echo /mnt/images &gt;&gt; /etc/tklbam/overrides
+</pre>
+<p>Make sure you understand the implications of doing this. For example, if
+you add a directory handled by package management this may break package
+management on the system you restore to.</p>
+</div>
+<div class="section" id="how-do-i-exclude-a-database-or-table-from-my-backup">
+<h2>How do I exclude a database or table from my backup?</h2>
+<p>By adding a negative database override to /etc/tklbam/overrides:</p>
+<pre class="literal-block">
+# exclude drupal5 database
+echo -mysql:drupal5 &gt;&gt; /etc/tklbam/overrides
+
+# exclude sessions table in drupal6 database
+echo -mysql:drupal6/sessions &gt;&gt; /etc/tklbam/overrides
+</pre>
+<p>By default ALL databases are backed up so adding a negative database
+override override excludes only that database or table from the backup.</p>
+<p>By contrast, a positive database override changes the default behavior
+so that only the database or table specified in the override is included
+in the backup.</p>
+<p>You can mix positive overrides with negative overrides.</p>
+</div>
+<div class="section" id="what-s-the-difference-between-a-full-backup-and-an-incremental-backup">
+<h2>What's the difference between a full backup and an incremental backup?</h2>
+<p>A full backup is a backup that can be restored independently of any
+other backup. An incremental backup links with the last backup before it
+and only includes changes made since.</p>
+<p>Backup chains are links of backup sessions which start with a full
+backup, and then a series of incremental backups each recording only the
+changes made since the backup before it. Incremental backups are useful
+because they are fast and efficient.</p>
+<p>Restoring an incremental backup requires retrieving the volumes of all
+backup sessions made before it, up to and including the full backup that
+started the chain. The longer the backup chain, the more time it will
+take to restore.</p>
+</div>
+<div class="section" id="how-often-does-a-does-a-full-backup-happen-how-can-i-configure-this">
+<h2>How often does a does a full backup happen, how can I configure this?</h2>
+<p>By default, a full backup will happen if the last full backup is
+older than 30 days. Between full backups, all backup sessions are
+incremental.</p>
+<p>We recommend enabling the daily backup cron job so that daily
+incremental backups happen automatically:</p>
+<pre class="literal-block">
+chmod +x /etc/cron.daily/tklbam-backup
+</pre>
+<p>You can override the default by setting the full-backup parameter in
+the tklbam configuration:</p>
+<pre class="literal-block">
+# create a full backup every 14 days
+echo full-backup 14D &gt;&gt; /etc/tklbam/conf
+</pre>
+</div>
+<div class="section" id="i-forgot-my-passphrase-and-i-lost-my-escrow-key-can-you-help-me">
+<h2>I forgot my passphrase, and I &quot;lost&quot; my escrow key. Can you help me?</h2>
+<p>Sorry, if your server is gone (e.g., terminated EC2 instance) nobody can
+help you. Next time either save an escrow key somewhere[s] safe or don't
+set a passphrase.</p>
+<p>Don't misunderstand, we'd love to help if we could, but we can't. The
+encryption key for your backup was generated locally on your server not
+ours. We designed passphrase protection to use special cryptographic
+countermeasures to make typical cracking techniques (e.g., dictionary
+attacks) very difficult even for someone with access to massive amounts
+of computer resources.</p>
+<p>Note, if the system you backed up is still available, just log into it
+as root and change the passphrase (you don't need to know the old
+passphrase):</p>
+<pre class="literal-block">
+tklbam-passphrase
+</pre>
+</div>
+</div>
+<div class="section" id="amazon-s3-questions">
+<h1>AMAZON S3 QUESTIONS</h1>
+<div class="section" id="do-i-have-to-use-amazon-s3-for-storage">
+<h2>Do I have to use Amazon S3 for storage?</h2>
+<p>No. Any storage target supported by Duplicity can be forced by adding
+the --address option when you backup and restore, but consider yourself
+warned...</p>
+<p>Here Be Dragons!</p>
+<p>Doing this complicates usage as the Hub only helps you manage your
+backups when it auto-configures the storage address. If you specify a
+manual address you are on your own. You will need to manage backups,
+encryption keys and authentication credentials by hand.  You may also
+run into unexpected bugs because this functionality has received limited
+attention so far.</p>
+<p>In short. Many things can go wrong so please be extra careful.</p>
+</div>
+<div class="section" id="why-can-t-i-access-tklbam-storage-buckets-with-other-amazon-s3-tools">
+<h2>Why can't I access TKLBAM storage buckets with other Amazon S3 tools?</h2>
+<p>TKLBAM doesn't store it's data in generic S3 buckets, but in an isolated
+TKLBAM-specific area on S3. This means generic S3 tools such as the AWS
+management console, or S3Fox will not be able to access the storage
+buckets in which TKLBAM backup volumes reside.</p>
+</div>
+<div class="section" id="what-are-the-advantages-of-isolating-tklbam-amazon-s3-storage">
+<h2>What are the advantages of isolating TKLBAM Amazon S3 storage?</h2>
+<ol class="arabic simple">
+<li>Easier sign up process. Users don't need to know anything about S3
+API keys or understand the implications of giving them to us.</li>
+<li>Security: you don't need to give us access to your generic S3
+account. If someone compromises your regular AWS API Key they still
+can't get to your encrypted backup volumes and say...  delete them.</li>
+<li>Cost transparency: TKLBAM related storage charges show up separately
+from your generic S3 storage.</li>
+</ol>
+</div>
+<div class="section" id="what-happens-if-my-payment-method-to-amazon-is-invalidated">
+<h2>What happens if my payment method to Amazon is invalidated?</h2>
+<p>Amazon supports payment by credit card and bank account. We recommend
+heavy users add a bank account as their payment method, as it's usually
+more permanent than a credit card.</p>
+<p>In any case, if your payment method is invalidated (e.g., cancelled or
+expired credit card), billing will fail and Amazon will attempt to
+contact you (e.g., by e-mail) to provide a new, valid payment method.</p>
+</div>
+</div>
+<div class="section" id="fault-tolerance-for-the-paranoid-it-guy">
+<h1>FAULT TOLERANCE FOR THE PARANOID IT GUY</h1>
+<div class="section" id="is-the-hub-tklbam-s-central-point-of-failure">
+<h2>Is the Hub TKLBAM's central point of failure?</h2>
+<p>Yes and no. On one hand, much of the streamlined usability of TKLBAM
+depends on the availability of the Hub. On the other hand, we designed
+TKLBAM to degrade gracefully if the Hub ever goes down (it shouldn't!).</p>
+<p>As we scale the Hub we will gradually add capacity and build in
+additional layers of fault tolerance.</p>
+<p>We have monitoring in place which alerts us immediately if anything
+unexpected happens.</p>
+</div>
+<div class="section" id="if-the-hub-goes-down-will-my-backup-cron-jobs-still-work">
+<h2>If the Hub goes down, will my backup cron jobs still work?</h2>
+<p>Yes. Backups which have already been configured will continue to work
+normally. If TKLBAM can't reach the Hub it just uses the locally cached
+profile and S3 address.</p>
+</div>
+<div class="section" id="if-my-connection-to-the-hub-goes-down-can-i-still-restore">
+<h2>If my connection to the Hub goes down, can I still restore?</h2>
+<p>Yes - manually. It just won't be as easy. You'll need to do a couple of
+steps by hand:</p>
+<ol class="arabic">
+<li><p class="first">transfer the escrow key to the restore target.</p>
+<p>This means you'll need to have stored the escrow key somewhere safe
+or be able to create it on the backed up machine.</p>
+</li>
+<li><p class="first">specify the S3 address and the key manually when you restore.</p>
+<p>For more details see the tklbam-restore documentation.</p>
+</li>
+</ol>
+</div>
+<div class="section" id="if-the-hub-goes-down-can-i-still-create-a-new-backup">
+<h2>If the Hub goes down, can I still create a new backup?</h2>
+<p>Yes - but only manually. Just remember the Hub won't know anything about
+these backups so you'll have manage keys and authentication credentials
+by hand.</p>
+</div>
+</div>
+<div class="section" id="see-also">
+<h1>SEE ALSO</h1>
+<p><tt class="docutils literal">tklbam</tt> (8)</p>
+</div>
+</div>
+</body>
+</html>

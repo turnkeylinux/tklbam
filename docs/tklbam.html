@@ -1,0 +1,527 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
+<title>TKLBAM</title>
+<meta name="author" content="Liraz Siri &lt;liraz&#64;turnkeylinux.org&gt;" />
+<meta name="date" content="2010-09-01" />
+<style type="text/css">
+
+/*
+:Author: David Goodger (goodger@python.org)
+:Id: $Id: html4css1.css 6253 2010-03-02 00:24:53Z milde $
+:Copyright: This stylesheet has been placed in the public domain.
+
+Default cascading style sheet for the HTML output of Docutils.
+
+See http://docutils.sf.net/docs/howto/html-stylesheets.html for how to
+customize this style sheet.
+*/
+
+/* used to remove borders from tables and images */
+.borderless, table.borderless td, table.borderless th {
+  border: 0 }
+
+table.borderless td, table.borderless th {
+  /* Override padding for "table.docutils td" with "! important".
+     The right padding separates the table cells. */
+  padding: 0 0.5em 0 0 ! important }
+
+.first {
+  /* Override more specific margin styles with "! important". */
+  margin-top: 0 ! important }
+
+.last, .with-subtitle {
+  margin-bottom: 0 ! important }
+
+.hidden {
+  display: none }
+
+a.toc-backref {
+  text-decoration: none ;
+  color: black }
+
+blockquote.epigraph {
+  margin: 2em 5em ; }
+
+dl.docutils dd {
+  margin-bottom: 0.5em }
+
+/* Uncomment (and remove this text!) to get bold-faced definition list terms
+dl.docutils dt {
+  font-weight: bold }
+*/
+
+div.abstract {
+  margin: 2em 5em }
+
+div.abstract p.topic-title {
+  font-weight: bold ;
+  text-align: center }
+
+div.admonition, div.attention, div.caution, div.danger, div.error,
+div.hint, div.important, div.note, div.tip, div.warning {
+  margin: 2em ;
+  border: medium outset ;
+  padding: 1em }
+
+div.admonition p.admonition-title, div.hint p.admonition-title,
+div.important p.admonition-title, div.note p.admonition-title,
+div.tip p.admonition-title {
+  font-weight: bold ;
+  font-family: sans-serif }
+
+div.attention p.admonition-title, div.caution p.admonition-title,
+div.danger p.admonition-title, div.error p.admonition-title,
+div.warning p.admonition-title {
+  color: red ;
+  font-weight: bold ;
+  font-family: sans-serif }
+
+/* Uncomment (and remove this text!) to get reduced vertical space in
+   compound paragraphs.
+div.compound .compound-first, div.compound .compound-middle {
+  margin-bottom: 0.5em }
+
+div.compound .compound-last, div.compound .compound-middle {
+  margin-top: 0.5em }
+*/
+
+div.dedication {
+  margin: 2em 5em ;
+  text-align: center ;
+  font-style: italic }
+
+div.dedication p.topic-title {
+  font-weight: bold ;
+  font-style: normal }
+
+div.figure {
+  margin-left: 2em ;
+  margin-right: 2em }
+
+div.footer, div.header {
+  clear: both;
+  font-size: smaller }
+
+div.line-block {
+  display: block ;
+  margin-top: 1em ;
+  margin-bottom: 1em }
+
+div.line-block div.line-block {
+  margin-top: 0 ;
+  margin-bottom: 0 ;
+  margin-left: 1.5em }
+
+div.sidebar {
+  margin: 0 0 0.5em 1em ;
+  border: medium outset ;
+  padding: 1em ;
+  background-color: #ffffee ;
+  width: 40% ;
+  float: right ;
+  clear: right }
+
+div.sidebar p.rubric {
+  font-family: sans-serif ;
+  font-size: medium }
+
+div.system-messages {
+  margin: 5em }
+
+div.system-messages h1 {
+  color: red }
+
+div.system-message {
+  border: medium outset ;
+  padding: 1em }
+
+div.system-message p.system-message-title {
+  color: red ;
+  font-weight: bold }
+
+div.topic {
+  margin: 2em }
+
+h1.section-subtitle, h2.section-subtitle, h3.section-subtitle,
+h4.section-subtitle, h5.section-subtitle, h6.section-subtitle {
+  margin-top: 0.4em }
+
+h1.title {
+  text-align: center }
+
+h2.subtitle {
+  text-align: center }
+
+hr.docutils {
+  width: 75% }
+
+img.align-left, .figure.align-left, object.align-left {
+  clear: left ;
+  float: left ;
+  margin-right: 1em }
+
+img.align-right, .figure.align-right, object.align-right {
+  clear: right ;
+  float: right ;
+  margin-left: 1em }
+
+img.align-center, .figure.align-center, object.align-center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.align-left {
+  text-align: left }
+
+.align-center {
+  clear: both ;
+  text-align: center }
+
+.align-right {
+  text-align: right }
+
+/* reset inner alignment in figures */
+div.align-right {
+  text-align: left }
+
+/* div.align-center * { */
+/*   text-align: left } */
+
+ol.simple, ul.simple {
+  margin-bottom: 1em }
+
+ol.arabic {
+  list-style: decimal }
+
+ol.loweralpha {
+  list-style: lower-alpha }
+
+ol.upperalpha {
+  list-style: upper-alpha }
+
+ol.lowerroman {
+  list-style: lower-roman }
+
+ol.upperroman {
+  list-style: upper-roman }
+
+p.attribution {
+  text-align: right ;
+  margin-left: 50% }
+
+p.caption {
+  font-style: italic }
+
+p.credits {
+  font-style: italic ;
+  font-size: smaller }
+
+p.label {
+  white-space: nowrap }
+
+p.rubric {
+  font-weight: bold ;
+  font-size: larger ;
+  color: maroon ;
+  text-align: center }
+
+p.sidebar-title {
+  font-family: sans-serif ;
+  font-weight: bold ;
+  font-size: larger }
+
+p.sidebar-subtitle {
+  font-family: sans-serif ;
+  font-weight: bold }
+
+p.topic-title {
+  font-weight: bold }
+
+pre.address {
+  margin-bottom: 0 ;
+  margin-top: 0 ;
+  font: inherit }
+
+pre.literal-block, pre.doctest-block {
+  margin-left: 2em ;
+  margin-right: 2em }
+
+span.classifier {
+  font-family: sans-serif ;
+  font-style: oblique }
+
+span.classifier-delimiter {
+  font-family: sans-serif ;
+  font-weight: bold }
+
+span.interpreted {
+  font-family: sans-serif }
+
+span.option {
+  white-space: nowrap }
+
+span.pre {
+  white-space: pre }
+
+span.problematic {
+  color: red }
+
+span.section-subtitle {
+  /* font-size relative to parent (h1..h6 element) */
+  font-size: 80% }
+
+table.citation {
+  border-left: solid 1px gray;
+  margin-left: 1px }
+
+table.docinfo {
+  margin: 2em 4em }
+
+table.docutils {
+  margin-top: 0.5em ;
+  margin-bottom: 0.5em }
+
+table.footnote {
+  border-left: solid 1px black;
+  margin-left: 1px }
+
+table.docutils td, table.docutils th,
+table.docinfo td, table.docinfo th {
+  padding-left: 0.5em ;
+  padding-right: 0.5em ;
+  vertical-align: top }
+
+table.docutils th.field-name, table.docinfo th.docinfo-name {
+  font-weight: bold ;
+  text-align: left ;
+  white-space: nowrap ;
+  padding-left: 0 }
+
+h1 tt.docutils, h2 tt.docutils, h3 tt.docutils,
+h4 tt.docutils, h5 tt.docutils, h6 tt.docutils {
+  font-size: 100% }
+
+ul.auto-toc {
+  list-style-type: none }
+
+</style>
+</head>
+<body>
+<div class="document" id="tklbam">
+<h1 class="title">TKLBAM</h1>
+<h2 class="subtitle" id="turnkey-linux-backup-and-migration">TurnKey Linux Backup and Migration</h2>
+<table class="docinfo" frame="void" rules="none">
+<col class="docinfo-name" />
+<col class="docinfo-content" />
+<tbody valign="top">
+<tr><th class="docinfo-name">Author:</th>
+<td>Liraz Siri &lt;<a class="reference external" href="mailto:liraz&#64;turnkeylinux.org">liraz&#64;turnkeylinux.org</a>&gt;</td></tr>
+<tr><th class="docinfo-name">Date:</th>
+<td>2010-09-01</td></tr>
+<tr class="field"><th class="docinfo-name">Manual section:</th><td class="field-body">8</td>
+</tr>
+<tr class="field"><th class="docinfo-name">Manual group:</th><td class="field-body">backup</td>
+</tr>
+</tbody>
+</table>
+<div class="section" id="synopsis">
+<h1>SYNOPSIS</h1>
+<p>tklbam &lt;command&gt; [arguments]</p>
+</div>
+<div class="section" id="description">
+<h1>DESCRIPTION</h1>
+<p>TKLBAM (TurnKey Linux Backup and Migration), is a smart automated backup
+and restore facility for the TurnKey Linux Virtual Appliance Library.</p>
+<div class="section" id="goals">
+<h2>Goals</h2>
+<p>TKLBAM is designed to provide an efficient system-level backup of
+changed files, users, databases and package management state. This
+system-level backup can be restored automatically on any installation of
+the same type of virtual appliance, regardless of the underlying
+hardware or location. The intended result is a functionally equivalent
+copy of the original system.</p>
+<p>It is also designed to assist in migration of data and system
+configurations between different versions of the same type of virtual
+appliance though for some applications, additional manual steps, such as
+a database schema update, may be required to complete migration between
+versions.</p>
+</div>
+<div class="section" id="key-elements">
+<h2>Key elements</h2>
+<p><cite>TurnKey Hub</cite>: a web service which provides the front-end for backup
+management. The user links an appliance to a specific Hub account
+identified by an API KEY.</p>
+<p><cite>Backup profile</cite>: describes the installation state for a specific type
+and version of appliance. An appropriate profile is downloaded from
+the Hub the first time you backup, or as required if there is a
+profile update (e.g., bugfix).</p>
+<p><cite>Delta</cite>: a set of changes since installation to files, users, databases
+and package management state. This is calculated at backup time by
+comparing the current system state to the installation state described
+by the backup profile.</p>
+<p><cite>Encryption key</cite>: generated locally on your server and used to directly
+encrypt your backup volumes. By default key management is handled
+transparently by the Hub. For extra security, the encryption key may
+be passphrase protected cryptographically. An escrow key can be
+created to protect against data loss in case the password is
+forgotten.</p>
+<p><cite>Duplicity</cite>: back-end primitive that the backup and restore operations
+invoke to encode, transfer and decode encrypted backup volumes which
+contain the delta. It communicates directly with the storage target
+(e.g., Amazon S3). In normal usage the storage target is
+auto-configured by the Hub. Duplicity uses the rsync algorithm to
+support efficient incremental backups. It uses GnuPG for symmetric
+encryption (AES).</p>
+<p><cite>Amazon S3</cite>: a highly-durable cloud storage service where encrypted
+backup volumes are uploaded to by default. To improve network
+performance, backups are routed to the closest datacenter, based on
+a GeoIP lookup table.</p>
+<p>Any storage target supported by Duplicity can be forced but this
+complicates usage as the Hub can only work with S3. This means
+backups, encryption keys and authentication credentials will need to
+be managed by hand.</p>
+</div>
+<div class="section" id="principle-of-operation">
+<h2>Principle of operation</h2>
+<p>Every TKLBAM-supported TurnKey appliance has a corresponding backup
+profile that describes installation state and includes an
+appliance-specific list of files and directories to check for changes.
+This list does not include any files or directories maintained by the
+package management system.</p>
+<p>A delta (I.e., changeset) is calculated by comparing the current system
+state to the installation state. Only this delta is backed up and only
+this delta is re-applied on restore.</p>
+<p>An exception is made with regards to database contents. These are backed
+up and restored whole, unless otherwise configured by the user.</p>
+<p>In addition to direct filesystem changes to user writeable directories
+(e.g., /etc, /var/www, /home) the backup delta is calculated to include
+a list of any new packages not originally in the appliance's
+installation manifest. During restore, the package management system is
+leveraged to install these new packages from the configured software
+repositories.</p>
+<p>Users and groups from the backed up system are merged on restore. If
+necessary, uids / gids of restored files and directories are remapped to
+maintain correct ownership.</p>
+<p>Similarly, permissions for files and directories are adjusted as
+necessary to match permissions on the backed up system.</p>
+</div>
+</div>
+<div class="section" id="commands">
+<h1>COMMANDS</h1>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">init:</th><td class="field-body">Initialization (links TKLBAM to Hub account)</td>
+</tr>
+<tr class="field"><th class="field-name">passphrase:</th><td class="field-body">Change passphrase of backup encryption key</td>
+</tr>
+<tr class="field"><th class="field-name">escrow:</th><td class="field-body">Create a backup escrow key (Save this somewhere safe)</td>
+</tr>
+<tr class="field"><th class="field-name">backup:</th><td class="field-body">Backup the current system</td>
+</tr>
+<tr class="field"><th class="field-name">list:</th><td class="field-body">List backup records</td>
+</tr>
+<tr class="field"><th class="field-name">restore:</th><td class="field-body">Restore a backup</td>
+</tr>
+<tr class="field"><th class="field-name" colspan="2">restore-rollback:</th></tr>
+<tr><td>&nbsp;</td><td class="field-body">Rollback last restore</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="example-usage-scenario">
+<h1>EXAMPLE USAGE SCENARIO</h1>
+<p>Alon is developing a new web site. He starts by deploying TurnKey LAMP
+to a virtual machine running on his laptop. This will serve as his local
+development server. He names it DevBox.</p>
+<p>He customizes DevBox by:</p>
+<ul class="simple">
+<li>creating user 'alon'.</li>
+<li>extracting an archive of his web application to /var/www</li>
+<li>tweaking Apache configuration directives in /etc/apache2/httpd.conf
+until his web application works.</li>
+<li>installing php5-xcache via the package manager</li>
+<li>enabling xcache by editing a section in /etc/php5/apache2/php.ini</li>
+<li>creating a new database user with reduced privileges for his web
+application.</li>
+<li>configuring and installing the web application, which creates a new
+MySQL database.</li>
+</ul>
+<p>After a few days of hacking on the web application, Alon is ready to
+show off a prototype of his creation to some friends from out of town.</p>
+<p>He logs into the TurnKey Hub and launches a new TurnKey LAMP server in
+the Amazon EC2 cloud. He names it CloudBox.</p>
+<p>On both DevBox and CloudBox Alon installs and initializes TKLBAM with
+the following commands:</p>
+<pre class="literal-block">
+apt-get update
+apt-get install tklbam
+
+# The API Key is needed to link tklbam to Alon's Hub account
+tklbam-init QPINK3GD7HHT3A
+</pre>
+<p>On DevBox Alon runs a backup:</p>
+<pre class="literal-block">
+root&#64;DevBox:~# tklbam-backup
+</pre>
+<p>Behind the scenes, TKLBAM downoads from the Hub a profile for the
+version of TurnKey LAMP Alon is using. The profile describes the state
+of DevBox right after installation, before Alon customized it. This
+allows TKLBAM to detect all the files and directories that Alon has
+added or edited since. Any new packages Alon installed are similarly
+detected.</p>
+<p>As for his MySQL databases, it's all taken care of transparently but if
+Alon dug deeper he would discover that their full contents are being
+serialized and encoded into a special file structure optimized for
+efficiency on subsequent incremental backups. Between backups Alon
+usually only updates a handful of tables and rows, so the following
+incremental backups are very small, just a few KBs!</p>
+<p>When TKLBAM is done calculating the delta and serializing database
+contents, it invokes Duplicity to encode backup contents into a chain of
+encrypted backup volumes which are uploaded to Amazon S3.</p>
+<p>When Alon's first backup is complete, a new record shows up in the
+Backups section of his TurnKey Hub account.</p>
+<p>Now to restore the DevBox backup on CloudBox:</p>
+<pre class="literal-block">
+root&#64;CloudBox:~# tklbam-list
+# ID  SKPP  Created     Updated     Size (GB)  Label
+   1  No    2010-09-01  2010-09-01  0.02       TurnKey LAMP
+
+root&#64;CloudBox:~# tklbam-restore 1
+</pre>
+<p>When the restore is done Alon points his browser to CloudBox's IP
+address and is delighted to see his web application running there,
+exactly the same as it does on DevBox.</p>
+<p>Alon, a tinkerer at heart, is curious to learn more about how the backup
+and restore process works. By default, the restore process reports what
+it's doing verbosely to the screen. But Alon had a hard time following
+the output in real time, because everything happened so fast!
+Thankfully, all the output is also saved to a log file at
+/var/log/tklbam-restore.</p>
+<p>Alon consults the log file and can see that only the files he added or
+changed on DevBox were restored to CloudBox. Database state was
+unserialized. The xcache package was installed via the package manager.
+User alon was recreated. It's uid didn't conflict with any other
+existing user on CloudBox so the restore process didn't need to remap it
+to another uid and fix ownership of Alon's files. Not that it would
+matter to Alon either way. It's all automagic.</p>
+</div>
+<div class="section" id="files">
+<h1>FILES</h1>
+<ul class="simple">
+<li>/var/lib/tklbam: the registry</li>
+</ul>
+</div>
+<div class="section" id="see-also">
+<h1>SEE ALSO</h1>
+<p><tt class="docutils literal"><span class="pre">tklbam-faq</span></tt> (7)</p>
+</div>
+</div>
+</body>
+</html>
