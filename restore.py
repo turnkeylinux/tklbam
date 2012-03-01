@@ -211,13 +211,7 @@ class Restore:
                     if lexists(root_fpath):
                         utils.remove_any(root_fpath)
 
-                    # temporary workaround for shutil.move bug
-                    if islink(overlay_fpath):
-                        linkto = os.readlink(overlay_fpath)
-                        os.symlink(linkto, root_fpath)
-                        os.unlink(overlay_fpath)
-                    else:
-                        shutil.move(overlay_fpath, root_fpath)
+                    utils.move(overlay_fpath, root_fpath)
                     yield root_fpath
                 except Exception, e:
                     yield OverlayError(root_fpath, e)

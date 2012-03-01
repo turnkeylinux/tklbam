@@ -22,7 +22,7 @@ from changes import Changes
 from dirindex import DirIndex
 from pkgman import Packages
 
-from utils import remove_any
+import utils
 
 class Error(Exception):
     pass
@@ -66,8 +66,8 @@ class Rollback:
         if not exists(dirname(dest)):
             os.makedirs(dirname(dest))
 
-        remove_any(dest)
-        shutil.move(source, dest)
+        utils.remove_any(dest)
+        utils.move(source, dest)
 
     def _move_to_originals(self, source):
         """Move source into originals"""
@@ -88,7 +88,7 @@ class Rollback:
 
         for change in changes:
             if change.path not in dirindex:
-                remove_any(change.path)
+                utils.remove_any(change.path)
                 continue
 
             if change.OP in ('o', 'd'):

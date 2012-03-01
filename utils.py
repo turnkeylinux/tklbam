@@ -12,6 +12,7 @@ import os
 from os.path import *
 
 import shutil
+import stat
 
 def remove_any(path):
     """Remove a path whether it is a file or a directory.
@@ -43,3 +44,19 @@ def is_writeable(fpath):
     except IOError:
         return False
 
+# workaround for shutil.move across-filesystem bugs
+def move(src, dst):
+    st = os.lstat(src)
+
+    is_symlink = stat.S_ISLNK(st.st_mode)
+
+    if os.path.isdir(dst):
+        dst = os.path.join(dst, os.path.basename(os.path.abspath(src)))
+
+    if is_symlink:
+        linkto = os.readlink(src)
+        os.symlink(linkto, dst)
+        os.unlink(src)
+    else: 
+        shutil.move(src, dst) 
+        os.lchown(dst, st.st_uid, st.st_gid)
