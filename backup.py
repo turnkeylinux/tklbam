@@ -318,7 +318,7 @@ class Backup:
                  ('exclude', '**')]
 
 
-        args = [ '--s3-unencrypted-connection', '--allow-source-mismatch', '--asynchronous-upload' ] 
+        args = [ '--s3-unencrypted-connection', '--allow-source-mismatch' ] 
          
         if conf.s3_parallel_uploads > 1:
             s3_multipart_chunk_size = conf.volsize / conf.s3_parallel_uploads
