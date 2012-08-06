@@ -30,7 +30,7 @@ class UNDEFINED:
 
 class _Registry(object):
     class Paths(Paths):
-        files = ['backup-session', 'sub_apikey', 'secret', 'key', 'credentials', 'hbr', 'profile', 'profile/stamp']
+        files = ['backup-resume', 'sub_apikey', 'secret', 'key', 'credentials', 'hbr', 'profile', 'profile/stamp']
 
     def __init__(self, path=None):
         if path is None:
@@ -141,12 +141,12 @@ class _Registry(object):
             os.utime(self.path.profile.stamp, (0, profile_archive.timestamp))
     profile = property(profile, profile)
 
-    def backup_session_conf(self, val=UNDEFINED):
+    def backup_resume_conf(self, val=UNDEFINED):
         if val is None:
-            return os.remove(self.path.backup_session)
+            return os.remove(self.path.backup_resume)
 
         if val is UNDEFINED:
-            s = self._file_str(self.path.backup_session)
+            s = self._file_str(self.path.backup_resume)
             if s is None:
                 return s
 
@@ -157,9 +157,9 @@ class _Registry(object):
             del copy['profile']
             s = simplejson.dumps(copy)
 
-            self._file_str(self.path.backup_session, s)
+            self._file_str(self.path.backup_resume, s)
 
-    backup_session_conf = property(backup_session_conf, backup_session_conf)
+    backup_resume_conf = property(backup_resume_conf, backup_resume_conf)
 
 class Profile(str):
     def __new__(cls, path, timestamp):

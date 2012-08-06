@@ -242,24 +242,24 @@ def main():
             conf.address = registry.hbr.address
 
     if not exists(backup.Backup.EXTRAS_PATH):
-        registry.backup_session_conf = None
+        registry.backup_resume_conf = None
 
     # implicit resume if we have a leftover session and 
     # the backup configuration is the same
-    if registry.backup_session_conf == conf:
+    if registry.backup_resume_conf == conf:
         opt_resume = True
 
     if opt_resume:
         if conf.simulate:
             fatal("--resume and --simulate incompatible")
 
-        if registry.backup_session_conf is None:
+        if registry.backup_resume_conf is None:
             fatal("no previous backup session to resume from")
 
-        conf = registry.backup_session_conf
+        conf = registry.backup_resume_conf
         print "RESUMING ABORTED SESSION"
 
-    registry.backup_session_conf = conf
+    registry.backup_resume_conf = conf
     b = backup.Backup(conf, force_cleanup=not opt_resume)
     try:
         trap = UnitedStdTrap(transparent=True)
@@ -286,7 +286,7 @@ def main():
         raise
 
     b.cleanup()
-    registry.backup_session_conf = None
+    registry.backup_resume_conf = None
     if not conf.simulate:
         hb.updated_backup(conf.address)
 
