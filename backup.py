@@ -319,6 +319,9 @@ class Backup:
 
 
         args = [ '--s3-unencrypted-connection', '--allow-source-mismatch' ] 
+
+        if conf.simulate and conf.verbose:
+            args += [ '--dry-run' ]
          
         if conf.s3_parallel_uploads > 1:
             s3_multipart_chunk_size = conf.volsize / conf.s3_parallel_uploads
@@ -335,8 +338,8 @@ class Backup:
             print "\n# PASSPHRASE=$(cat %s) %s" % (conf.secretfile, 
                                                    backup_command)
 
-        if not conf.simulate:
-            backup_command.run(passphrase, conf.credentials)
+
+        backup_command.run(passphrase, conf.credentials)
 
     def cleanup(self):
         if not self.conf.simulate:

@@ -242,23 +242,15 @@ def main():
                 else:
                     warn(e)
 
-        if not registry.hbr and not conf.simulate:
+        if not registry.hbr:
             registry.hbr = hb.new_backup_record(registry.key, 
                                                 get_turnkey_version(), 
                                                 get_server_id())
 
-        if not registry.hbr and conf.simulate:
-            conf.address = 's3://bucket-address'
-        else:
-            conf.address = registry.hbr.address
+        conf.address = registry.hbr.address
 
     if not exists(backup.Backup.EXTRAS_PATH):
         registry.backup_resume_conf = None
-
-    # implicit resume if we have a leftover session and 
-    # the backup configuration is the same
-    if registry.backup_resume_conf == conf:
-        opt_resume = True
 
     if opt_resume:
         if conf.simulate:
@@ -268,9 +260,18 @@ def main():
             fatal("no previous backup session to resume from")
 
         conf = registry.backup_resume_conf
+
+    # implicit resume if we have a leftover session and 
+    # the backup configuration is the same
+    if registry.backup_resume_conf == conf:
+        opt_resume = True
+
+    if opt_resume:
         print "RESUMING ABORTED SESSION"
 
-    registry.backup_resume_conf = conf
+    if not conf.simulate:
+        registry.backup_resume_conf = conf
+
     b = backup.Backup(conf, force_cleanup=not opt_resume)
     try:
         trap = UnitedStdTrap(transparent=True)
@@ -298,6 +299,7 @@ def main():
 
     b.cleanup()
     registry.backup_resume_conf = None
+
     if not conf.simulate:
         hb.updated_backup(conf.address)
 
