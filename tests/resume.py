@@ -12,14 +12,20 @@ SESSION_FILE = "/tmp/session"
 class Error(Exception):
     pass
 
-def session_load():
-    return simplejson.loads(file(SESSION_FILE).read())
+class Session:
+    SESSION_FILE = '/tmp/session'
 
-def session_save(conf):
-    file(SESSION_FILE, "w").write(simplejson.dumps(conf))
+    @classmethod 
+    def load(cls):
+        return simplejson.loads(file(cls.SESSION_FILE).read())
 
-def session_remove():
-    os.remove(SESSION_FILE)
+    @classmethod 
+    def save(cls, conf):
+        file(cls.SESSION_FILE, "w").write(simplejson.dumps(conf))
+
+    @classmethod 
+    def remove(cls):
+        os.remove(cls.SESSION_FILE)
 
 def main():
     try:
@@ -36,8 +42,7 @@ def main():
             opt_resume = True
 
     try:
-        prev_conf = session_load()
-
+        prev_conf = Session.load()
     except:
         prev_conf = None
 
@@ -61,9 +66,9 @@ def main():
     print "conf: " + `conf`
     print "opt_resume = " + `opt_resume`
 
-    session_save(conf)
+    Session.save(conf)
     time.sleep(3)
-    session_remove()
+    Session.remove()
 
 if __name__ == "__main__":
     main()
