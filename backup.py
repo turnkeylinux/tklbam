@@ -256,14 +256,16 @@ class Backup:
         except mysql.Error:
             pass
 
-    def __init__(self, conf):
+    def __init__(self, conf, force_cleanup=False):
         profile_paths = ProfilePaths(conf.profile)
         extras_paths = ExtrasPaths(self.EXTRAS_PATH)
 
         if not conf.checkpoint_restore:
             _rmdir(extras_paths.path)
 
+        self.force_cleanup = force_cleanup
         if not exists(extras_paths.path):
+            self.force_cleanup = True
             if conf.verbose:
                 print "CREATING " + extras_paths.path
 
@@ -307,7 +309,7 @@ class Backup:
         if conf.verbose:
             opts += [('verbosity', 5)]
 
-        if not conf.checkpoint_restore:
+        if not conf.checkpoint_restore or self.force_cleanup:
             cleanup_command = duplicity.Command(opts, "cleanup", "--force", conf.address)
             if conf.verbose:
                 print "\n# " + str(cleanup_command)

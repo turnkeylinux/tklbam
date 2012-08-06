@@ -195,22 +195,6 @@ def main():
 
     hb = hub.Backups(registry.sub_apikey)
 
-    if not exists(backup.Backup.EXTRAS_PATH):
-        registry.backup_session_conf = None
-
-    if registry.backup_session_conf == conf:
-        opt_resume = True
-
-    if opt_resume:
-        if conf.simulate:
-            fatal("--resume and --simulate incompatible")
-
-        if registry.backup_session_conf is None:
-            fatal("no previous backup session to resume from")
-
-        conf = registry.backup_session_conf
-        print "resuming previously aborted session"
-
     if not conf.profile:
         conf.profile = get_profile(hb)
 
@@ -257,8 +241,26 @@ def main():
         else:
             conf.address = registry.hbr.address
 
+    if not exists(backup.Backup.EXTRAS_PATH):
+        registry.backup_session_conf = None
+
+    # implicit resume if we have a leftover session and 
+    # the backup configuration is the same
+    if registry.backup_session_conf == conf:
+        opt_resume = True
+
+    if opt_resume:
+        if conf.simulate:
+            fatal("--resume and --simulate incompatible")
+
+        if registry.backup_session_conf is None:
+            fatal("no previous backup session to resume from")
+
+        conf = registry.backup_session_conf
+        print "RESUMING ABORTED SESSION"
+
     registry.backup_session_conf = conf
-    b = backup.Backup(conf)
+    b = backup.Backup(conf, force_cleanup=not opt_resume)
     try:
         trap = UnitedStdTrap(transparent=True)
         try:
@@ -290,4 +292,3 @@ def main():
 
 if __name__=="__main__":
     main()
-

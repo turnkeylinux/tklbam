@@ -178,8 +178,9 @@ class BackupSessionConf(AttrDict):
     def __eq__(self, other):
         def normalize(val):
             val = dict(val)
-            if 'profile' in val:
-                del val['profile']
+            for k in ('profile', 'credentials'):
+                if k in val:
+                    del val[k]
             return val
 
         if normalize(self) == normalize(other):
