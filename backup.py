@@ -88,19 +88,19 @@ class Limits(list):
 
 from utils import AttrDict
 
-class BackupConf(AttrDict):
+class Conf(AttrDict):
+    DEFAULT_PATH = "/etc/tklbam"
     class Error(Exception):
         pass
 
-    path = "/etc/tklbam"
     class Paths(Paths):
         files = [ 'overrides', 'conf' ]
-    paths = Paths(path)
 
     def _error(self, s):
         return self.Error("%s: %s" % (self.paths.conf, s))
 
     def __setitem__(self, name, val):
+        # sanity checking / parsing
         if name == 'full_backup':
             if not re.match(r'^\d+[HDWMY]', val):
                 raise self.Error("bad full-backup value (%s)" % val)
@@ -110,6 +110,13 @@ class BackupConf(AttrDict):
                 val = int(val)
             except ValueError:
                 raise self.Error("volsize not a number (%s)" % val)
+
+        if name == 'restore-cache-size':
+            if not re.match(r'^\d+\(%|mb?|gb?)?$', val, re.IGNORECASE):
+                raise self.Error("bad restore-cache value (%s)" % val)
+
+        if name == 'restore-cache-dir':
+            pass
 
         AttrDict.__setitem__(self, name, val)
 
@@ -129,7 +136,12 @@ class BackupConf(AttrDict):
         except ValueError:
             raise self._error("bad volsize value (%s)" % val)
 
-    def __init__(self):
+    def __init__(self, path=None):
+        if path is None:
+            path = self.DEFAULT_PATH
+
+        self.paths = self.Paths(path)
+
         self.secretfile = None
         self.address = None
         self.credentials = None
@@ -143,6 +155,8 @@ class BackupConf(AttrDict):
 
         self.volsize = 50
         self.full_backup = "1M"
+        self.restore_cache_size = "50%"
+        self.restore_cache_dir = "/var/cache/tklbam/restore"
 
         if not exists(self.paths.conf):
             return
@@ -164,11 +178,18 @@ class BackupConf(AttrDict):
                 elif opt == 'volsize':
                     self.volsize = val
 
+                elif opt == 'restore-cache-size':
+                    self.restore_cache_size = val
+
+                elif opt == 'restore-cache-dir':
+                    self.restore_cache_dir = val
+
                 else:
                     raise self.Error("unknown conf option '%s'" % opt)
 
             except self.Error, e:
                 raise self._error(e)
+
 
 class ProfilePaths(Paths):
     files = [ 'dirindex', 'dirindex.conf', 'packages' ]

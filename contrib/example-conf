@@ -17,3 +17,17 @@ volsize 50
 #     1M - one month
 
 full-backup 1M
+
+# restore-cache-size: the maximum size of the download cache in restore-cache-dir
+# 
+# This will come in handy when:
+# 1) resuming big restores (already downloaded backup archives don't need to be re-downloaded)
+# 2) if you make a mistake and need to rollback the restore and try again
+#
+# e.g.,
+#       1000MB
+#       2GB
+#       50% - 50% of free space in the restore-cache-path
+
+restore-cache-size 50%
+restore-cache-dir /var/cache/tklbam/restore

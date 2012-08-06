@@ -33,6 +33,8 @@ import backup
 import mysql
 import duplicity
 
+from squid import Squid
+
 class Error(Exception):
     pass
 
@@ -66,7 +68,7 @@ class Restore:
         return title + "\n" + c * len(title) + "\n"
 
     @staticmethod
-    def _duplicity_restore(address, credentials, secret, time=None):
+    def _duplicity_restore(address, cache_size, cache_dir, credentials, secret, time=None):
         tmpdir = TempDir(prefix="tklbam-")
         os.chmod(tmpdir, 0700)
 
@@ -75,15 +77,22 @@ class Restore:
         else:
             opts = []
 
+        squid = Squid(cache_size, cache_dir)
+        squid.start()
+        os.environ['http_proxy'] = squid.address
+
         raise_rlimit(resource.RLIMIT_NOFILE, RLIMIT_NOFILE_MAX)
-        duplicity.Command(opts, address, tmpdir).run(secret, credentials)
+        duplicity.Command(opts, '--s3-unencrypted-connection', address, tmpdir).run(secret, credentials)
         sys.stdout.flush()
+
+        squid.stop()
 
         return tmpdir
 
-    def __init__(self, address, secret, limits=[], time=None, credentials=None, rollback=True):
+    def __init__(self, address, secret, cache_size, cache_dir,  
+                 limits=[], time=None, credentials=None, rollback=True):
         print "Restoring duplicity archive from " + address
-        backup_archive = self._duplicity_restore(address, credentials, secret, time)
+        backup_archive = self._duplicity_restore(address, cache_size, cache_dir, credentials, secret, time)
 
         extras_path = TempDir(prefix="tklbam-extras-")
         os.rename(backup_archive + backup.Backup.EXTRAS_PATH, extras_path)

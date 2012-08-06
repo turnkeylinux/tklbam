@@ -56,12 +56,31 @@ Options:
     --noninteractive                  Disable interactive user prompts
     --force                           Disable sanity checking
 
+Configurable options:
+
+    --restore-cache-size=SIZE         The maximum size of the download cache
+                                      default: $CONF_RESTORE_CACHE_SIZE
+
+    --restore-cache-dir=PATH          The path to the download cache directory
+                                      default: $CONF_RESTORE_CACHE_DIR
+
+Resolution order for configurable options:
+
+  1) comand line (highest precedence)
+  2) configuration file ($CONF_PATH)
+  3) built-in default (lowest precedence)
+
+Configuration file format ($CONF_PATH):
+
+  <option-name> <value>
+
 """
 
 import os
 import sys
 import getopt
 
+from string import Template
 import re
 
 from os.path import *
@@ -79,6 +98,8 @@ from registry import registry
 
 from version import get_turnkey_version, codename
 from utils import is_writeable
+
+import backup
 
 PATH_LOGFILE = "/var/log/tklbam-restore"
 
@@ -179,7 +200,13 @@ def usage(e=None):
         print >> sys.stderr, "error: " + str(e)
 
     print >> sys.stderr, "Syntax: %s [ -options ] [ <hub-backup> ]" % sys.argv[0]
-    print >> sys.stderr, __doc__.strip()
+
+    tpl = Template(__doc__.strip())
+    conf = backup.Conf()
+    print >> sys.stderr, tpl.substitute(CONF_PATH=conf.paths.conf,
+                                        CONF_RESTORE_CACHE_SIZE=conf.restore_cache_size,
+                                        CONF_RESTORE_CACHE_DIR=conf.restore_cache_dir)
+
     sys.exit(1)
 
 def main():
@@ -201,6 +228,7 @@ def main():
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'h', 
                                        ['limits=', 'address=', 'keyfile=', 
                                         'logfile=',
+                                        'restore-cache-size=', 'restore-cache-dir=',
                                         'force',
                                         'time=',
                                         'silent',
@@ -210,6 +238,8 @@ def main():
                                         
     except getopt.GetoptError, e:
         usage(e)
+
+    conf = backup.Conf()
 
     for opt, val in opts:
         if opt == '--limits':
@@ -245,6 +275,15 @@ def main():
 
         elif opt == '-h':
             usage()
+
+        elif opt == '--restore-cache-size':
+            conf.restore_cache_size = val
+
+        elif opt == '--restore-cache-dir':
+            conf.restore_cache_dir = val
+
+    restore_cache_size = conf.restore_cache_size
+    restore_cache_dir = conf.restore_cache_dir
 
     hbr = None
     credentials = None
@@ -287,9 +326,8 @@ def main():
     trap = UnitedStdTrap(usepty=True, transparent=(False if silent else True))
     try:
         hooks.restore.pre()
-        restore = Restore(address, secret, opt_limits, opt_time,
-                          credentials=credentials,
-                          rollback=not no_rollback)
+        restore = Restore(address, secret, restore_cache_size, restore_cache_dir,
+                          opt_limits, opt_time, credentials=credentials, rollback=not no_rollback)
 
         if not skip_packages:
             restore.packages()
