@@ -12,6 +12,15 @@ SESSION_FILE = "/tmp/session"
 class Error(Exception):
     pass
 
+def session_load():
+    return simplejson.loads(file(SESSION_FILE).read())
+
+def session_save(conf):
+    file(SESSION_FILE, "w").write(simplejson.dumps(conf))
+
+def session_remove():
+    os.remove(SESSION_FILE)
+
 def main():
     try:
         opts, conf = getopt.gnu_getopt(sys.argv[1:], '', ['resume'])
@@ -27,7 +36,8 @@ def main():
             opt_resume = True
 
     try:
-        prev_conf = simplejson.loads(file(SESSION_FILE).read())
+        prev_conf = session_load()
+
     except:
         prev_conf = None
 
@@ -45,15 +55,15 @@ def main():
             raise Error("can't resume with different arguments")
 
         print "resuming..."
+    else:
+        print "not resuming..."
 
     print "conf: " + `conf`
     print "opt_resume = " + `opt_resume`
 
-    file(SESSION_FILE, "w").write(simplejson.dumps(conf))
-
+    session_save(conf)
     time.sleep(3)
-
-    os.remove(SESSION_FILE)
+    session_remove()
 
 if __name__ == "__main__":
     main()
