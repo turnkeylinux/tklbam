@@ -227,7 +227,7 @@ def main():
                 else:
                     warn(e)
 
-        if not registry.hbr:
+        if not registry.hbr and not conf.simulate:
             registry.hbr = hb.new_backup_record(registry.key, 
                                                 get_turnkey_version(), 
                                                 get_server_id())
