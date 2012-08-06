@@ -323,7 +323,7 @@ class Backup:
                  ('include-filelist', self.extras_paths.fsdelta_olist),
                  ('exclude', '**')]
 
-        backup_command = duplicity.Command(opts, '--allow-source-mismatch', '--asynchronous-upload', '/', conf.address)
+        backup_command = duplicity.Command(opts, '--s3-unencrypted-connection', '--allow-source-mismatch', '--asynchronous-upload', '/', conf.address)
         if conf.verbose:
             print "\n# PASSPHRASE=$(cat %s) %s" % (conf.secretfile, 
                                                    backup_command)
