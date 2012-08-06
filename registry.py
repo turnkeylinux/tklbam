@@ -143,7 +143,9 @@ class _Registry(object):
 
     def backup_resume_conf(self, val=UNDEFINED):
         if val is None:
-            return os.remove(self.path.backup_resume)
+            if exists(self.path.backup_resume):
+                os.remove(self.path.backup_resume)
+            return
 
         if val is UNDEFINED:
             s = self._file_str(self.path.backup_resume)
