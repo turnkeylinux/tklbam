@@ -253,7 +253,7 @@ class Backup:
         profile_paths = ProfilePaths(conf.profile)
         extras_paths = ExtrasPaths(self.EXTRAS_PATH)
 
-        if not conf.checkpoint_restore:
+        if not conf.checkpoint_restore or conf.simulate:
             _rmdir(extras_paths.path)
 
         self.force_cleanup = force_cleanup
