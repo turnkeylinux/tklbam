@@ -4,7 +4,16 @@
 
 # volsize: size of backup volumes in MBs
 
-volsize 50
+volsize 1
+
+# s3-parallel-uploads: Amazon S3 supports multipart uploads. This
+# allows different chunks of a volume to be uploaded in parallel
+# which may increase upload speed.
+#
+# The minimum chunk size is 5MB so the maximum s3-parallel-uploads value 
+# equals volsize / 5
+
+s3-parallel-uploads	1
 
 # full-backup: time frequency of full backup
 # (in between full backups we do incremental backups)
@@ -18,7 +27,7 @@ volsize 50
 
 full-backup 1M
 
-# restore-cache-size: the maximum size of the download cache in restore-cache-dir
+# restore-cache-size: the maximum size of the download cache in restore-cache-path
 # 
 # This will come in handy when:
 # 1) resuming big restores (already downloaded backup archives don't need to be re-downloaded)
@@ -31,3 +40,4 @@ full-backup 1M
 
 restore-cache-size 50%
 restore-cache-dir /var/cache/tklbam/restore
+

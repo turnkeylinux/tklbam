@@ -111,6 +111,12 @@ class Conf(AttrDict):
             except ValueError:
                 raise self.Error("volsize not a number (%s)" % val)
 
+        if name == 's3_parallel_uploads':
+            try:
+                val = int(val)
+            except ValueError:
+                raise self.Error("s3-parallel-uploads not a number (%s)" % val)
+
         if name == 'restore-cache-size':
             if not re.match(r'^\d+\(%|mb?|gb?)?$', val, re.IGNORECASE):
                 raise self.Error("bad restore-cache value (%s)" % val)
@@ -119,22 +125,6 @@ class Conf(AttrDict):
             pass
 
         AttrDict.__setitem__(self, name, val)
-
-    def _full_backup(self, val=None):
-        print "full_backup"
-        if val is None:
-            return getattr(self, '_full_backup', None)
-
-        setattr(self, '_full_backup', val)
-
-    def _volsize(self, val=None):
-        if val is None:
-            return getattr(self, '_volsize', None)
-
-        try:
-            setattr(self, '_volsize', int(val))
-        except ValueError:
-            raise self._error("bad volsize value (%s)" % val)
 
     def __init__(self, path=None):
         if path is None:
@@ -153,6 +143,7 @@ class Conf(AttrDict):
         self.checkpoint_restore = True
 
         self.volsize = 50
+        self.s3_parallel_uploads = 1
         self.full_backup = "1M"
         self.restore_cache_size = "50%"
         self.restore_cache_dir = "/var/cache/tklbam/restore"
@@ -177,6 +168,9 @@ class Conf(AttrDict):
                 elif opt == 'volsize':
                     self.volsize = val
 
+                elif opt == 's3-parallel-uploads':
+                    self.s3_parallel_uploads = val
+
                 elif opt == 'restore-cache-size':
                     self.restore_cache_size = val
 
@@ -188,7 +182,6 @@ class Conf(AttrDict):
 
             except self.Error, e:
                 raise self._error(e)
-
 
 class ProfilePaths(Paths):
     files = [ 'dirindex', 'dirindex.conf', 'packages' ]
@@ -324,7 +317,20 @@ class Backup:
                  ('include-filelist', self.extras_paths.fsdelta_olist),
                  ('exclude', '**')]
 
-        backup_command = duplicity.Command(opts, '--s3-unencrypted-connection', '--allow-source-mismatch', '--asynchronous-upload', '/', conf.address)
+
+        args = [ '--s3-unencrypted-connection', '--allow-source-mismatch', '--asynchronous-upload' ] 
+         
+        if conf.s3_parallel_uploads > 1:
+            s3_multipart_chunk_size = conf.volsize / conf.s3_parallel_uploads
+            if s3_multipart_chunk_size < 5:
+                s3_multipart_chunk_size = 5
+            args += [ '--s3-use-multiprocessing', '--s3-multipart-chunk-size=%d' % s3_multipart_chunk_size ]
+
+        args += [ '/', conf.address ]
+
+
+        backup_command = duplicity.Command(opts, *args)
+
         if conf.verbose:
             print "\n# PASSPHRASE=$(cat %s) %s" % (conf.secretfile, 
                                                    backup_command)

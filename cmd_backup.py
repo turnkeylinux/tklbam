@@ -34,6 +34,9 @@ Configurable options:
     --volsize MB              Size of backup volume in MBs
                               default: $CONF_VOLSIZE
 
+    --s3-parallel-uploads=N   Number of parallel volume chunk uploads
+                              default: $CONF_S3_PARALLEL_UPLOADS
+
     --full-backup FREQUENCY   Time frequency of full backup
                               default: $CONF_FULL_BACKUP
 
@@ -89,6 +92,7 @@ def usage(e=None):
                                         CONF_OVERRIDES=conf.paths.overrides,
                                         CONF_VOLSIZE=conf.volsize,
                                         CONF_FULL_BACKUP=conf.full_backup,
+                                        CONF_S3_PARALLEL_UPLOADS=conf.s3_parallel_uploads,
                                         LOGFILE=PATH_LOGFILE)
     sys.exit(1)
 
@@ -140,7 +144,7 @@ def main():
                                         'logfile=',
                                         'simulate', 'quiet', 
                                         'profile=', 'secretfile=', 'address=',
-                                        'volsize=', 'full-backup='])
+                                        'volsize=', 's3-parallel-uploads=', 'full-backup='])
     except getopt.GetoptError, e:
         usage(e)
 
@@ -174,6 +178,9 @@ def main():
         elif opt == '--volsize':
             conf.volsize = val
 
+        elif opt == '--s3-parallel-uploads':
+            conf.s3_parallel_uploads = val
+
         elif opt == '--full-backup':
             conf.full_backup = val
 
@@ -185,6 +192,7 @@ def main():
         elif opt in ('-h', '--help'):
             usage()
 
+
     conf.overrides += args
 
     lock = PidLock("/var/run/tklbam-backup.pid", nonblock=True)
@@ -192,6 +200,9 @@ def main():
         lock.lock()
     except lock.Locked:
         fatal("a previous backup is still in progress")
+
+    if conf.s3_parallel_uploads > (conf.volsize / 5):
+        warn("s3-parallel-uploads (%d) greater than volsize / 5 (%d)" % (conf.s3_parallel_uploads, conf.volsize / 5.0))
 
     hb = hub.Backups(registry.sub_apikey)
 
