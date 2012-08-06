@@ -15,6 +15,7 @@ import sys
 import os
 from os.path import *
 from paths import Paths
+import simplejson
 
 from datetime import datetime
 
@@ -22,12 +23,14 @@ import shutil
 from utils import AttrDict
 from hub import Credentials
 
+import backup
+
 class UNDEFINED:
     pass
 
 class _Registry(object):
     class Paths(Paths):
-        files = ['sub_apikey', 'secret', 'key', 'credentials', 'hbr', 'profile', 'profile/stamp']
+        files = ['backup-session', 'sub_apikey', 'secret', 'key', 'credentials', 'hbr', 'profile', 'profile/stamp']
 
     def __init__(self, path=None):
         if path is None:
@@ -138,11 +141,50 @@ class _Registry(object):
             os.utime(self.path.profile.stamp, (0, profile_archive.timestamp))
     profile = property(profile, profile)
 
+    def backup_session_conf(self, val=UNDEFINED):
+        if val is None:
+            return os.remove(self.path.backup_session)
+
+        if val is UNDEFINED:
+            s = self._file_str(self.path.backup_session)
+            if s is None:
+                return s
+
+            return BackupSessionConf(simplejson.loads(s))
+
+        else:
+            copy = dict(val)
+            del copy['profile']
+            s = simplejson.dumps(copy)
+
+            self._file_str(self.path.backup_session, s)
+
+    backup_session_conf = property(backup_session_conf, backup_session_conf)
+
 class Profile(str):
     def __new__(cls, path, timestamp):
         return str.__new__(cls, path)
 
     def __init__(self, path, timestamp):
         self.timestamp = timestamp
+
+class BackupSessionConf(AttrDict):
+    def __init__(self, d={}):
+        AttrDict.__init__(self, d)
+        self.profile = None
+        self.overrides = backup.Limits(self.overrides)
+        self.credentials = Credentials(self.credentials)
+
+    def __eq__(self, other):
+        def normalize(val):
+            val = dict(val)
+            if 'profile' in val:
+                del val['profile']
+            return val
+
+        if normalize(self) == normalize(other):
+            return True
+        else:
+            return False
 
 registry = _Registry()

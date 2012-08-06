@@ -150,8 +150,7 @@ class Conf(AttrDict):
         self.verbose = True
         self.simulate = False
 
-        # warning: checkpoint restore is currently broken in duplicity
-        self.checkpoint_restore = False
+        self.checkpoint_restore = True
 
         self.volsize = 50
         self.full_backup = "1M"

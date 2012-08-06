@@ -18,6 +18,8 @@ Arguments:
     Default overrides read from $CONF_OVERRIDES
 
 Options:
+    --resume                  Resume previously interrupted backup session
+
     --address=TARGET_URL      manual backup target URL
                               default: automatically configured via Hub
 
@@ -134,14 +136,15 @@ def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'qsh', 
                                        ['help',
+                                        'resume',
                                         'logfile=',
                                         'simulate', 'quiet', 
-                                        'checkpoint-restore',
                                         'profile=', 'secretfile=', 'address=',
                                         'volsize=', 'full-backup='])
     except getopt.GetoptError, e:
         usage(e)
 
+    opt_resume = None
     opt_logfile = PATH_LOGFILE
 
     conf = backup.Conf()
@@ -150,6 +153,9 @@ def main():
     for opt, val in opts:
         if opt in ('-s', '--simulate'):
             conf.simulate = True
+
+        if opt == '--resume':
+            opt_resume = True
 
         elif opt == '--profile':
             conf.profile = val
@@ -171,9 +177,6 @@ def main():
         elif opt == '--full-backup':
             conf.full_backup = val
 
-        elif opt == '--checkpoint-restore':
-            conf.checkpoint_restore = True
-
         elif opt == '--logfile':
             if not is_writeable(val):
                 fatal("logfile '%s' is not writeable" % val)
@@ -191,6 +194,23 @@ def main():
         fatal("a previous backup is still in progress")
 
     hb = hub.Backups(registry.sub_apikey)
+
+    if not exists(backup.Backup.EXTRAS_PATH):
+        registry.backup_session_conf = None
+
+    if registry.backup_session_conf == conf:
+        opt_resume = True
+
+    if opt_resume:
+        if conf.simulate:
+            fatal("--resume and --simulate incompatible")
+
+        if registry.backup_session_conf is None:
+            fatal("no previous backup session to resume from")
+
+        conf = registry.backup_session_conf
+        print "resuming previously aborted session"
+
     if not conf.profile:
         conf.profile = get_profile(hb)
 
@@ -232,8 +252,12 @@ def main():
                                                 get_turnkey_version(), 
                                                 get_server_id())
 
-        conf.address = registry.hbr.address
+        if not registry.hbr and conf.simulate:
+            conf.address = 's3://bucket-address'
+        else:
+            conf.address = registry.hbr.address
 
+    registry.backup_session_conf = conf
     b = backup.Backup(conf)
     try:
         trap = UnitedStdTrap(transparent=True)
@@ -256,9 +280,11 @@ def main():
     except:
         if not conf.checkpoint_restore:
             b.cleanup()
+        # not cleaning up
         raise
 
     b.cleanup()
+    registry.backup_session_conf = None
     if not conf.simulate:
         hb.updated_backup(conf.address)
 
