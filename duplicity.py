@@ -32,9 +32,6 @@ PATH_DEPS_PYLIB = _find_duplicity_pylib(PATH_DEPS)
 class Error(Exception):
     pass
 
-def _fmt_s3_headers(product, user):
-    return "x-amz-security-token=" + ",".join([product,user])
-
 class Command:
     def __init__(self, *args):
         """Duplicity command. The first member of args can be a an array of tuple arguments"""
@@ -59,10 +56,7 @@ class Command:
         if creds:
             os.environ['AWS_ACCESS_KEY_ID'] = creds.accesskey
             os.environ['AWS_SECRET_ACCESS_KEY'] = creds.secretkey
-
-            s3_headers = _fmt_s3_headers(creds.producttoken, 
-                                         creds.usertoken)
-            os.environ['AWS_S3_HEADERS'] = s3_headers
+            os.environ['X_AMZ_SECURITY_TOKEN'] = ",".join([creds.producttoken, creds.usertoken])
 
         if PATH_DEPS_BIN not in os.environ['PATH'].split(':'):
             os.environ['PATH'] = PATH_DEPS_BIN + ':' + os.environ['PATH']
@@ -71,6 +65,7 @@ class Command:
             os.environ['PYTHONPATH'] = PATH_DEPS_PYLIB
 
         os.environ['PASSPHRASE'] = passphrase
+
         child = Popen(self.command)
         del os.environ['PASSPHRASE']
 
