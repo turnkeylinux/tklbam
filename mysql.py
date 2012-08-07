@@ -222,8 +222,15 @@ def chunkify(elements, sep, maxlen):
         if len(chunk) + len(sep) + len(element) > maxlen:
             if chunk:
                 yield chunk
+
             if len(element) > maxlen:
-                raise Error("element='%s' longer than maxlen=%d" % (element, maxlen))
+                ## locally correct logic:
+                #raise Error("element='%s' longer than maxlen=%d" % (element, maxlen))
+
+                ## globally correct logic (the lesser evil):
+                yield element
+                continue
+
             chunk = element
         else:
             if not chunk:
