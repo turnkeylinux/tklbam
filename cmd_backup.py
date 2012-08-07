@@ -272,14 +272,21 @@ def main():
     if not conf.simulate:
         registry.backup_resume_conf = conf
 
+    is_hub_address = not conf.simulate and registry.hbr and registry.hbr.address == conf.address
+    backup_id = registry.hbr.backup_id
+
     b = backup.Backup(conf, force_cleanup=not opt_resume)
     try:
         trap = UnitedStdTrap(transparent=True)
         try:
             hooks.backup.pre()
+            if is_hub_address:
+                hb.set_backup_inprogress(backup_id, True)
             b.run()
             hooks.backup.post()
         finally:
+            if is_hub_address:
+                hb.set_backup_inprogress(backup_id, False)
             trap.close()
             fh = file(opt_logfile, "a")
 
