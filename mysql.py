@@ -216,7 +216,27 @@ class MyFS_Writer(MyFS):
 def mysql2fs(fh, outdir, limits=[], callback=None):
     MyFS_Writer(outdir, limits).fromfile(fh, callback)
 
+def chunkify(elements, sep, maxlen):
+    chunk = ""
+    for element in elements:
+        if len(chunk) + len(sep) + len(element) > maxlen:
+            if chunk:
+                yield chunk
+            if len(element) > maxlen:
+                raise Error("element='%s' longer than maxlen=%d" % (element, maxlen))
+            chunk = element
+        else:
+            if not chunk:
+                chunk = element
+            else:
+                chunk += sep + element
+
+    if chunk:
+        yield chunk
+
 class MyFS_Reader(MyFS):
+    MAX_EXTENDED_INSERT = 1000000 - 1024
+
     class Database(MyFS.Database):
         def __init__(self, myfs, fname):
             self.paths = self.Paths(join(myfs.path, fname))
@@ -287,25 +307,40 @@ UNLOCK TABLES;
 
         def tofile(self, fh):
             skip_extended_insert = self.database.myfs.skip_extended_insert
+            max_extended_insert = self.database.myfs.max_extended_insert
 
             tpl = Template(self.TPL_CREATE)
             print >> fh, tpl.substitute(name=self.name, init=self.sql_init)
 
             index = None
-            for index, row in enumerate(self.rows):
-                if index == 0:
-                    tpl = Template(self.TPL_INSERT_PRE)
-                    print >> fh, tpl.substitute(name=self.name)
 
-                if skip_extended_insert:
-                    print >> fh, "INSERT INTO `%s` VALUES (%s);" % (self.name, row)
+            insert_prefix = "INSERT INTO `%s` VALUES " % self.name
+            insert_suffix = ";"
 
-                else:
+            if skip_extended_insert:
+                for index, row in enumerate(self.rows):
                     if index == 0:
-                        print >> fh, "INSERT INTO `%s` VALUES" % self.name
-                    else:
-                        fh.write(",\n")
-                    fh.write("(%s)" % row)
+                        tpl = Template(self.TPL_INSERT_PRE)
+                        print >> fh, tpl.substitute(name=self.name)
+
+                    print >> fh, insert_prefix + "(%s)" % row + insert_suffix
+                    
+            else:
+                rows = ( "(%s)" % row for row in self.rows )
+                row_chunks = chunkify(rows, ",\n", max_extended_insert - len(insert_prefix + insert_suffix))
+
+                for index, chunk in enumerate(row_chunks):
+                    if index == 0:
+                        tpl = Template(self.TPL_INSERT_PRE)
+                        print >> fh, tpl.substitute(name=self.name)
+
+                    fh.write(insert_prefix + "\n")
+                    fh.write(chunk)
+                    fh.write(insert_suffix)
+                    fh.write("\n")
+
+                if index is not None:
+                    print >> fh, "/* CHUNKS: %d */" % index
 
             if index is not None:
                 if not skip_extended_insert:
@@ -340,11 +375,16 @@ UNLOCK TABLES;
 
     def __init__(self, path, limits=[], 
                  skip_extended_insert=False,
-                 add_drop_database=False):
+                 add_drop_database=False,
+                 max_extended_insert=None):
         self.path = path
         self.limits = self.Limits(limits)
         self.skip_extended_insert = skip_extended_insert
         self.add_drop_database = add_drop_database
+
+        if max_extended_insert is None:
+            max_extended_insert = self.MAX_EXTENDED_INSERT
+        self.max_extended_insert = max_extended_insert
 
     def __iter__(self):
         for fname in os.listdir(self.path):
