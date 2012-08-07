@@ -231,10 +231,9 @@ class Backups:
         return BackupRecord(response)
 
     def set_backup_inprogress(self, backup_id, bool):
-        return True # short-cirtcuit until Alon implements this
-
-        response = self._api('PUT', 'record/%s/inprogress/' % backup_id, 
+        response = self._api('PUT', 'record/%s/inprogress/' % backup_id,
                              {'bool': bool})
+
         return response
 
     def update_key(self, backup_id, key):
