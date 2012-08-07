@@ -331,6 +331,9 @@ class Backups:
                 dummydb.save()
                 return
 
+    def set_backup_inprogress(self, backup_id, bool):
+        pass
+
 class ProfileArchive:
     def __init__(self, archive, timestamp):
         self.path_archive = archive
