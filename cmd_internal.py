@@ -21,6 +21,8 @@ class CliWrapper(CliWrapper):
     DESCRIPTION = __doc__
     PATH = cmd_internals.__path__
 
+main = CliWrapper.main
+
 if __name__ == "__main__":
     CliWrapper.main()
 
