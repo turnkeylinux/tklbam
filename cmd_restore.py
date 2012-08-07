@@ -56,6 +56,8 @@ Options:
     --noninteractive                  Disable interactive user prompts
     --force                           Disable sanity checking
 
+    --debug                           Run $$SHELL after Duplicity
+                            
 Configurable options:
 
     --restore-cache-size=SIZE         The maximum size of the download cache
@@ -88,6 +90,7 @@ from restore import Restore
 
 from stdtrap import UnitedStdTrap
 from temp import TempFile
+import executil
 
 import hub
 import keypacket
@@ -224,6 +227,8 @@ def main():
     silent = False
     interactive = True
 
+    opt_debug = False
+
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'h', 
                                        ['limits=', 'address=', 'keyfile=', 
@@ -233,6 +238,7 @@ def main():
                                         'time=',
                                         'silent',
                                         'noninteractive',
+                                        'debug',
                                         'skip-files', 'skip-database', 'skip-packages',
                                         'no-rollback'])
                                         
@@ -242,7 +248,7 @@ def main():
     conf = backup.Conf()
 
     for opt, val in opts:
-        if opt == '--limits':
+        if opt == '--l':
             opt_limits += re.split(r'\s+', val)
         elif opt == '--keyfile':
             if not isfile(val):
@@ -281,6 +287,9 @@ def main():
 
         elif opt == '--restore-cache-dir':
             conf.restore_cache_dir = val
+
+        elif opt == '--debug':
+            opt_debug = True
 
     restore_cache_size = conf.restore_cache_size
     restore_cache_dir = conf.restore_cache_dir
@@ -329,6 +338,14 @@ def main():
         restore = Restore(address, secret, restore_cache_size, restore_cache_dir,
                           opt_limits, opt_time, credentials=credentials, rollback=not no_rollback)
 
+        if opt_debug:
+            trap.close()
+            trap = None
+
+            os.chdir(restore.backup_archive)
+            executil.system(os.environ.get("SHELL", "/bin/bash"))
+            os.chdir('/')
+
         if not skip_packages:
             restore.packages()
 
@@ -342,8 +359,9 @@ def main():
         hooks.restore.post()
 
     finally:
-        trap.close()
-        file(opt_logfile, "w").write(trap.std.read())
+        if trap:
+            trap.close()
+            file(opt_logfile, "w").write(trap.std.read())
 
     print "We're done. You may want to reboot now to restart all services."
 

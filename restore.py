@@ -94,9 +94,7 @@ class Restore:
         print "Restoring duplicity archive from " + address
         backup_archive = self._duplicity_restore(address, cache_size, cache_dir, credentials, secret, time)
 
-        extras_path = TempDir(prefix="tklbam-extras-")
-        os.rename(backup_archive + backup.Backup.EXTRAS_PATH, extras_path)
-
+        extras_path = backup_archive + backup.Backup.EXTRAS_PATH
         self.extras = backup.ExtrasPaths(extras_path)
         self.rollback = Rollback.create() if rollback else None
         self.limits = backup.Limits(limits)
@@ -242,7 +240,7 @@ class Restore:
             rollback.save_files(changes)
 
         print "\nOVERLAY:\n"
-        for val in self._iter_apply_overlay(overlay, "/", limits):
+        for val in self._iter_apply_overlay(overlay, "/", [ "-" + backup.Backup.EXTRAS_PATH ] + limits):
             print val
 
         print "\nPOST-OVERLAY FIXES:\n"
