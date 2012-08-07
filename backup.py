@@ -200,6 +200,9 @@ def _fpaths(dpath):
             arr.append(join(dpath, fname))
     return arr
 
+def _filter_deleted(files):
+    return [ file for file in files if exists(file) ]
+
 class Backup:
     EXTRAS_PATH = "/TKLBAM"
 
@@ -276,7 +279,7 @@ class Backup:
 
             # files in /TKLBAM + /TKLBAM/fsdelta-olist
             fpaths= _fpaths(extras_paths.path) + \
-                            file(extras_paths.fsdelta_olist).read().splitlines()
+                            _filter_deleted(file(extras_paths.fsdelta_olist).read().splitlines())
 
             size = sum([ os.lstat(fpath).st_size 
                          for fpath in fpaths ])
