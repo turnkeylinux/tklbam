@@ -50,7 +50,7 @@ class Command:
         opts = [ "--%s=%s" % (key, val) for key, val in opts ]
         self.command = ["duplicity"] + opts + list(args)
 
-    def run(self, passphrase, creds=None):
+    def run(self, passphrase, creds=None, debug=False):
         sys.stdout.flush()
 
         if creds:
@@ -65,6 +65,10 @@ class Command:
             os.environ['PYTHONPATH'] = PATH_DEPS_PYLIB
 
         os.environ['PASSPHRASE'] = passphrase
+
+        if debug:
+            import executil
+            executil.system(os.environ.get("SHELL", "/bin/bash"))
 
         child = Popen(self.command)
         del os.environ['PASSPHRASE']

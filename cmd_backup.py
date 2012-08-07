@@ -30,6 +30,8 @@ Options:
     --logfile=PATH            Path of file to log to
                               default: $LOGFILE
 
+    --debug                   Run $$SHELL before Duplicity
+
 Configurable options:
     --volsize MB              Size of backup volume in MBs
                               default: $CONF_VOLSIZE
@@ -140,6 +142,7 @@ def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'qsh', 
                                        ['help',
+                                        'debug',
                                         'resume',
                                         'logfile=',
                                         'simulate', 'quiet', 
@@ -147,6 +150,8 @@ def main():
                                         'volsize=', 's3-parallel-uploads=', 'full-backup='])
     except getopt.GetoptError, e:
         usage(e)
+
+    opt_debug = False
 
     opt_resume = None
     opt_logfile = PATH_LOGFILE
@@ -189,9 +194,11 @@ def main():
                 fatal("logfile '%s' is not writeable" % val)
             opt_logfile = val
 
+        elif opt == '--debug':
+            opt_debug = True
+
         elif opt in ('-h', '--help'):
             usage()
-
 
     conf.overrides += args
 
@@ -282,21 +289,28 @@ def main():
             hooks.backup.pre()
             if is_hub_address:
                 hb.set_backup_inprogress(backup_id, True)
-            b.run()
+
+            if opt_debug:
+                trap.close()
+                trap = None
+
+            b.run(opt_debug)
             hooks.backup.post()
         finally:
             if is_hub_address:
                 hb.set_backup_inprogress(backup_id, False)
-            trap.close()
-            fh = file(opt_logfile, "a")
 
-            timestamp = "### %s ###" % datetime.datetime.now().ctime()
-            print >> fh, "#" * len(timestamp)
-            print >> fh, timestamp
-            print >> fh, "#" * len(timestamp)
+            if trap:
+                trap.close()
+                fh = file(opt_logfile, "a")
 
-            fh.write(trap.std.read())
-            fh.close()
+                timestamp = "### %s ###" % datetime.datetime.now().ctime()
+                print >> fh, "#" * len(timestamp)
+                print >> fh, timestamp
+                print >> fh, "#" * len(timestamp)
+
+                fh.write(trap.std.read())
+                fh.close()
             
     except:
         if not conf.checkpoint_restore:

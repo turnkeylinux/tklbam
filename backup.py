@@ -297,7 +297,7 @@ class Backup:
         self.conf = conf
         self.extras_paths = extras_paths
 
-    def run(self):
+    def run(self, debug=False):
         conf = self.conf
         passphrase = file(conf.secretfile).readline().strip()
 
@@ -342,7 +342,7 @@ class Backup:
                                                    backup_command)
 
 
-        backup_command.run(passphrase, conf.credentials)
+        backup_command.run(passphrase, conf.credentials, debug=debug)
 
     def cleanup(self):
         if not self.conf.simulate:
