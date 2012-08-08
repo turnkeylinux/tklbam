@@ -183,6 +183,5 @@ class Backup:
         backup_command.run(passphrase, conf.credentials, debug=debug)
 
     def cleanup(self):
-        if not self.conf.simulate:
-            _rmdir(self.extras_paths.path)
+        _rmdir(self.extras_paths.path)
 

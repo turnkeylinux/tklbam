@@ -330,14 +330,20 @@ def main():
     except:
         if not conf.checkpoint_restore:
             b.cleanup()
+
         # not cleaning up
         raise
 
-    b.cleanup()
+    if conf.simulate:
+        print "Completed --simulate: Leaving /TKLBAM intact so you can manually inspect it"
+    else:
+        b.cleanup()
+
     registry.backup_resume_conf = None
 
     if not conf.simulate:
         hb.updated_backup(conf.address)
+
 
 if __name__=="__main__":
     main()
