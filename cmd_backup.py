@@ -224,8 +224,8 @@ def main():
     except lock.Locked:
         fatal("a previous backup is still in progress")
 
-    if conf.s3_parallel_uploads > (conf.volsize / 5):
-        warn("s3-parallel-uploads (%d) greater than volsize / 5 (%d)" % (conf.s3_parallel_uploads, conf.volsize / 5.0))
+    if conf.s3_parallel_uploads > 1 and conf.s3_parallel_uploads > (conf.volsize / 5):
+        warn("s3-parallel-uploads > volsize / 5 (minimum upload chunk is 5MB)")
 
     hb = hub.Backups(registry.sub_apikey)
 
