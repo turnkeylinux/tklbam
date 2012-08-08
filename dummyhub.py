@@ -66,8 +66,6 @@ class DummyUser(AttrDict):
         self.backups_max = 0
 
     def subscribe(self):
-        import random
-
         accesskey = base64.b64encode(sha("%d" % self.uid).digest())[:20]
         secretkey = base64.b64encode(os.urandom(30))[:40]
         producttoken = "{ProductToken}" + base64.b64encode("\x00" + os.urandom(2) + "AppTkn" + os.urandom(224))

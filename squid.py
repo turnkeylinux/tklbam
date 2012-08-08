@@ -4,7 +4,6 @@ import socket
 import command
 
 import signal
-import time
 
 import errno
 
