@@ -27,6 +27,12 @@ s3-parallel-uploads	1
 
 full-backup 1M
 
+# Skip backup components?
+
+backup-skip-files       False
+backup-skip-packages    False
+backup-skip-database    False
+
 # restore-cache-size: the maximum size of the download cache in restore-cache-path
 # 
 # This will come in handy when:

@@ -70,17 +70,20 @@ class Backup:
         shutil.copy("/etc/passwd", etc)
         shutil.copy("/etc/group", etc)
 
-        cls._write_whatchanged(extras.fsdelta, extras.fsdelta_olist,
-                               profile.dirindex, profile.dirindex_conf, 
-                               conf.overrides.fs)
+        if not conf.backup_skip_files:
+            cls._write_whatchanged(extras.fsdelta, extras.fsdelta_olist,
+                                   profile.dirindex, profile.dirindex_conf, 
+                                   conf.overrides.fs)
 
-        cls._write_new_packages(extras.newpkgs, profile.packages)
+        if not conf.backup_skip_packages:
+            cls._write_new_packages(extras.newpkgs, profile.packages)
 
-        try:
-            mysql.backup(extras.myfs, extras.etc.mysql, 
-                         limits=conf.overrides.db)
-        except mysql.Error:
-            pass
+        if not conf.backup_skip_database:
+            try:
+                mysql.backup(extras.myfs, extras.etc.mysql, 
+                             limits=conf.overrides.db)
+            except mysql.Error:
+                pass
 
     def __init__(self, conf, force_cleanup=False):
         profile_paths = ProfilePaths(conf.profile)
@@ -108,8 +111,11 @@ class Backup:
         if conf.verbose:
 
             # files in /TKLBAM + /TKLBAM/fsdelta-olist
-            fpaths= _fpaths(extras_paths.path) + \
-                            _filter_deleted(file(extras_paths.fsdelta_olist).read().splitlines())
+            fpaths= _fpaths(extras_paths.path) 
+
+            if not conf.backup_skip_files:
+                fsdelta_olist = file(extras_paths.fsdelta_olist).read().splitlines()
+                fpaths += _filter_deleted(fsdelta_olist)
 
             size = sum([ os.lstat(fpath).st_size 
                          for fpath in fpaths ])
@@ -146,16 +152,18 @@ class Backup:
         opts += [('volsize', conf.volsize),
                  ('full-if-older-than', conf.full_backup),
                  ('include', self.extras_paths.path),
-                 ('gpg-options', '--cipher-algo=aes'),
-                 ('include-filelist', self.extras_paths.fsdelta_olist),
-                 ('exclude', '**')]
+                 ('gpg-options', '--cipher-algo=aes')]
 
+        if not conf.backup_skip_files:
+             opts += [('include-filelist', self.extras_paths.fsdelta_olist)]
+
+        opts += [('exclude', '**')]
 
         args = [ '--s3-unencrypted-connection', '--allow-source-mismatch' ] 
 
         if conf.simulate and conf.verbose:
             args += [ '--dry-run' ]
-         
+
         if conf.s3_parallel_uploads > 1:
             s3_multipart_chunk_size = conf.volsize / conf.s3_parallel_uploads
             if s3_multipart_chunk_size < 5:

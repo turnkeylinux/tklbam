@@ -103,21 +103,25 @@ class Restore:
         self.backup_archive = backup_archive
 
     def database(self):
-        print "\n" + self._title("Restoring databases")
+        if not exists(self.extras.myfs):
+            return
 
         if self.rollback:
             self.rollback.save_database()
 
-        if exists(self.extras.myfs):
-            try:
-                mysql.restore(self.extras.myfs, self.extras.etc.mysql, 
-                              limits=self.limits.db, callback=mysql.cb_print())
+        print "\n" + self._title("Restoring databases")
 
-            except mysql.Error, e:
-                print "SKIPPING MYSQL DATABASE RESTORE: " + str(e)
-        
+        try:
+            mysql.restore(self.extras.myfs, self.extras.etc.mysql, 
+                          limits=self.limits.db, callback=mysql.cb_print())
+
+        except mysql.Error, e:
+            print "SKIPPING MYSQL DATABASE RESTORE: " + str(e)
+
     def packages(self):
         newpkgs_file = self.extras.newpkgs
+        if not exists(newpkgs_file):
+            return
 
         print "\n" + self._title("Restoring new packages")
 
@@ -220,6 +224,9 @@ class Restore:
 
     def files(self):
         extras = self.extras
+        if not exists(extras.fsdelta):
+            return
+
         overlay = self.backup_archive
         rollback = self.rollback
         limits = self.limits.fs
@@ -244,12 +251,17 @@ class Restore:
         for val in self._iter_apply_overlay(overlay, "/", [ "-" + backup.Backup.EXTRAS_PATH ] + limits):
             print val
 
-        print "\nPOST-OVERLAY FIXES:\n"
-        for action in changes.emptydirs():
+        emptydirs = list(changes.emptydirs())
+        statfixes = list(changes.statfixes(uidmap, gidmap))
+
+        if emptydirs or statfixes or deleted:
+            print "\nPOST-OVERLAY FIXES:\n"
+
+        for action in emptydirs:
             print action
             action()
 
-        for action in changes.statfixes(uidmap, gidmap):
+        for action in statfixes:
             print action
             action()
 

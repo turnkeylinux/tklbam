@@ -261,6 +261,6 @@ class ProfileArchive:
             os.remove(self.path_archive)
 
 from conf import Conf
-if os.environ.get("TKLBAM_DUMMYHUB") or os.path.exists(os.path.join(Conf().paths, "dummyhub")):
+if os.environ.get("TKLBAM_DUMMYHUB") or os.path.exists(os.path.join(Conf.DEFAULT_PATH, "dummyhub")):
     from dummyhub import Backups
 

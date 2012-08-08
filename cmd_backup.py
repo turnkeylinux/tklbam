@@ -1,14 +1,14 @@
 #!/usr/bin/python
-# 
+#
 # Copyright (c) 2010 Liraz Siri <liraz@turnkeylinux.org>
-# 
+#
 # This file is part of TKLBAM (TurnKey Linux BAckup and Migration).
-# 
+#
 # TKLBAM is open source software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
-# 
+#
 """
 Backup the current system
 
@@ -33,6 +33,7 @@ Options:
     --debug                   Run $$SHELL before Duplicity
 
 Configurable options:
+
     --volsize MB              Size of backup volume in MBs
                               default: $CONF_VOLSIZE
 
@@ -48,7 +49,11 @@ Configurable options:
                                 3D - three days
                                 2W - two weeks
                                 1M - one month
-                                
+
+    --skip-files              Don't backup filesystem
+    --skip-database           Don't backup databases
+    --skip-packages           Don't backup new packages
+
 Resolution order for configurable options:
 
   1) comand line (highest precedence)
@@ -141,8 +146,9 @@ def get_profile(hb):
 
 def main():
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], 'qsh', 
+        opts, args = getopt.gnu_getopt(sys.argv[1:], 'qsh',
                                        ['help',
+                                        'skip-files', 'skip-database', 'skip-packages',
                                         'debug',
                                         'resume',
                                         'logfile=',
@@ -197,6 +203,15 @@ def main():
 
         elif opt == '--debug':
             opt_debug = True
+
+        elif opt == '--skip-files':
+            conf.backup_skip_files = True
+
+        elif opt == '--skip-database':
+            conf.backup_skip_database = True
+
+        elif opt == '--skip-packages':
+            conf.backup_skip_packages = True
 
         elif opt in ('-h', '--help'):
             usage()
@@ -312,7 +327,6 @@ def main():
 
                 fh.write(trap.std.read())
                 fh.close()
-            
     except:
         if not conf.checkpoint_restore:
             b.cleanup()

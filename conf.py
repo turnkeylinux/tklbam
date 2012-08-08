@@ -81,7 +81,7 @@ class Limits(list):
 from utils import AttrDict
 
 class Conf(AttrDict):
-    DEFAULT_PATH = "/etc/tklbam"
+    DEFAULT_PATH = os.environ.get('TKLBAM_CONF', '/etc/tklbam')
     class Error(Exception):
         pass
 
@@ -92,7 +92,9 @@ class Conf(AttrDict):
         return self.Error("%s: %s" % (self.paths.conf, s))
 
     def __setitem__(self, name, val):
-        # sanity checking / parsing
+        # sanity checking / parsing values reach us whenver someone
+        # (including a method in this instance) sets an instance member
+
         if name == 'full_backup':
             if not re.match(r'^\d+[HDWMY]', val):
                 raise self.Error("bad full-backup value (%s)" % val)
@@ -116,12 +118,28 @@ class Conf(AttrDict):
         if name == 'restore-cache-dir':
             pass
 
+        if name == 'restore-cache-size':
+            if not re.match(r'^\d+\(%|mb?|gb?)?$', val, re.IGNORECASE):
+                raise self.Error("bad restore-cache value (%s)" % val)
+
+        backup_skip_options = [ 'backup_skip_' + opt
+                                for opt in ('files', 'database', 'packages') ]
+        if name in backup_skip_options:
+            if val not in (True, False):
+                if re.match(r'^true|1|yes$', val, re.IGNORECASE):
+                    val = True
+                elif re.match(r'^false|0|no$', val, re.IGNORECASE):
+                    val = False
+                else:
+                    raise self.Error("bad bool value '%s'" % val)
+
         AttrDict.__setitem__(self, name, val)
 
     def __init__(self, path=None):
         if path is None:
-            path = os.environ.get('TKLBAM_CONF', self.DEFAULT_PATH)
+            path = self.DEFAULT_PATH
 
+        self.path = path
         self.paths = self.Paths(path)
 
         self.secretfile = None
@@ -140,6 +158,10 @@ class Conf(AttrDict):
         self.restore_cache_size = "50%"
         self.restore_cache_dir = "/var/cache/tklbam/restore"
 
+        self.backup_skip_files = False
+        self.backup_skip_database = False
+        self.backup_skip_packages = False
+
         if not exists(self.paths.conf):
             return
 
@@ -154,20 +176,12 @@ class Conf(AttrDict):
                 raise self._error("illegal line '%s'" % (line))
 
             try:
-                if opt == 'full-backup':
-                    self.full_backup = val
+                if opt in ('full-backup', 'volsize', 's3-parallel-uploads',
+                           'restore-cache-size', 'restore-cache-dir',
+                           'backup-skip-files', 'backup-skip-packages', 'backup-skip-database'):
 
-                elif opt == 'volsize':
-                    self.volsize = val
-
-                elif opt == 's3-parallel-uploads':
-                    self.s3_parallel_uploads = val
-
-                elif opt == 'restore-cache-size':
-                    self.restore_cache_size = val
-
-                elif opt == 'restore-cache-dir':
-                    self.restore_cache_dir = val
+                    attrname = opt.replace('-', '_')
+                    setattr(self, attrname, val)
 
                 else:
                     raise self.Error("unknown conf option '%s'" % opt)
