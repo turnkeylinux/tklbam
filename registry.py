@@ -29,12 +29,14 @@ class UNDEFINED:
     pass
 
 class _Registry(object):
+    DEFAULT_PATH = "/var/lib/tklbam"
+
     class Paths(Paths):
         files = ['backup-resume', 'sub_apikey', 'secret', 'key', 'credentials', 'hbr', 'profile', 'profile/stamp']
 
     def __init__(self, path=None):
         if path is None:
-            path = os.environ.get('TKLBAM_REGISTRY', '/var/lib/tklbam')
+            path = os.environ.get('TKLBAM_REGISTRY', self.DEFAULT_PATH)
 
         if not exists(path):
             os.makedirs(path)

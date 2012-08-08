@@ -128,7 +128,7 @@ class Conf(AttrDict):
 
     def __init__(self, path=None):
         if path is None:
-            path = self.DEFAULT_PATH
+            path = os.environ.get('TKLBAM_CONF', self.DEFAULT_PATH)
 
         self.paths = self.Paths(path)
 

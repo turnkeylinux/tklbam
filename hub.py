@@ -260,6 +260,7 @@ class ProfileArchive:
         if os.path.exists(self.path_archive):
             os.remove(self.path_archive)
 
-if os.environ.get("TKLBAM_DUMMYHUB") or os.path.exists("/etc/tklbam/dummyhub"):
+import backup
+if os.environ.get("TKLBAM_DUMMYHUB") or os.path.exists(os.path.join(backup.Conf().paths, "dummyhub")):
     from dummyhub import Backups
 
