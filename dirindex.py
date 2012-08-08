@@ -1,13 +1,13 @@
-# 
+#
 # Copyright (c) 2010 Liraz Siri <liraz@turnkeylinux.org>
-# 
+#
 # This file is part of TKLBAM (TurnKey Linux BAckup and Migration).
-# 
+#
 # TKLBAM is open source software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
-# 
+#
 import re
 import os
 import stat
@@ -20,7 +20,7 @@ class Error(Exception):
 
 class DirIndex(dict):
     class Record:
-        def __init__(self, path, mod, uid, gid, size, mtime, 
+        def __init__(self, path, mod, uid, gid, size, mtime,
                      symlink=None):
             self.path = path
             self.mod = mod
@@ -37,10 +37,10 @@ class DirIndex(dict):
             symlink = os.readlink(path) \
                       if stat.S_ISLNK(st.st_mode) else None
 
-            rec = cls(path, 
-                      st.st_mode, 
-                      st.st_uid, st.st_gid, 
-                      st.st_size, st.st_mtime, 
+            rec = cls(path,
+                      st.st_mode,
+                      st.st_uid, st.st_gid,
+                      st.st_size, st.st_mtime,
                       symlink)
             return rec
 
@@ -58,7 +58,7 @@ class DirIndex(dict):
             return cls(path, *vals)
 
         def fmt(self):
-            vals = [ self.path ] 
+            vals = [ self.path ]
             for val in ( self.mod, self.uid, self.gid, self.size, self.mtime ):
                 vals.append("%x" % val)
 
@@ -77,7 +77,7 @@ class DirIndex(dict):
         di = cls()
         di.walk(*paths)
         di.save(path_index)
-        
+
         return di
 
     def __init__(self, fromfile=None):
@@ -101,7 +101,7 @@ class DirIndex(dict):
                 path = join(dir, dentry)
                 if path in pathmap.excludes:
                     continue
-                
+
                 dentries.append(dentry)
 
                 if not islink(path) and isdir(path):
@@ -177,14 +177,14 @@ class DirIndex(dict):
 
             if not attrs_equal(('mod', 'uid', 'gid'), self[path], other[path]):
                 paths_stat.append(path)
-        
+
         return files_new, files_edited, paths_stat
 
 create = DirIndex.create
 
 def read_paths(fh):
     paths = []
-    
+
     for line in fh.readlines():
         path = re.sub(r'#.*', '', line).strip()
         if not path:

@@ -1,14 +1,14 @@
 #!/usr/bin/python
-# 
+#
 # Copyright (c) 2010 Liraz Siri <liraz@turnkeylinux.org>
-# 
+#
 # This file is part of TKLBAM (TurnKey Linux BAckup and Migration).
-# 
+#
 # TKLBAM is open source software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
-# 
+#
 """
 Rollback last restore
 
@@ -36,9 +36,8 @@ def usage(e=None):
 
 def main():
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], 'h', 
+        opts, args = getopt.gnu_getopt(sys.argv[1:], 'h',
                                        ['force', 'help'])
-                                        
     except getopt.GetoptError, e:
         usage(e)
 
@@ -70,7 +69,7 @@ def main():
         if answer.lower() != "yes":
             print "You didn't answer 'yes'. Aborting!"
             sys.exit(1)
-        
+
     rollback.rollback()
 
 if __name__=="__main__":

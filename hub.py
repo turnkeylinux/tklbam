@@ -1,14 +1,14 @@
-# 
+#
 # Copyright (c) 2010 Liraz Siri <liraz@turnkeylinux.org>
 # Copyright (c) 2010 Alon Swartz <alon@turnkeylinux.org>
-# 
+#
 # This file is part of TKLBAM (TurnKey Linux BAckup and Migration).
-# 
+#
 # TKLBAM is open source software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
-# 
+#
 """TurnKey Hub API - Backup
 
 Notes:
@@ -150,7 +150,7 @@ class BackupRecord(AttrDict):
         self.size = int(response['size']) # in MBs
         self.label = response['description']
 
-        # no interface for this in tklbam, so not returned from hub 
+        # no interface for this in tklbam, so not returned from hub
         self.sessions = []
 
 class Credentials(AttrDict):

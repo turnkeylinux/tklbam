@@ -49,7 +49,7 @@ class Backup:
         fh.close()
 
     @staticmethod
-    def _write_whatchanged(dest, dest_olist, dirindex, dirindex_conf, 
+    def _write_whatchanged(dest, dest_olist, dirindex, dirindex_conf,
                            overrides=[]):
         paths = read_paths(file(dirindex_conf))
         paths += overrides
@@ -72,7 +72,7 @@ class Backup:
 
         if not conf.backup_skip_files:
             cls._write_whatchanged(extras.fsdelta, extras.fsdelta_olist,
-                                   profile.dirindex, profile.dirindex_conf, 
+                                   profile.dirindex, profile.dirindex_conf,
                                    conf.overrides.fs)
 
         if not conf.backup_skip_packages:
@@ -80,7 +80,7 @@ class Backup:
 
         if not conf.backup_skip_database:
             try:
-                mysql.backup(extras.myfs, extras.etc.mysql, 
+                mysql.backup(extras.myfs, extras.etc.mysql,
                              limits=conf.overrides.db)
             except mysql.Error:
                 pass
@@ -111,13 +111,13 @@ class Backup:
         if conf.verbose:
 
             # files in /TKLBAM + /TKLBAM/fsdelta-olist
-            fpaths= _fpaths(extras_paths.path) 
+            fpaths= _fpaths(extras_paths.path)
 
             if not conf.backup_skip_files:
                 fsdelta_olist = file(extras_paths.fsdelta_olist).read().splitlines()
                 fpaths += _filter_deleted(fsdelta_olist)
 
-            size = sum([ os.lstat(fpath).st_size 
+            size = sum([ os.lstat(fpath).st_size
                          for fpath in fpaths ])
 
             if size > 1024 * 1024 * 1024:
@@ -159,7 +159,7 @@ class Backup:
 
         opts += [('exclude', '**')]
 
-        args = [ '--s3-unencrypted-connection', '--allow-source-mismatch' ] 
+        args = [ '--s3-unencrypted-connection', '--allow-source-mismatch' ]
 
         if conf.simulate and conf.verbose:
             args += [ '--dry-run' ]
@@ -176,7 +176,7 @@ class Backup:
         backup_command = duplicity.Command(opts, *args)
 
         if conf.verbose:
-            print "\n# PASSPHRASE=$(cat %s) %s" % (conf.secretfile, 
+            print "\n# PASSPHRASE=$(cat %s) %s" % (conf.secretfile,
                                                    backup_command)
 
 

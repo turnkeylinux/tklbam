@@ -1,13 +1,13 @@
-# 
+#
 # Copyright (c) 2010 Liraz Siri <liraz@turnkeylinux.org>
-# 
+#
 # This file is part of TKLBAM (TurnKey Linux BAckup and Migration).
-# 
+#
 # TKLBAM is open source software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
-# 
+#
 import sys
 
 import os
@@ -46,7 +46,7 @@ def _mysql_opts(opts=[], defaults_file=None, **conf):
     return " ".join([ "--" + opt for opt in opts ])
 
 def mysqldump(**conf):
-    opts = [ "all-databases", "skip-extended-insert", "single-transaction", 
+    opts = [ "all-databases", "skip-extended-insert", "single-transaction",
              "compact", "quick" ]
 
     command = "mysqldump " + _mysql_opts(opts, **conf)
@@ -124,7 +124,7 @@ class MyFS:
                 database = val
                 if database in self.databases:
                     return True
-                
+
                 return self.default
 
 
@@ -193,7 +193,7 @@ class MyFS_Writer(MyFS):
                         callback(database)
                 else:
                     database = None
-            
+
             elif statement.startswith("CREATE TABLE"):
                 if not database:
                     continue
@@ -428,7 +428,7 @@ def cb_print(fh=None):
 def backup(myfs, etc, **kws):
     """High level mysql backup command.
     Arguments:
-        
+
         <myfs>      Directory we create to save MySQL backup
         <etc>       Directory where we save required MySQL etc configuration files (e.g., debian.cnf)
         """

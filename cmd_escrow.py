@@ -1,14 +1,14 @@
 #!/usr/bin/python
-# 
+#
 # Copyright (c) 2010 Liraz Siri <liraz@turnkeylinux.org>
-# 
+#
 # This file is part of TKLBAM (TurnKey Linux BAckup and Migration).
-# 
+#
 # TKLBAM is open source software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
-# 
+#
 """Create a backup escrow key (Save this somewhere safe)
 
 Arguments:
@@ -17,7 +17,7 @@ Arguments:
 
 Options:
 
-    -P --no-passphrase      Don't encrypt escrow key with a passphrase 
+    -P --no-passphrase      Don't encrypt escrow key with a passphrase
     -R --random-passphrase  Choose a secure random passphrase (and print it)
 """
 
@@ -92,6 +92,6 @@ def main():
         os.chmod(keyfile, 0600)
 
     print >> fh, key
-    
+
 if __name__ == "__main__":
     main()

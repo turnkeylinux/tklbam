@@ -15,9 +15,9 @@ def _find_free_port(port_from):
             sock.connect(('127.0.0.1', localport))
             return True
         except socket.error, e:
-            if e.errno == errno.ECONNREFUSED: 
+            if e.errno == errno.ECONNREFUSED:
                 return False
-    
+
     while True:
         if _is_listening(port_from) is False:
             return port_from
@@ -36,7 +36,7 @@ class Squid:
         os.environ['TKLBAM_SQUID_CACHE_DIR'] = self.cache_dir
 
         self.address = "127.0.0.1:%d" % _find_free_port(33128)
-        self.command = command.Command(("/usr/local/sbin/tklbam-squid", self.address, self.cache_size), 
+        self.command = command.Command(("/usr/local/sbin/tklbam-squid", self.address, self.cache_size),
                                        setpgrp=True, pty=True)
 
 

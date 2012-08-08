@@ -1,13 +1,13 @@
-# 
+#
 # Copyright (c) 2010 Liraz Siri <liraz@turnkeylinux.org>
-# 
+#
 # This file is part of TKLBAM (TurnKey Linux BAckup and Migration).
-# 
+#
 # TKLBAM is open source software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
-# 
+#
 import os
 from os.path import *
 
@@ -100,7 +100,7 @@ class Change:
 
     @classmethod
     def parse(cls, line):
-        op2class = dict((val.OP, val) for val in cls.__dict__.values() 
+        op2class = dict((val.OP, val) for val in cls.__dict__.values()
                         if isinstance(val, types.ClassType))
         op = line[0]
         if op not in op2class:
@@ -119,7 +119,7 @@ class Changes(list):
     """
     A list of Change instances, which we can load from a file and write
     back to a file.
-    
+
     The smarts is in statfixes() and deleted() methods which compare the
     list of changes to the current filesystem and yield Action() instances.
 
@@ -186,7 +186,7 @@ class Changes(list):
                 continue
 
             yield self.Action(os.remove, change.path)
-    
+
     def emptydirs(self):
         for change in self:
             if not lexists(change.path) and change.OP == 's':
@@ -208,7 +208,7 @@ class Changes(list):
 
             if change.OP == 'd':
                 continue
-            
+
             # optimization: if not remapped we can skip 'o' changes
             if change.OP == 'o' and \
                change.uid not in uidmap and change.gid not in gidmap:
@@ -218,7 +218,7 @@ class Changes(list):
             if change.OP in ('s', 'o'):
                 if st.st_uid != uidmap[change.uid] or \
                    st.st_gid != gidmap[change.gid]:
-                    yield self.Action(os.lchown, change.path, 
+                    yield self.Action(os.lchown, change.path,
                                         uidmap[change.uid], gidmap[change.gid])
 
             if change.OP == 's':

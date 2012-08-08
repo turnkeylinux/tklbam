@@ -1,13 +1,13 @@
-# 
+#
 # Copyright (c) 2010 Liraz Siri <liraz@turnkeylinux.org>
-# 
+#
 # This file is part of TKLBAM (TurnKey Linux BAckup and Migration).
-# 
+#
 # TKLBAM is open source software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
-# 
+#
 import sys
 import os
 import re
@@ -35,8 +35,8 @@ def installed():
 
     packages = []
     for control in parse_status("/var/lib/dpkg/status"):
-        d = dict([ re.split(':\s*', line, 1) 
-                   for line in control.split('\n') 
+        d = dict([ re.split(':\s*', line, 1)
+                   for line in control.split('\n')
                    if line and (':' in line) and (line[0] != ' ') ])
 
         if "ok installed" in d['Status']:
@@ -77,8 +77,8 @@ class AptCache(set):
         status = os.WEXITSTATUS(status)
         if status not in (0, 100):
             raise self.Error("execution failed (%d): %s\n%s" % (status, command, output))
-        
-        cached = [ line.split()[1] 
+
+        cached = [ line.split()[1]
                    for line in output.split("\n") if
                    line.startswith("Package: ") ]
 

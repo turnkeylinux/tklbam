@@ -1,21 +1,21 @@
 #!/usr/bin/python
-# 
+#
 # Copyright (c) 2010 Liraz Siri <liraz@turnkeylinux.org>
-# 
+#
 # This file is part of TKLBAM (TurnKey Linux BAckup and Migration).
-# 
+#
 # TKLBAM is open source software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
-# 
+#
 """
 List backup records
 
 By default uses a built-in format, unless a user-specified format is specified.
 
 Format variables:
-    
+
     %id                     Backup id
     %label                  Descriptive label
     %turnkey_version        Appliance version code
@@ -118,7 +118,7 @@ def main():
                     (hbr.backup_id, fmt_skpp(hbr.key),
                      hbr.created.strftime("%Y-%m-%d"),
 
-                     hbr.updated.strftime("%Y-%m-%d") 
+                     hbr.updated.strftime("%Y-%m-%d")
                      if hbr.updated else "-",
 
                      fmt_size(hbr.size),

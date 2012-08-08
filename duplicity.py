@@ -1,13 +1,13 @@
-# 
+#
 # Copyright (c) 2010 Liraz Siri <liraz@turnkeylinux.org>
-# 
+#
 # This file is part of TKLBAM (TurnKey Linux BAckup and Migration).
-# 
+#
 # TKLBAM is open source software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
-# 
+#
 import os
 from os.path import *
 
@@ -76,6 +76,6 @@ class Command:
         exitcode = child.wait()
         if exitcode != 0:
             raise Error("non-zero exitcode (%d) from backup command: %s" % (exitcode, str(self)))
-        
+
     def __str__(self):
         return " ".join(self.command)

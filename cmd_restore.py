@@ -1,14 +1,14 @@
 #!/usr/bin/python
-# 
+#
 # Copyright (c) 2010 Liraz Siri <liraz@turnkeylinux.org>
-# 
+#
 # This file is part of TKLBAM (TurnKey Linux BAckup and Migration).
-# 
+#
 # TKLBAM is open source software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
-# 
+#
 """
 Restore a backup
 
@@ -18,9 +18,9 @@ Arguments:
 
 Options:
     --time=TIME                       Time to restore from
-     
+
       TIME := YYYY-MM-DD | YYYY-MM-DDThh:mm:ss | <int>[mhDWMY]
-        
+
               2010-08-06 - 2010, August 6th, 00:00
 
               2010-08-07T14:00 - 2010, August 7th 14:00 UTC
@@ -57,7 +57,7 @@ Options:
     --force                           Disable sanity checking
 
     --debug                           Run $$SHELL after Duplicity
-                            
+
 Configurable options:
 
     --restore-cache-size=SIZE         The maximum size of the download cache
@@ -231,8 +231,8 @@ def main():
     opt_debug = False
 
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], 'h', 
-                                       ['limits=', 'address=', 'keyfile=', 
+        opts, args = getopt.gnu_getopt(sys.argv[1:], 'h',
+                                       ['limits=', 'address=', 'keyfile=',
                                         'logfile=',
                                         'restore-cache-size=', 'restore-cache-dir=',
                                         'force',
@@ -242,7 +242,6 @@ def main():
                                         'debug',
                                         'skip-files', 'skip-database', 'skip-packages',
                                         'no-rollback'])
-                                        
     except getopt.GetoptError, e:
         usage(e)
 

@@ -152,7 +152,7 @@ def main():
                                         'debug',
                                         'resume',
                                         'logfile=',
-                                        'simulate', 'quiet', 
+                                        'simulate', 'quiet',
                                         'profile=', 'secretfile=', 'address=',
                                         'volsize=', 's3-parallel-uploads=', 'full-backup='])
     except getopt.GetoptError, e:
@@ -236,12 +236,12 @@ def main():
         try:
             registry.credentials = hb.get_credentials()
         except hb.Error, e:
-            # asking for get_credentials() might fail if the hub is down. 
+            # asking for get_credentials() might fail if the hub is down.
             # But If we already have the credentials we can survive that.
-            
+
             if isinstance(e, hub.NotSubscribedError):
                 fatal(e)
-            
+
             if not registry.credentials:
                 pass
 
@@ -253,7 +253,7 @@ def main():
             try:
                 registry.hbr = hb.get_backup_record(registry.hbr.backup_id)
             except hb.Error, e:
-                # if the Hub is down we can hope that the cached address 
+                # if the Hub is down we can hope that the cached address
                 # is still valid and warn and try to backup anyway.
                 #
                 # But if we reach the Hub and it tells us the backup is invalid
@@ -266,8 +266,8 @@ def main():
                     warn(e)
 
         if not registry.hbr:
-            registry.hbr = hb.new_backup_record(registry.key, 
-                                                get_turnkey_version(), 
+            registry.hbr = hb.new_backup_record(registry.key,
+                                                get_turnkey_version(),
                                                 get_server_id())
 
         conf.address = registry.hbr.address
@@ -284,7 +284,7 @@ def main():
 
         conf = registry.backup_resume_conf
 
-    # implicit resume if we have a leftover session and 
+    # implicit resume if we have a leftover session and
     # the backup configuration is the same
     if registry.backup_resume_conf == conf:
         opt_resume = True

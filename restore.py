@@ -1,13 +1,13 @@
-# 
+#
 # Copyright (c) 2010 Liraz Siri <liraz@turnkeylinux.org>
-# 
+#
 # This file is part of TKLBAM (TurnKey Linux BAckup and Migration).
-# 
+#
 # TKLBAM is open source software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
-# 
+#
 import sys
 
 import os
@@ -90,7 +90,7 @@ class Restore:
 
         return tmpdir
 
-    def __init__(self, address, secret, cache_size, cache_dir,  
+    def __init__(self, address, secret, cache_size, cache_dir,
                  limits=[], time=None, credentials=None, rollback=True):
         print "Restoring duplicity archive from " + address
         backup_archive = self._duplicity_restore(address, cache_size, cache_dir, credentials, secret, time)
@@ -112,7 +112,7 @@ class Restore:
         print "\n" + self._title("Restoring databases")
 
         try:
-            mysql.restore(self.extras.myfs, self.extras.etc.mysql, 
+            mysql.restore(self.extras.myfs, self.extras.etc.mysql,
                           limits=self.limits.db, callback=mysql.cb_print())
 
         except mysql.Error, e:
@@ -152,14 +152,14 @@ class Restore:
     def _userdb_merge(old_etc, new_etc):
         old_passwd = join(old_etc, "passwd")
         new_passwd = join(new_etc, "passwd")
-        
+
         old_group = join(old_etc, "group")
         new_group = join(new_etc, "group")
 
         def r(path):
             return file(path).read()
 
-        return userdb.merge(r(old_passwd), r(old_group), 
+        return userdb.merge(r(old_passwd), r(old_group),
                             r(new_passwd), r(new_group))
 
     @staticmethod

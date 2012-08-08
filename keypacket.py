@@ -1,13 +1,13 @@
-# 
+#
 # Copyright (c) 2010 Liraz Siri <liraz@turnkeylinux.org>
-# 
+#
 # This file is part of TKLBAM (TurnKey Linux BAckup and Migration).
-# 
+#
 # TKLBAM is open source software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
-# 
+#
 import os
 import hashlib
 import base64
@@ -41,7 +41,7 @@ def _repeat(f, input, count):
     return input
 
 def _cipher_key(passphrase, repeats):
-    cipher_key = _repeat(lambda k: hashlib.sha256(k).digest(),  
+    cipher_key = _repeat(lambda k: hashlib.sha256(k).digest(),
                          passphrase, repeats)
     return cipher_key
 
@@ -60,12 +60,12 @@ def fmt(secret, passphrase):
     cipher_key = _cipher_key(passphrase, hash_repeats)
     plaintext = salt + hashlib.sha1(secret).digest() + secret
 
-    ciphertext = _repeat(lambda v: _cipher(cipher_key).encrypt(v), 
+    ciphertext = _repeat(lambda v: _cipher(cipher_key).encrypt(v),
                          _pad(plaintext), cipher_repeats)
 
     fingerprint = hashlib.sha1(secret).digest()[:FINGERPRINT_LEN]
-    packet = struct.pack("!BHH", KEY_VERSION, 
-                         hash_repeats / 1000, 
+    packet = struct.pack("!BHH", KEY_VERSION,
+                         hash_repeats / 1000,
                          cipher_repeats / 1000) + fingerprint + ciphertext
 
     return base64.b64encode(packet)

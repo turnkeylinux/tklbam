@@ -20,7 +20,7 @@ class APIKey:
     def __init__(self, apikey):
         apikey = str(apikey)
         self.encoded = apikey
-        
+
         padded = "A" * (20 - len(apikey)) + apikey
         try:
             uid, secret = struct.unpack("!L8s", base64.b32decode(padded + "=" * 4))
@@ -73,8 +73,8 @@ class DummyUser(AttrDict):
         producttoken = "{ProductToken}" + base64.b64encode("\x00" + os.urandom(2) + "AppTkn" + os.urandom(224))
         usertoken = "{UserToken}" + base64.b64encode("\x00" + os.urandom(2) + "UserTkn" + os.urandom(288))
 
-        self.credentials = Credentials({'accesskey': accesskey, 
-                                        'secretkey': secretkey, 
+        self.credentials = Credentials({'accesskey': accesskey,
+                                        'secretkey': secretkey,
                                         'producttoken': producttoken,
                                         'usertoken': usertoken})
 
@@ -165,7 +165,7 @@ class DummyBackupRecord(AttrDict):
     def update(self):
         self.updated = datetime.now()
 
-        path = self.address[len("file://"):] 
+        path = self.address[len("file://"):]
 
         self.sessions = _parse_duplicity_sessions(path)
         self.size = sum([ session.size for session in self.sessions ])
@@ -230,7 +230,7 @@ dummydb = _DummyDB("/var/tmp/tklbam/dummyhub")
 class Backups:
     # For simplicity's sake this implements a dummy version of both
     # client-side and server-side operations.
-    # 
+    #
     # When translating to a real implementation the interface should remain
     # but the implementation will change completely as only client-side
     # operations remain.
@@ -302,7 +302,7 @@ class Backups:
         os.makedirs(path)
         address = "file://" + path
 
-        backup_record = self.user.new_backup(address, key, 
+        backup_record = self.user.new_backup(address, key,
                                              turnkey_version, server_id)
 
         dummydb.save()
@@ -317,7 +317,7 @@ class Backups:
 
     def list_backups(self):
         backups = self.user.backups.values()
-        return sorted(self.user.backups.values(), 
+        return sorted(self.user.backups.values(),
                       lambda a,b: cmp(int(a.backup_id), int(b.backup_id)))
 
     def updated_backup(self, address):

@@ -1,15 +1,15 @@
 # the registry is implemented as a virtual object with properties that are
 # mapped directly to files.
-# 
+#
 # Copyright (c) 2010 Liraz Siri <liraz@turnkeylinux.org>
-# 
+#
 # This file is part of TKLBAM (TurnKey Linux BAckup and Migration).
-# 
+#
 # TKLBAM is open source software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
-# 
+#
 
 import sys
 import os
@@ -104,7 +104,7 @@ class _Registry(object):
             return Credentials(retval)
 
     credentials = property(credentials, credentials)
-    
+
     def hbr(self, val=UNDEFINED):
         format = "%Y-%m-%d %H:%M:%S"
         if val and val is not UNDEFINED:

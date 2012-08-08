@@ -1,14 +1,14 @@
 #!/usr/bin/python
-# 
+#
 # Copyright (c) 2010 Liraz Siri <liraz@turnkeylinux.org>
-# 
+#
 # This file is part of TKLBAM (TurnKey Linux BAckup and Migration).
-# 
+#
 # TKLBAM is open source software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
-# 
+#
 """
 Print a helpful status message
 
@@ -57,7 +57,7 @@ def usage(e=None):
 
 def main():
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], "h", 
+        opts, args = getopt.gnu_getopt(sys.argv[1:], "h",
                                        [ "short", "help" ])
     except getopt.GetoptError, e:
         usage(e)
@@ -75,20 +75,20 @@ def main():
     if status == Status.NO_APIKEY:
         print "TKLBAM (Backup and Migration):  NOT INITIALIZED"
         if not opt_short:
-            print 
+            print
             print '  To initialize TKLBAM, run the "tklbam-init" command to link this'
             print '  system to your TurnKey Hub account. For details see the man page or'
             print '  go to:'
-            print 
+            print
             print '      http://www.turnkeylinux.org/tklbam'
 
     elif status == Status.NO_BACKUP:
         print "TKLBAM (Backup and Migration):  NO BACKUPS"
         if not opt_short:
-            print 
+            print
             print '  To backup for the first time run the "tklbam-backup" command. For'
             print '  details see the man page or go to:'
-            print 
+            print
             print '      http://www.turnkeylinux.org/tklbam'
 
     elif status == Status.OK:
