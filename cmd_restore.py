@@ -103,6 +103,7 @@ from version import get_turnkey_version, codename
 from utils import is_writeable
 
 import backup
+from conf import Conf
 
 PATH_LOGFILE = "/var/log/tklbam-restore"
 
@@ -205,7 +206,7 @@ def usage(e=None):
     print >> sys.stderr, "Syntax: %s [ -options ] [ <hub-backup> ]" % sys.argv[0]
 
     tpl = Template(__doc__.strip())
-    conf = backup.Conf()
+    conf = Conf()
     print >> sys.stderr, tpl.substitute(CONF_PATH=conf.paths.conf,
                                         CONF_RESTORE_CACHE_SIZE=conf.restore_cache_size,
                                         CONF_RESTORE_CACHE_DIR=conf.restore_cache_dir)
@@ -245,7 +246,7 @@ def main():
     except getopt.GetoptError, e:
         usage(e)
 
-    conf = backup.Conf()
+    conf = Conf()
 
     for opt, val in opts:
         if opt == '--l':

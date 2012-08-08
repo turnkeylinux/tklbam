@@ -172,11 +172,13 @@ class Profile(str):
     def __init__(self, path, timestamp):
         self.timestamp = timestamp
 
+import conf
+
 class BackupSessionConf(AttrDict):
     def __init__(self, d={}):
         AttrDict.__init__(self, d)
         self.profile = None
-        self.overrides = backup.Limits(self.overrides)
+        self.overrides = conf.Limits(self.overrides)
         self.credentials = Credentials(self.credentials)
 
     def __eq__(self, other):

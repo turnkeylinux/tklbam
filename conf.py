@@ -1,6 +1,9 @@
 import os
 from os.path import *
+
 import re
+
+from paths import Paths
 
 class Error(Exception):
     pass

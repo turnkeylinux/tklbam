@@ -30,6 +30,7 @@ from temp import TempDir
 import utils
 
 import backup
+import conf
 import mysql
 import duplicity
 
@@ -97,7 +98,7 @@ class Restore:
         extras_path = backup_archive + backup.Backup.EXTRAS_PATH
         self.extras = backup.ExtrasPaths(extras_path)
         self.rollback = Rollback.create() if rollback else None
-        self.limits = backup.Limits(limits)
+        self.limits = conf.Limits(limits)
         self.credentials = credentials
         self.backup_archive = backup_archive
 

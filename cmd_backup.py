@@ -75,6 +75,7 @@ import hub
 import backup
 import hooks
 from registry import registry
+from conf import Conf
 
 from version import get_turnkey_version
 from stdtrap import UnitedStdTrap
@@ -89,7 +90,7 @@ def usage(e=None):
 
     print >> sys.stderr, "Syntax: %s [ -options ] [ override ... ]" % sys.argv[0]
     tpl = Template(__doc__.strip())
-    conf = backup.Conf()
+    conf = Conf()
     print >> sys.stderr, tpl.substitute(CONF_PATH=conf.paths.conf,
                                         CONF_OVERRIDES=conf.paths.overrides,
                                         CONF_VOLSIZE=conf.volsize,
@@ -156,7 +157,7 @@ def main():
     opt_resume = None
     opt_logfile = PATH_LOGFILE
 
-    conf = backup.Conf()
+    conf = Conf()
     conf.secretfile = registry.path.secret
 
     for opt, val in opts:
