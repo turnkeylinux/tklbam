@@ -1,7 +1,7 @@
 # the registry is implemented as a virtual object with properties that are
 # mapped directly to files.
 #
-# Copyright (c) 2010 Liraz Siri <liraz@turnkeylinux.org>
+# Copyright (c) 2010-2012 Liraz Siri <liraz@turnkeylinux.org>
 #
 # This file is part of TKLBAM (TurnKey Linux BAckup and Migration).
 #
