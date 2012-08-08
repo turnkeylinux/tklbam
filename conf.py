@@ -111,15 +111,8 @@ class Conf(AttrDict):
             except ValueError:
                 raise self.Error("s3-parallel-uploads not a number (%s)" % val)
 
-        if name == 'restore-cache-size':
-            if not re.match(r'^\d+\(%|mb?|gb?)?$', val, re.IGNORECASE):
-                raise self.Error("bad restore-cache value (%s)" % val)
-
-        if name == 'restore-cache-dir':
-            pass
-
-        if name == 'restore-cache-size':
-            if not re.match(r'^\d+\(%|mb?|gb?)?$', val, re.IGNORECASE):
+        if name == 'restore_cache_size':
+            if not re.match(r'^\d+(%|mb?|gb?)?$', val, re.IGNORECASE):
                 raise self.Error("bad restore-cache value (%s)" % val)
 
         backup_skip_options = [ 'backup_skip_' + opt
