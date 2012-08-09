@@ -1,7 +1,6 @@
 import os
 from os.path import *
 
-import re
 import shutil
 
 from paths import Paths
