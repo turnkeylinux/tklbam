@@ -11,9 +11,8 @@
 # the License, or (at your option) any later version.
 #
 
-import sys
 import os
-from os.path import *
+from os.path import exists
 from paths import Paths
 import simplejson
 
@@ -22,8 +21,6 @@ from datetime import datetime
 import shutil
 from utils import AttrDict
 from hub import Credentials
-
-import backup
 
 class UNDEFINED:
     pass
