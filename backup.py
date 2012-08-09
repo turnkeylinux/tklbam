@@ -33,6 +33,12 @@ def _fpaths(dpath):
 def _filter_deleted(files):
     return [ file for file in files if exists(file) ]
 
+def print_if(conditional):
+    def printer(s):
+        if conditional:
+            print s
+    return printer
+
 class Backup:
     EXTRAS_PATH = "/TKLBAM"
 
@@ -86,6 +92,8 @@ class Backup:
                 pass
 
     def __init__(self, conf, force_cleanup=False):
+        verbose = print_if(conf.verbose)
+
         profile_paths = ProfilePaths(conf.profile)
         extras_paths = ExtrasPaths(self.EXTRAS_PATH)
 
@@ -95,8 +103,7 @@ class Backup:
         self.force_cleanup = force_cleanup
         if not exists(extras_paths.path):
             self.force_cleanup = True
-            if conf.verbose:
-                print "CREATING " + extras_paths.path
+            verbose("CREATING " + extras_paths.path)
 
             try:
                 self._create_extras(extras_paths, profile_paths, conf)
@@ -105,8 +112,7 @@ class Backup:
                 _rmdir(extras_paths.path)
                 raise
         else:
-            if conf.verbose:
-                print "RE-USING " + extras_paths.path
+            verbose("RE-USING " + extras_paths.path)
 
         if conf.verbose:
 
@@ -134,6 +140,8 @@ class Backup:
         self.extras_paths = extras_paths
 
     def run(self, debug=False):
+        verbose = print_if(self.conf.verbose)
+
         conf = self.conf
         passphrase = file(conf.secretfile).readline().strip()
 
@@ -143,8 +151,7 @@ class Backup:
 
         if not conf.checkpoint_restore or self.force_cleanup:
             cleanup_command = duplicity.Command(opts, "cleanup", "--force", conf.address)
-            if conf.verbose:
-                print "\n# " + str(cleanup_command)
+            verbose("\n# " + str(cleanup_command))
 
             if not conf.simulate:
                 cleanup_command.run(passphrase, conf.credentials)
@@ -175,9 +182,7 @@ class Backup:
 
         backup_command = duplicity.Command(opts, *args)
 
-        if conf.verbose:
-            print "\n# PASSPHRASE=$(cat %s) %s" % (conf.secretfile,
-                                                   backup_command)
+        verbose("\n# PASSPHRASE=$(cat %s) %s" % (conf.secretfile, backup_command))
 
 
         backup_command.run(passphrase, conf.credentials, debug=debug)
