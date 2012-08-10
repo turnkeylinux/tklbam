@@ -229,7 +229,7 @@ def main():
     try:
         registry.update_profile(hb, conf.force_profile)
     except registry.CachedProfile, e:
-        warn(e)
+        warn(str(e) + "\n")
 
     credentials = None
     if not conf.address:
