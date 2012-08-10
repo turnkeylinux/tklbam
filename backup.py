@@ -136,7 +136,7 @@ class Backup:
 
         saved_backup_conf = BackupConf.fromfile(extras_paths.backup_conf)
 
-        if backup_conf != saved_backup_conf:
+        if backup_conf != saved_backup_conf or not conf.checkpoint_restore:
             resume = False
 
         self.force_cleanup = False
