@@ -18,7 +18,8 @@ Arguments:
     Default overrides read from $CONF_OVERRIDES
 
 Options:
-    --resume                  Resume previously interrupted backup session
+    --resume                  Resume aborted backup session
+    --disable-resume          Disable implicit --resume when rerunning an aborted backup
 
     --address=TARGET_URL      manual backup target URL
                               default: automatically configured via Hub
@@ -71,6 +72,7 @@ from os.path import *
 import sys
 import getopt
 
+import time
 import datetime
 from string import Template
 
@@ -150,7 +152,7 @@ def main():
                                        ['help',
                                         'skip-files', 'skip-database', 'skip-packages',
                                         'debug',
-                                        'resume',
+                                        'resume', 'disable-resume',
                                         'logfile=',
                                         'simulate', 'quiet',
                                         'profile=', 'secretfile=', 'address=',
@@ -160,6 +162,7 @@ def main():
 
     opt_debug = False
     opt_resume = None
+    opt_disable_resume = False
     opt_logfile = PATH_LOGFILE
 
     conf = Conf()
@@ -171,6 +174,9 @@ def main():
 
         if opt == '--resume':
             opt_resume = True
+
+        elif opt == '--disable-resume':
+            opt_disable_resume = True
 
         elif opt == '--profile':
             conf.profile = val
@@ -274,7 +280,10 @@ def main():
     if opt_resume:
         # explicit resume
         if conf.simulate:
-            fatal("--resume and --simulate incompatible")
+            fatal("--resume and --simulate incompatible: you can only resume real backups")
+
+        if opt_disable_resume:
+            fatal("--resume and --disable-resume incompatible")
 
         if registry.backup_resume_conf is None:
             fatal("no previous backup session to resume from")
@@ -282,7 +291,12 @@ def main():
         conf = registry.backup_resume_conf
     else:
         # implicit resume
-        if not conf.simulate and registry.backup_resume_conf == conf:
+        if not conf.simulate and not opt_disable_resume and registry.backup_resume_conf == conf:
+            print "Implicit --resume: Detected a rerun of an aborted backup session"
+            print "                   You can disable this with the --disable-resume option"
+            print
+            time.sleep(5)
+
             opt_resume = True
 
     if opt_resume:
