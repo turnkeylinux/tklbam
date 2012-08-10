@@ -83,6 +83,9 @@ class DirIndex(dict):
     def __init__(self, fromfile=None):
         if fromfile:
             for line in file(fromfile).readlines():
+                if not line.strip():
+                    continue
+
                 rec = DirIndex.Record.fromline(line)
                 self[rec.path] = rec
 
