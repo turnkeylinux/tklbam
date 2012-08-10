@@ -80,10 +80,18 @@ class Restore:
 
         squid = Squid(cache_size, cache_dir)
         squid.start()
+
+        orig_env = os.environ.get('http_proxy')
         os.environ['http_proxy'] = squid.address
 
         raise_rlimit(resource.RLIMIT_NOFILE, RLIMIT_NOFILE_MAX)
         duplicity.Command(opts, '--s3-unencrypted-connection', address, tmpdir).run(secret, credentials)
+
+        if orig_env:
+            os.environ['http_proxy'] = orig_env
+        else:
+            del os.environ['http_proxy']
+
         sys.stdout.flush()
 
         squid.stop()
