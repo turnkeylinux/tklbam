@@ -143,6 +143,8 @@ class Backup:
         if not resume:
             _rmdir(extras_paths.path)
             self.force_cleanup = True
+        else:
+            verbose("ATTEMPTING TO RESUME ABORTED BACKUP SESSION")
 
         # create or re-use /TKLBAM
         if not exists(extras_paths.path):

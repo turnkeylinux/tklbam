@@ -299,9 +299,6 @@ def main():
 
             opt_resume = True
 
-    if opt_resume:
-        print "ATTEMPTING TO RESUME ABORTED SESSION"
-
     registry.backup_resume_conf = None
     if not conf.simulate:
         registry.backup_resume_conf = conf
