@@ -176,6 +176,8 @@ class Conf(AttrDict):
                     attrname = opt.replace('-', '_')
                     setattr(self, attrname, val)
 
+                elif opt == 'force-profile':
+                    self.profile = val
                 else:
                     raise self.Error("unknown conf option '%s'" % opt)
 

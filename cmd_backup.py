@@ -18,41 +18,43 @@ Arguments:
     Default overrides read from $CONF_OVERRIDES
 
 Options:
-    --resume                  Resume aborted backup session
-    --disable-resume          Disable implicit --resume when rerunning an aborted backup
+    --resume                       Resume aborted backup session
+    --disable-resume               Disable implicit --resume when rerunning an aborted backup
 
-    --address=TARGET_URL      manual backup target URL
-                              default: automatically configured via Hub
+    --address=TARGET_URL           manual backup target URL
+                                   default: automatically configured via Hub
 
-    -s --simulate             Do a dry run simulation of the backup.
+    -s --simulate                  Do a dry run simulation of the backup.
 
-    -q --quiet                Be less verbose
-    --logfile=PATH            Path of file to log to
-                              default: $LOGFILE
+    -q --quiet                     Be less verbose
+    --logfile=PATH                 Path of file to log to
+                                   default: $LOGFILE
 
-    --debug                   Run $$SHELL before Duplicity
+    --debug                        Run $$SHELL before Duplicity
 
 Configurable options:
 
-    --volsize MB              Size of backup volume in MBs
-                              default: $CONF_VOLSIZE
+    --volsize MB                   Size of backup volume in MBs
+                                   default: $CONF_VOLSIZE
 
-    --s3-parallel-uploads=N   Number of parallel volume chunk uploads
-                              default: $CONF_S3_PARALLEL_UPLOADS
+    --s3-parallel-uploads=N        Number of parallel volume chunk uploads
+                                   default: $CONF_S3_PARALLEL_UPLOADS
 
-    --full-backup FREQUENCY   Time frequency of full backup
-                              default: $CONF_FULL_BACKUP
+    --full-backup FREQUENCY        Time frequency of full backup
+                                   default: $CONF_FULL_BACKUP
 
-                              format := <int>[DWM]
+                                   format := <int>[DWM]
 
-                                e.g.,
-                                3D - three days
-                                2W - two weeks
-                                1M - one month
+                                     e.g.,
+                                     3D - three days
+                                     2W - two weeks
+                                     1M - one month
 
-    --skip-files              Don't backup filesystem
-    --skip-database           Don't backup databases
-    --skip-packages           Don't backup new packages
+    --skip-files                   Don't backup filesystem
+    --skip-database                Don't backup databases
+    --skip-packages                Don't backup new packages
+
+    --force-profile=PROFILE_ID     Force a specific backup profile
 
 Resolution order for configurable options:
 
@@ -161,7 +163,7 @@ def main():
                                         'resume', 'disable-resume',
                                         'logfile=',
                                         'simulate', 'quiet',
-                                        'profile=', 'secretfile=', 'address=',
+                                        'force-profile=', 'secretfile=', 'address=',
                                         'volsize=', 's3-parallel-uploads=', 'full-backup='])
     except getopt.GetoptError, e:
         usage(e)
@@ -184,7 +186,7 @@ def main():
         elif opt == '--disable-resume':
             opt_disable_resume = True
 
-        elif opt == '--profile':
+        elif opt == '--force-profile':
             conf.profile = val
 
         elif opt in ('-q', '--quiet'):
