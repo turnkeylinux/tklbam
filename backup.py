@@ -157,8 +157,6 @@ class Backup:
                 # destroy potentially incomplete extras
                 _rmdir(extras_paths.path)
                 raise
-        else:
-            verbose("RE-USING " + extras_paths.path)
 
         # print uncompressed footprint
         if conf.verbose:
