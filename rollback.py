@@ -120,7 +120,7 @@ class Rollback:
 
         purge_packages = current_packages & rollback_packages
         if purge_packages:
-            os.system("dpkg --purge " + " ".join(purge_packages))
+            os.system("DEBIAN_FRONTEND=noninteractive dpkg --purge " + " ".join(purge_packages))
 
     def rollback_database(self):
         if exists(self.paths.myfs):
