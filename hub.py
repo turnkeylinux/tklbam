@@ -200,7 +200,8 @@ class Backups:
 
         Raises an exception if no profile exists for profile_id.
         """
-        attrs = {'profile_id': profile_id}
+        #attrs = {'profile_id': profile_id}
+        attrs = {'turnkey_version': profile_id} # quick hack until we fix the Hub API
 
         response = self._api('GET', 'archive/timestamp/', attrs)
         archive_timestamp = float(response['archive_timestamp'])
