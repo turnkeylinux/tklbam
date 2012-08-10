@@ -222,6 +222,20 @@ def main():
 
     conf.overrides += args
 
+    if opt_resume:
+        # explicit resume
+        if conf.simulate:
+            fatal("--resume and --simulate incompatible: you can only resume real backups")
+
+        if opt_disable_resume:
+            fatal("--resume and --disable-resume incompatible")
+
+        if registry.backup_resume_conf is None:
+            fatal("no previous backup session to resume from")
+
+    if conf.simulate and registry.backup_resume_conf and not opt_disable_resume:
+        fatal("--simulate will destroy your aborted backup session. To force use --disable-resume")
+
     lock = PidLock("/var/run/tklbam-backup.pid", nonblock=True)
     try:
         lock.lock()
@@ -277,16 +291,6 @@ def main():
         conf.address = registry.hbr.address
 
     if opt_resume:
-        # explicit resume
-        if conf.simulate:
-            fatal("--resume and --simulate incompatible: you can only resume real backups")
-
-        if opt_disable_resume:
-            fatal("--resume and --disable-resume incompatible")
-
-        if registry.backup_resume_conf is None:
-            fatal("no previous backup session to resume from")
-
         conf = registry.backup_resume_conf
     else:
         # implicit resume
