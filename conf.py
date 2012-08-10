@@ -144,7 +144,7 @@ class Conf(AttrDict):
 
         self.checkpoint_restore = True
 
-        self.volsize = 50
+        self.volsize = 25
         self.s3_parallel_uploads = 1
         self.full_backup = "1M"
         self.restore_cache_size = "50%"

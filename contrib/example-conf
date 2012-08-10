@@ -4,7 +4,7 @@
 
 # volsize: size of backup volumes in MBs
 
-volsize 50
+volsize 25
 
 # s3-parallel-uploads: Amazon S3 supports multipart uploads. This
 # allows different chunks of a volume to be uploaded in parallel
