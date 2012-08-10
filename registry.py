@@ -31,6 +31,9 @@ class _Registry(object):
     class CachedProfile(Exception):
         pass
 
+    class ProfileNotFound(Exception):
+        pass
+
     DEFAULT_PATH = "/var/lib/tklbam"
 
     class Paths(Paths):
@@ -191,6 +194,10 @@ class _Registry(object):
             if new_profile:
                 self.profile = new_profile
         except hub_backups.Error, e:
+            errno, errname, desc = e.args
+            if errname == "BackupArchive.NotFound":
+                raise self.ProfileNotFound(desc)
+
             if not self.profile or (self.profile.profile_id != profile_id):
                 raise
 

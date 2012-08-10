@@ -230,6 +230,16 @@ def main():
         registry.update_profile(hb, conf.force_profile)
     except registry.CachedProfile, e:
         warn(str(e) + "\n")
+    except registry.ProfileNotFound, e:
+        print >> sys.stderr, "TurnKey Hub Error: %s" % str(e)
+        if not conf.force_profile:
+            # be extra nice to people who aren't using --force-profile
+            print """
+This probably means that TKLBAM doesn't yet fully support your system.
+If you're feeling adventurous you can force another profile with the
+--force-profile option. Sorry about that."""
+
+        sys.exit(1)
 
     credentials = None
     if not conf.address:
