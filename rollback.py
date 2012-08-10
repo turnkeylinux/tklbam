@@ -88,6 +88,7 @@ class Rollback:
         changes = Changes.fromfile(self.paths.fsdelta)
         dirindex = DirIndex(self.paths.dirindex)
 
+        exceptions = 0
         for change in changes:
             try:
                 if change.path not in dirindex:
@@ -111,11 +112,15 @@ class Rollback:
                     mod = stat.S_IMODE(dirindex_rec.mod)
                     os.chmod(change.path, mod)
             except:
+                exceptions += 1
                 # fault-tolerance: warn and continue, don't die
                 traceback.print_exc(file=sys.stderr)
 
         for fname in ('passwd', 'group'):
             shutil.copy(join(self.paths.etc, fname), "/etc")
+
+        if exceptions:
+            raise Error("caught %d exceptions during rollback_files" % exceptions)
 
     def rollback_new_packages(self):
         if not exists(self.paths.newpkgs):
@@ -134,11 +139,18 @@ class Rollback:
                           add_drop_database=True)
 
     def rollback(self):
-        self.rollback_database()
-        self.rollback_files()
-        self.rollback_new_packages()
+        exceptions = 0
+        for method in (self.rollback_database, self.rollback_files, self.rollback_new_packages):
+            try:
+                method()
+            except:
+                exceptions += 1
+                print >> sys.stderr, "error: %s raised an exception:" % method.__name__
+                traceback.print_exc(file=sys.stderr)
 
         shutil.rmtree(self.paths)
+        if exceptions:
+            raise Error("caught %d exceptions during rollback" % exceptions)
 
     def save_files(self, changes):
         for fname in ("passwd", "group"):
