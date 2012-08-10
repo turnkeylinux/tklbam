@@ -336,20 +336,21 @@ If you're feeling adventurous you can force another profile with the
             sys.stderr.flush()
 
             trap.close()
-            fh = file(opt_logfile, "a")
+            if not conf.simulate:
+                fh = file(opt_logfile, "a")
 
-            timestamp = "### %s ###" % datetime.datetime.now().ctime()
-            print >> fh
-            print >> fh, "#" * len(timestamp)
-            print >> fh, timestamp
-            print >> fh, "#" * len(timestamp)
-            print >> fh
-
-            fh.write(trap.std.read())
-            if sys.exc_type:
+                timestamp = "### %s ###" % datetime.datetime.now().ctime()
                 print >> fh
-                traceback.print_exc(file=fh)
-            fh.close()
+                print >> fh, "#" * len(timestamp)
+                print >> fh, timestamp
+                print >> fh, "#" * len(timestamp)
+                print >> fh
+
+                fh.write(trap.std.read())
+                if sys.exc_type:
+                    print >> fh
+                    traceback.print_exc(file=fh)
+                fh.close()
 
     if conf.simulate:
         print "Completed --simulate: Leaving /TKLBAM intact so you can manually inspect it"
