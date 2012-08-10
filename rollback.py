@@ -9,6 +9,7 @@
 # the License, or (at your option) any later version.
 #
 import os
+import sys
 from os.path import *
 
 import stat
@@ -23,6 +24,7 @@ from dirindex import DirIndex
 from pkgman import Packages
 
 import utils
+import traceback
 
 class Error(Exception):
     pass
@@ -87,26 +89,30 @@ class Rollback:
         dirindex = DirIndex(self.paths.dirindex)
 
         for change in changes:
-            if change.path not in dirindex:
-                utils.remove_any(change.path)
-                continue
-
-            if change.OP in ('o', 'd'):
-                try:
-                    self._move_from_originals(change.path)
-                except self.Error:
+            try:
+                if change.path not in dirindex:
+                    utils.remove_any(change.path)
                     continue
 
-            dirindex_rec = dirindex[change.path]
-            local_rec = DirIndex.Record.frompath(change.path)
+                if change.OP in ('o', 'd'):
+                    try:
+                        self._move_from_originals(change.path)
+                    except self.Error:
+                        continue
 
-            if dirindex_rec.uid != local_rec.uid or \
-               dirindex_rec.gid != local_rec.gid:
-                os.lchown(change.path, dirindex_rec.uid, dirindex_rec.gid)
+                dirindex_rec = dirindex[change.path]
+                local_rec = DirIndex.Record.frompath(change.path)
 
-            if dirindex_rec.mod != local_rec.mod:
-                mod = stat.S_IMODE(dirindex_rec.mod)
-                os.chmod(change.path, mod)
+                if dirindex_rec.uid != local_rec.uid or \
+                   dirindex_rec.gid != local_rec.gid:
+                    os.lchown(change.path, dirindex_rec.uid, dirindex_rec.gid)
+
+                if dirindex_rec.mod != local_rec.mod:
+                    mod = stat.S_IMODE(dirindex_rec.mod)
+                    os.chmod(change.path, mod)
+            except:
+                # fault-tolerance: warn and continue, don't die
+                traceback.print_exc(file=sys.stderr)
 
         for fname in ('passwd', 'group'):
             shutil.copy(join(self.paths.etc, fname), "/etc")
