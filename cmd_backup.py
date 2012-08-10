@@ -123,22 +123,29 @@ def get_server_id():
     except KeyError:
         return None
 
-def get_profile(hb):
+def get_profile(hb, profile_id=None):
     """Get a new profile if we don't have a profile in the registry or the Hub
     has a newer profile for this appliance. If we can't contact the Hub raise
     an error if we don't already have profile."""
 
-    profile_timestamp = registry.profile.timestamp \
-                        if registry.profile else None
+    if not profile_id:
+        if registry.profile:
+            profile_id = registry.profile.profile_id
+        else:
+            profile_id = get_turnkey_version()
 
-    turnkey_version = get_turnkey_version()
+    if registry.profile and registry.profile.profile_id == profile_id:
+        profile_timestamp = registry.profile.timestamp
+    else:
+        # forced profile is not cached in the registry
+        profile_timestamp = None
 
     try:
-        new_profile = hb.get_new_profile(turnkey_version, profile_timestamp)
+        new_profile = hb.get_new_profile(profile_id, profile_timestamp)
         if new_profile:
             registry.profile = new_profile
     except hb.Error, e:
-        if not registry.profile:
+        if not registry.profile or (registry.profile.profile_id != profile_id):
             raise
 
         warn("using cached profile because of a Hub error: " + str(e))
@@ -247,8 +254,8 @@ def main():
 
     hb = hub.Backups(registry.sub_apikey)
 
-    if not conf.profile:
-        conf.profile = get_profile(hb)
+    if not conf.profile or not exists(conf.profile):
+        conf.profile = get_profile(hb, conf.profile)
 
     if not conf.address:
         try:

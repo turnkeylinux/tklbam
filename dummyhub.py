@@ -1,5 +1,5 @@
 import os
-from os.path import *
+from os.path import exists, join
 
 import re
 import struct
@@ -10,10 +10,9 @@ import pickle
 import glob
 from datetime import datetime
 
-import executil
 from utils import AttrDict
 
-from hub import Credentials
+from hub import Credentials, ProfileArchive
 from hub import Error, NotSubscribedError, InvalidBackupError
 
 class APIKey:
@@ -225,6 +224,10 @@ class _DummyDB(AttrDict):
 
 dummydb = _DummyDB("/var/tmp/tklbam/dummyhub")
 
+class DummyProfileArchive(ProfileArchive):
+    def __del__(self):
+        pass
+
 class Backups:
     # For simplicity's sake this implements a dummy version of both
     # client-side and server-side operations.
@@ -273,25 +276,25 @@ class Backups:
         self.get_backup_record(backup_id).key = key
         dummydb.save()
 
-    def get_new_profile(self, turnkey_version, profile_timestamp):
+    def get_new_profile(self, profile_id, profile_timestamp):
         """
-        Gets a profile for <turnkey_version> that is newer than <profile_timestamp>.
+        Gets a profile for <profile_id> that is newer than <profile_timestamp>.
 
-        If there's a new profile, returns a ProfileArchive instance.
+        If there's a new profile, returns a DummyProfileArchive instance.
         Otherwise returns None.
 
-        Raises an exception if no profile exists for turnkey_version.
+        Raises an exception if no profile exists for profile_id.
         """
 
-        archive = dummydb.get_profile(turnkey_version)
+        archive = dummydb.get_profile(profile_id)
         if not archive:
-            raise Error("no profile exists for turnkey_version '%s'" % turnkey_version)
+            raise Error("no profile exists for profile_id '%s'" % profile_id)
 
         archive_timestamp = os.stat(archive).st_mtime
         if profile_timestamp and profile_timestamp >= archive_timestamp:
             return None
 
-        return ProfileArchive(archive, archive_timestamp)
+        return DummyProfileArchive(profile_id, archive, archive_timestamp)
 
     def new_backup_record(self, key, turnkey_version, server_id=None):
         # in the real implementation the hub would create a bucket not a dir...
@@ -332,10 +335,4 @@ class Backups:
     def set_backup_inprogress(self, backup_id, bool):
         pass
 
-class ProfileArchive:
-    def __init__(self, archive, timestamp):
-        self.path_archive = archive
-        self.timestamp = timestamp
 
-    def extract(self, path):
-        executil.system("tar -xf %s -C %s" % (self.path_archive, path))

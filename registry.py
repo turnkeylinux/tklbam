@@ -22,6 +22,8 @@ import shutil
 from utils import AttrDict
 from hub import Credentials
 
+from version import get_turnkey_version
+
 class UNDEFINED:
     pass
 
@@ -29,7 +31,8 @@ class _Registry(object):
     DEFAULT_PATH = "/var/lib/tklbam"
 
     class Paths(Paths):
-        files = ['backup-resume', 'sub_apikey', 'secret', 'key', 'credentials', 'hbr', 'profile', 'profile/stamp']
+        files = ['backup-resume', 'sub_apikey', 'secret', 'key', 'credentials', 'hbr', 
+                 'profile', 'profile/stamp', 'profile/profile_id']
 
     def __init__(self, path=None):
         if path is None:
@@ -128,7 +131,10 @@ class _Registry(object):
                 return None
 
             timestamp = os.stat(self.path.profile.stamp).st_mtime
-            return Profile(self.path.profile, timestamp)
+            profile_id = self._file_str(self.path.profile.profile_id)
+            if profile_id is None:
+                profile_id = get_turnkey_version()
+            return Profile(self.path.profile, profile_id, timestamp)
         else:
             profile_archive = val
 
@@ -138,6 +144,7 @@ class _Registry(object):
             profile_archive.extract(self.path.profile)
             file(self.path.profile.stamp, "w").close()
             os.utime(self.path.profile.stamp, (0, profile_archive.timestamp))
+            self._file_str(self.path.profile.profile_id, profile_archive.profile_id)
     profile = property(profile, profile)
 
     def backup_resume_conf(self, val=UNDEFINED):
@@ -163,11 +170,12 @@ class _Registry(object):
     backup_resume_conf = property(backup_resume_conf, backup_resume_conf)
 
 class Profile(str):
-    def __new__(cls, path, timestamp):
+    def __new__(cls, path, profile_id, timestamp):
         return str.__new__(cls, path)
 
-    def __init__(self, path, timestamp):
+    def __init__(self, path, profile_id, timestamp):
         self.timestamp = timestamp
+        self.profile_id = profile_id
 
 import conf
 

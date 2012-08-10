@@ -191,16 +191,16 @@ class Backups:
         response = self._api('GET', 'credentials/')
         return Credentials(response)
 
-    def get_new_profile(self, turnkey_version, profile_timestamp):
+    def get_new_profile(self, profile_id, profile_timestamp):
         """
-        Gets a profile for <turnkey_version> that is newer than <profile_timestamp>.
+        Gets a profile for <profile_id> that is newer than <profile_timestamp>.
 
         If there's a new profile, returns a ProfileArchive instance.
         Otherwise returns None.
 
-        Raises an exception if no profile exists for turnkey_version.
+        Raises an exception if no profile exists for profile_id.
         """
-        attrs = {'turnkey_version': turnkey_version}
+        attrs = {'profile_id': profile_id}
 
         response = self._api('GET', 'archive/timestamp/', attrs)
         archive_timestamp = float(response['archive_timestamp'])
@@ -216,7 +216,7 @@ class Backups:
         fh.write(content)
         fh.close()
 
-        return ProfileArchive(archive_path, archive_timestamp)
+        return ProfileArchive(profile_id, archive_path, archive_timestamp)
 
     def new_backup_record(self, key, turnkey_version, server_id=None):
         attrs = {'key': key, 'turnkey_version': turnkey_version}
@@ -249,9 +249,10 @@ class Backups:
         return map(lambda r: BackupRecord(r), response)
 
 class ProfileArchive:
-    def __init__(self, archive, timestamp):
+    def __init__(self, profile_id, archive, timestamp):
         self.path_archive = archive
         self.timestamp = timestamp
+        self.profile_id = profile_id
 
     def extract(self, path):
         executil.system("tar -zxf %s -C %s" % (self.path_archive, path))
