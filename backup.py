@@ -1,7 +1,8 @@
 import os
-from os.path import *
+from os.path import exists, join
 
 import shutil
+import simplejson
 
 from paths import Paths
 
@@ -12,11 +13,23 @@ from pkgman import Packages
 import duplicity
 import mysql
 
+from utils import AttrDict
+
 class ProfilePaths(Paths):
     files = [ 'dirindex', 'dirindex.conf', 'packages' ]
 
 class ExtrasPaths(Paths):
-    files = [ 'fsdelta', 'fsdelta-olist', 'newpkgs', 'myfs', 'etc', 'etc/mysql' ]
+    PATH = "/TKLBAM"
+    def __init__(self, path=None):
+        if path is None:
+            path = self.PATH
+
+        Paths.__init__(self, path)
+
+    def __new__(cls, path=None):
+        return str.__new__(cls, path)
+
+    files = [ 'backup-conf', 'fsdelta', 'fsdelta-olist', 'newpkgs', 'myfs', 'etc', 'etc/mysql' ]
 
 def _rmdir(path):
     if exists(path):
@@ -30,7 +43,7 @@ def _fpaths(dpath):
     return arr
 
 def _filter_deleted(files):
-    return [ file for file in files if exists(file) ]
+    return [ f for f in files if exists(f) ]
 
 def print_if(conditional):
     def printer(s):
@@ -38,9 +51,27 @@ def print_if(conditional):
             print s
     return printer
 
-class Backup:
-    EXTRAS_PATH = "/TKLBAM"
+class BackupConf(AttrDict):
+    def __init__(self, overrides, skip_files, skip_packages, skip_database):
+        AttrDict.__init__(self)
+        self.overrides = overrides
+        self.skip_files = skip_files
+        self.skip_packages = skip_packages
+        self.skip_database = skip_database
 
+    @classmethod
+    def fromfile(cls, path):
+        if not exists(path):
+            return None
+
+        d = simplejson.load(file(path))
+        return cls(*(d[attr]
+                     for attr in ('overrides', 'skip_files', 'skip_packages', 'skip_database')))
+
+    def tofile(self, path):
+        simplejson.dump(dict(self), file(path, "w"))
+
+class Backup:
     @staticmethod
     def _write_new_packages(dest, base_packages):
         base_packages = Packages.fromfile(base_packages)
@@ -90,22 +121,36 @@ class Backup:
             except mysql.Error:
                 pass
 
-    def __init__(self, conf, force_cleanup=False):
+    def __init__(self, conf, resume=False):
         verbose = print_if(conf.verbose)
 
         profile_paths = ProfilePaths(conf.profile)
-        extras_paths = ExtrasPaths(self.EXTRAS_PATH)
+        extras_paths = ExtrasPaths()
 
-        if not conf.checkpoint_restore or conf.simulate:
+        # decide whether we can allow resume=True
+        # /TKLBAM has to exist and the backup configuration has to match
+        backup_conf = BackupConf(conf.overrides,
+                                 conf.backup_skip_files,
+                                 conf.backup_skip_packages,
+                                 conf.backup_skip_database)
+
+        saved_backup_conf = BackupConf.fromfile(extras_paths.backup_conf)
+
+        if backup_conf != saved_backup_conf:
+            resume = False
+
+        self.force_cleanup = False
+        if not resume:
             _rmdir(extras_paths.path)
-
-        self.force_cleanup = force_cleanup
-        if not exists(extras_paths.path):
             self.force_cleanup = True
+
+        # create or re-use /TKLBAM
+        if not exists(extras_paths.path):
             verbose("CREATING " + extras_paths.path)
 
             try:
                 self._create_extras(extras_paths, profile_paths, conf)
+                backup_conf.tofile(extras_paths.backup_conf)
             except:
                 # destroy potentially incomplete extras
                 _rmdir(extras_paths.path)
@@ -113,6 +158,7 @@ class Backup:
         else:
             verbose("RE-USING " + extras_paths.path)
 
+        # print uncompressed footprint
         if conf.verbose:
 
             # files in /TKLBAM + /TKLBAM/fsdelta-olist
@@ -143,7 +189,6 @@ class Backup:
 
         conf = self.conf
         passphrase = file(conf.secretfile).readline().strip()
-
         opts = []
         if conf.verbose:
             opts += [('verbosity', 5)]
@@ -161,7 +206,7 @@ class Backup:
                  ('gpg-options', '--cipher-algo=aes')]
 
         if not conf.backup_skip_files:
-             opts += [('include-filelist', self.extras_paths.fsdelta_olist)]
+            opts += [('include-filelist', self.extras_paths.fsdelta_olist)]
 
         opts += [('exclude', '**')]
 

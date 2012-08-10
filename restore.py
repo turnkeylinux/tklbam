@@ -95,7 +95,7 @@ class Restore:
         print "Restoring duplicity archive from " + address
         backup_archive = self._duplicity_restore(address, cache_size, cache_dir, credentials, secret, time)
 
-        extras_path = backup_archive + backup.Backup.EXTRAS_PATH
+        extras_path = backup_archive + backup.ExtrasPaths.PATH
         self.extras = backup.ExtrasPaths(extras_path)
         self.rollback = Rollback.create() if rollback else None
         self.limits = conf.Limits(limits)
@@ -242,7 +242,7 @@ class Restore:
             rollback.save_files(changes)
 
         print "\nOVERLAY:\n"
-        for val in self._iter_apply_overlay(overlay, "/", [ "-" + backup.Backup.EXTRAS_PATH ] + limits):
+        for val in self._iter_apply_overlay(overlay, "/", [ "-" + backup.ExtrasPaths.PATH ] + limits):
             print val
 
         emptydirs = list(changes.emptydirs())

@@ -159,7 +159,6 @@ def main():
         usage(e)
 
     opt_debug = False
-
     opt_resume = None
     opt_logfile = PATH_LOGFILE
 
@@ -272,10 +271,8 @@ def main():
 
         conf.address = registry.hbr.address
 
-    if not exists(backup.Backup.EXTRAS_PATH):
-        registry.backup_resume_conf = None
-
     if opt_resume:
+        # explicit resume
         if conf.simulate:
             fatal("--resume and --simulate incompatible")
 
@@ -283,22 +280,22 @@ def main():
             fatal("no previous backup session to resume from")
 
         conf = registry.backup_resume_conf
-
-    # implicit resume if we have a leftover session and
-    # the backup configuration is the same
-    if registry.backup_resume_conf == conf:
-        opt_resume = True
+    else:
+        # implicit resume
+        if not conf.simulate and registry.backup_resume_conf == conf:
+            opt_resume = True
 
     if opt_resume:
-        print "RESUMING ABORTED SESSION"
+        print "ATTEMPTING TO RESUME ABORTED SESSION"
 
+    registry.backup_resume_conf = None
     if not conf.simulate:
         registry.backup_resume_conf = conf
 
     is_hub_address = not conf.simulate and registry.hbr and registry.hbr.address == conf.address
     backup_id = registry.hbr.backup_id
 
-    b = backup.Backup(conf, force_cleanup=not opt_resume)
+    b = backup.Backup(conf, resume=opt_resume)
     try:
         trap = UnitedStdTrap(transparent=True)
         try:
@@ -343,7 +340,6 @@ def main():
 
     if not conf.simulate:
         hb.updated_backup(conf.address)
-
 
 if __name__=="__main__":
     main()
