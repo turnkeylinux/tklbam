@@ -93,6 +93,7 @@ from version import get_turnkey_version
 from stdtrap import UnitedStdTrap
 
 from utils import is_writeable
+import traceback
 
 PATH_LOGFILE = "/var/log/tklbam-backup"
 
@@ -305,9 +306,9 @@ If you're feeling adventurous you can force another profile with the
     is_hub_address = not conf.simulate and registry.hbr and registry.hbr.address == conf.address
     backup_id = registry.hbr.backup_id
 
-    b = backup.Backup(conf, registry.profile, credentials, resume=opt_resume)
+    trap = UnitedStdTrap(transparent=True)
     try:
-        trap = UnitedStdTrap(transparent=True)
+        b = backup.Backup(conf, registry.profile, credentials, resume=opt_resume)
         try:
             hooks.backup.pre()
             if is_hub_address:
@@ -319,27 +320,36 @@ If you're feeling adventurous you can force another profile with the
 
             b.run(opt_debug)
             hooks.backup.post()
-        finally:
-            if is_hub_address:
-                hb.set_backup_inprogress(backup_id, False)
+        except:
+            if not conf.checkpoint_restore:
+                b.cleanup()
 
-            if trap:
-                trap.close()
-                fh = file(opt_logfile, "a")
+            # not cleaning up
+            raise
 
-                timestamp = "### %s ###" % datetime.datetime.now().ctime()
-                print >> fh, "#" * len(timestamp)
-                print >> fh, timestamp
-                print >> fh, "#" * len(timestamp)
+    finally:
+        if is_hub_address:
+            hb.set_backup_inprogress(backup_id, False)
 
-                fh.write(trap.std.read())
-                fh.close()
-    except:
-        if not conf.checkpoint_restore:
-            b.cleanup()
+        if trap:
+            sys.stdout.flush()
+            sys.stderr.flush()
 
-        # not cleaning up
-        raise
+            trap.close()
+            fh = file(opt_logfile, "a")
+
+            timestamp = "### %s ###" % datetime.datetime.now().ctime()
+            print >> fh
+            print >> fh, "#" * len(timestamp)
+            print >> fh, timestamp
+            print >> fh, "#" * len(timestamp)
+            print >> fh
+
+            fh.write(trap.std.read())
+            if sys.exc_type:
+                print >> fh
+                traceback.print_exc(file=fh)
+            fh.close()
 
     if conf.simulate:
         print "Completed --simulate: Leaving /TKLBAM intact so you can manually inspect it"
