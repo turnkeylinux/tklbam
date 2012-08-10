@@ -105,6 +105,8 @@ from utils import is_writeable
 import backup
 from conf import Conf
 
+import traceback
+
 PATH_LOGFILE = "/var/log/tklbam-restore"
 
 class Error(Exception):
@@ -333,35 +335,49 @@ def main():
     secret = decrypt_key(key, interactive)
 
     trap = UnitedStdTrap(usepty=True, transparent=(False if silent else True))
+    log_fh = None
     try:
-        hooks.restore.pre()
-        restore = Restore(address, secret, restore_cache_size, restore_cache_dir,
-                          opt_limits, opt_time, credentials=credentials, rollback=not no_rollback)
+        try:
+            hooks.restore.pre()
+            restore = Restore(address, secret, restore_cache_size, restore_cache_dir,
+                              opt_limits, opt_time, credentials=credentials, rollback=not no_rollback)
 
-        if opt_debug:
-            trap.close()
-            trap = None
+            if opt_debug:
+                trap.close()
+                trap = None
 
-            os.chdir(restore.backup_archive)
-            executil.system(os.environ.get("SHELL", "/bin/bash"))
-            os.chdir('/')
+                os.chdir(restore.backup_archive)
+                executil.system(os.environ.get("SHELL", "/bin/bash"))
+                os.chdir('/')
 
-        if not skip_packages:
-            restore.packages()
+            if not skip_packages:
+                restore.packages()
 
-        if not skip_files:
-            restore.files()
+            if not skip_files:
+                restore.files()
 
-        if not skip_database:
-            restore.database()
+            if not skip_database:
+                restore.database()
 
-        print
-        hooks.restore.post()
+            print
+            hooks.restore.post()
+
+        finally:
+            if trap:
+                trap.close()
+                log_fh = file(opt_logfile, "w")
+                log_fh.write(trap.std.read())
+    except:
+        if sys.exc_type and log_fh:
+            print >> log_fh
+            traceback.print_exc(file=log_fh)
+
+        raise
 
     finally:
-        if trap:
-            trap.close()
-            file(opt_logfile, "w").write(trap.std.read())
+        if log_fh:
+            log_fh.close()
+
 
     print "We're done. You may want to reboot now to restart all services."
 
