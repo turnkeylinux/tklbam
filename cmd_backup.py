@@ -24,8 +24,7 @@ Options:
     --address=TARGET_URL      manual backup target URL
                               default: automatically configured via Hub
 
-    -s --simulate             Simulate operation. Don't actually backup.
-                              Useful for inspecting /TKLBAM by hand.
+    -s --simulate             Do a dry run simulation of the backup.
 
     -q --quiet                Be less verbose
     --logfile=PATH            Path of file to log to
