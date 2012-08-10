@@ -28,6 +28,9 @@ class UNDEFINED:
     pass
 
 class _Registry(object):
+    class CachedProfile(Exception):
+        pass
+
     DEFAULT_PATH = "/var/lib/tklbam"
 
     class Paths(Paths):
@@ -161,19 +164,44 @@ class _Registry(object):
             return BackupSessionConf(simplejson.loads(s))
 
         else:
-            copy = dict(val)
-            del copy['profile']
-            s = simplejson.dumps(copy)
-
+            s = simplejson.dumps(val)
             self._file_str(self.path.backup_resume, s)
 
     backup_resume_conf = property(backup_resume_conf, backup_resume_conf)
+
+    def update_profile(self, hub_backups, profile_id=None):
+        """Get a new profile if we don't have a profile in the registry or the Hub
+        has a newer profile for this appliance. If we can't contact the Hub raise
+        an error if we don't already have profile."""
+
+        if not profile_id:
+            if self.profile:
+                profile_id = self.profile.profile_id
+            else:
+                profile_id = get_turnkey_version()
+
+        if self.profile and self.profile.profile_id == profile_id:
+            profile_timestamp = self.profile.timestamp
+        else:
+            # forced profile is not cached in the self
+            profile_timestamp = None
+
+        try:
+            new_profile = hub_backups.get_new_profile(profile_id, profile_timestamp)
+            if new_profile:
+                self.profile = new_profile
+        except hub_backups.Error, e:
+            if not self.profile or (self.profile.profile_id != profile_id):
+                raise
+
+            raise self.CachedProfile("using cached profile because of a Hub error: " + str(e))
 
 class Profile(str):
     def __new__(cls, path, profile_id, timestamp):
         return str.__new__(cls, path)
 
     def __init__(self, path, profile_id, timestamp):
+        self.path = path
         self.timestamp = timestamp
         self.profile_id = profile_id
 
@@ -182,21 +210,6 @@ import conf
 class BackupSessionConf(AttrDict):
     def __init__(self, d={}):
         AttrDict.__init__(self, d)
-        self.profile = None
         self.overrides = conf.Limits(self.overrides)
-        self.credentials = Credentials(self.credentials)
-
-    def __eq__(self, other):
-        def normalize(val):
-            val = dict(val)
-            for k in ('profile', 'credentials'):
-                if k in val:
-                    del val[k]
-            return val
-
-        if normalize(self) == normalize(other):
-            return True
-        else:
-            return False
 
 registry = _Registry()

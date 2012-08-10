@@ -137,8 +137,7 @@ class Conf(AttrDict):
 
         self.secretfile = None
         self.address = None
-        self.credentials = None
-        self.profile = None
+        self.force_profile = None
         self.overrides = Limits.fromfile(self.paths.overrides)
         self.verbose = True
         self.simulate = False
@@ -171,13 +170,11 @@ class Conf(AttrDict):
             try:
                 if opt in ('full-backup', 'volsize', 's3-parallel-uploads',
                            'restore-cache-size', 'restore-cache-dir',
-                           'backup-skip-files', 'backup-skip-packages', 'backup-skip-database'):
+                           'backup-skip-files', 'backup-skip-packages', 'backup-skip-database', 'force-profile'):
 
                     attrname = opt.replace('-', '_')
                     setattr(self, attrname, val)
 
-                elif opt == 'force-profile':
-                    self.profile = val
                 else:
                     raise self.Error("unknown conf option '%s'" % opt)
 

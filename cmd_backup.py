@@ -125,35 +125,6 @@ def get_server_id():
     except KeyError:
         return None
 
-def get_profile(hb, profile_id=None):
-    """Get a new profile if we don't have a profile in the registry or the Hub
-    has a newer profile for this appliance. If we can't contact the Hub raise
-    an error if we don't already have profile."""
-
-    if not profile_id:
-        if registry.profile:
-            profile_id = registry.profile.profile_id
-        else:
-            profile_id = get_turnkey_version()
-
-    if registry.profile and registry.profile.profile_id == profile_id:
-        profile_timestamp = registry.profile.timestamp
-    else:
-        # forced profile is not cached in the registry
-        profile_timestamp = None
-
-    try:
-        new_profile = hb.get_new_profile(profile_id, profile_timestamp)
-        if new_profile:
-            registry.profile = new_profile
-    except hb.Error, e:
-        if not registry.profile or (registry.profile.profile_id != profile_id):
-            raise
-
-        warn("using cached profile because of a Hub error: " + str(e))
-
-    return registry.profile
-
 def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'qsh',
@@ -187,7 +158,7 @@ def main():
             opt_disable_resume = True
 
         elif opt == '--force-profile':
-            conf.profile = val
+            conf.force_profile = val
 
         elif opt in ('-q', '--quiet'):
             conf.verbose = False
@@ -255,10 +226,12 @@ def main():
         warn("s3-parallel-uploads > volsize / 5 (minimum upload chunk is 5MB)")
 
     hb = hub.Backups(registry.sub_apikey)
+    try:
+        registry.update_profile(hb, conf.force_profile)
+    except registry.CachedProfile, e:
+        warn(e)
 
-    if not conf.profile or not exists(conf.profile):
-        conf.profile = get_profile(hb, conf.profile)
-
+    credentials = None
     if not conf.address:
         try:
             registry.credentials = hb.get_credentials()
@@ -274,7 +247,7 @@ def main():
 
             warn(e)
 
-        conf.credentials = registry.credentials
+        credentials = registry.credentials
 
         if registry.hbr:
             try:
@@ -318,7 +291,7 @@ def main():
     is_hub_address = not conf.simulate and registry.hbr and registry.hbr.address == conf.address
     backup_id = registry.hbr.backup_id
 
-    b = backup.Backup(conf, resume=opt_resume)
+    b = backup.Backup(conf, registry.profile, credentials, resume=opt_resume)
     try:
         trap = UnitedStdTrap(transparent=True)
         try:

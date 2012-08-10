@@ -52,8 +52,9 @@ def print_if(conditional):
     return printer
 
 class BackupConf(AttrDict):
-    def __init__(self, overrides, skip_files, skip_packages, skip_database):
+    def __init__(self, profile_id, overrides, skip_files, skip_packages, skip_database):
         AttrDict.__init__(self)
+        self.profile_id = profile_id
         self.overrides = overrides
         self.skip_files = skip_files
         self.skip_packages = skip_packages
@@ -66,7 +67,7 @@ class BackupConf(AttrDict):
 
         d = simplejson.load(file(path))
         return cls(*(d[attr]
-                     for attr in ('overrides', 'skip_files', 'skip_packages', 'skip_database')))
+                     for attr in ('profile_id', 'overrides', 'skip_files', 'skip_packages', 'skip_database')))
 
     def tofile(self, path):
         simplejson.dump(dict(self), file(path, "w"))
@@ -121,15 +122,19 @@ class Backup:
             except mysql.Error:
                 pass
 
-    def __init__(self, conf, resume=False):
+    def __init__(self, conf, profile, credentials=None, resume=False):
         verbose = print_if(conf.verbose)
 
-        profile_paths = ProfilePaths(conf.profile)
+        if not profile:
+            raise Error("can't backup without a profile")
+
+        profile_paths = ProfilePaths(profile.path)
         extras_paths = ExtrasPaths()
 
         # decide whether we can allow resume=True
         # /TKLBAM has to exist and the backup configuration has to match
-        backup_conf = BackupConf(conf.overrides,
+        backup_conf = BackupConf(profile.profile_id,
+                                 conf.overrides,
                                  conf.backup_skip_files,
                                  conf.backup_skip_packages,
                                  conf.backup_skip_database)
@@ -183,6 +188,7 @@ class Backup:
 
         self.conf = conf
         self.extras_paths = extras_paths
+        self.credentials = credentials
 
     def run(self, debug=False):
         verbose = print_if(self.conf.verbose)
@@ -198,7 +204,7 @@ class Backup:
             verbose("\n# " + str(cleanup_command))
 
             if not conf.simulate:
-                cleanup_command.run(passphrase, conf.credentials)
+                cleanup_command.run(passphrase, self.credentials)
 
         opts += [('volsize', conf.volsize),
                  ('full-if-older-than', conf.full_backup),
@@ -228,8 +234,7 @@ class Backup:
 
         verbose("\n# PASSPHRASE=$(cat %s) %s" % (conf.secretfile, backup_command))
 
-
-        backup_command.run(passphrase, conf.credentials, debug=debug)
+        backup_command.run(passphrase, self.credentials, debug=debug)
 
     def cleanup(self):
         _rmdir(self.extras_paths.path)
