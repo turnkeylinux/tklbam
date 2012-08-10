@@ -288,7 +288,7 @@ class Backups:
 
         archive = dummydb.get_profile(profile_id)
         if not archive:
-            raise Error("no profile exists for profile_id '%s'" % profile_id)
+            raise Error(404, 'BackupArchive.NotFound', 'Backup profile archive not found: ' + profile_id)
 
         archive_timestamp = os.stat(archive).st_mtime
         if profile_timestamp and profile_timestamp >= archive_timestamp:
