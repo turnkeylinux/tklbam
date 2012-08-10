@@ -6,7 +6,7 @@
 <meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
 <title>tklbam-backup</title>
 <meta name="author" content="Liraz Siri &lt;liraz&#64;turnkeylinux.org&gt;" />
-<meta name="date" content="2010-09-01" />
+<meta name="date" content="2012-08-10" />
 <style type="text/css">
 
 /*
@@ -322,7 +322,7 @@ ul.auto-toc {
 <tr><th class="docinfo-name">Author:</th>
 <td>Liraz Siri &lt;<a class="reference external" href="mailto:liraz&#64;turnkeylinux.org">liraz&#64;turnkeylinux.org</a>&gt;</td></tr>
 <tr><th class="docinfo-name">Date:</th>
-<td>2010-09-01</td></tr>
+<td>2012-08-10</td></tr>
 <tr class="field"><th class="docinfo-name">Manual section:</th><td class="field-body">8</td>
 </tr>
 <tr class="field"><th class="docinfo-name">Manual group:</th><td class="field-body">backup</td>
@@ -385,6 +385,13 @@ mysql:drupal6
 <col class="option" />
 <col class="description" />
 <tbody valign="top">
+<tr><td class="option-group">
+<kbd><span class="option">--resume</span></kbd></td>
+<td>Resume aborted backup session</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">--disable-resume</span></kbd></td>
+</tr>
+<tr><td>&nbsp;</td><td>Disable implicit --resume when rerunning an aborted backup</td></tr>
 <tr><td class="option-group" colspan="2">
 <kbd><span class="option">--address=<var>TARGET_URL</var></span></kbd></td>
 </tr>
@@ -401,6 +408,9 @@ Useful for inspecting /TKLBAM by hand.</td></tr>
 <kbd><span class="option">--logfile=<var>PATH</var></span></kbd></td>
 <td>Path of file to log output to.
 Default: /var/log/tklbam-backup</td></tr>
+<tr><td class="option-group">
+<kbd><span class="option">--debug</span></kbd></td>
+<td>Run $SHELL before Duplicity</td></tr>
 </tbody>
 </table>
 <div class="section" id="configurable-options">
@@ -414,20 +424,44 @@ Default: /var/log/tklbam-backup</td></tr>
 <td>Size of backup volume in MBs.
 Default: 50</td></tr>
 <tr><td class="option-group" colspan="2">
+<kbd><span class="option">--s3-parallel-uploads=<var>N</var></span></kbd></td>
+</tr>
+<tr><td>&nbsp;</td><td>Number of parallel volume chunk uploads
+Default: 1</td></tr>
+<tr><td class="option-group" colspan="2">
 <kbd><span class="option">--full-backup <var>FREQUENCY</var></span></kbd></td>
 </tr>
 <tr><td>&nbsp;</td><td><p class="first">Time frequency of full backup.
 Default: 1M</p>
-<p>&lt;frequency&gt; := &lt;int&gt;[DWM]</p>
+<p>&lt;frequency&gt; := now | &lt;int&gt;[DWM]</p>
 <blockquote class="last">
 <p>e.g.,:</p>
 <pre class="literal-block">
+now - always do a full backup
+
+60m - 60 minutes
+12h - 12 hours
 3D - three days
 2W - two weeks
 1M - one month
 </pre>
 </blockquote>
 </td></tr>
+<tr><td class="option-group">
+<kbd><span class="option">--skip-files</span></kbd></td>
+<td>Don't backup filesystem</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">--skip-database</span></kbd></td>
+</tr>
+<tr><td>&nbsp;</td><td>Don't backup databases</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">--skip-packages</span></kbd></td>
+</tr>
+<tr><td>&nbsp;</td><td>Don't backup new packages</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">--force-profile=<var>PROFILE_ID</var></span></kbd></td>
+</tr>
+<tr><td>&nbsp;</td><td>Force a specific backup profile</td></tr>
 </tbody>
 </table>
 <p>Resolution order for configurable options:</p>

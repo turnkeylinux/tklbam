@@ -1,6 +1,6 @@
 .\" Man page generated from reStructeredText.
 .
-.TH TKLBAM-BACKUP 8 "2010-09-01" "" "backup"
+.TH TKLBAM-BACKUP 8 "2012-08-10" "" "backup"
 .SH NAME
 tklbam-backup \- Backup the current system
 .
@@ -97,6 +97,14 @@ mysql:drupal6
 .SH OPTIONS
 .INDENT 0.0
 .TP
+.B \-\-resume
+.
+Resume aborted backup session
+.TP
+.B \-\-disable\-resume
+.
+Disable implicit \-\-resume when rerunning an aborted backup
+.TP
 .BI \-\-address\fB= TARGET_URL
 .
 manual backup target URL.
@@ -115,6 +123,10 @@ Be less verbose
 .
 Path of file to log output to.
 Default: /var/log/tklbam\-backup
+.TP
+.B \-\-debug
+.
+Run $SHELL before Duplicity
 .UNINDENT
 .SS Configurable options
 .INDENT 0.0
@@ -124,12 +136,17 @@ Default: /var/log/tklbam\-backup
 Size of backup volume in MBs.
 Default: 50
 .TP
+.BI \-\-s3\-parallel\-uploads\fB= N
+.
+Number of parallel volume chunk uploads
+Default: 1
+.TP
 .BI \-\-full\-backup \ FREQUENCY
 .
 Time frequency of full backup.
 Default: 1M
 .sp
-<frequency> := <int>[DWM]
+<frequency> := now | <int>[DWM]
 .INDENT 7.0
 .INDENT 3.5
 .sp
@@ -137,6 +154,10 @@ e.g.,:
 .sp
 .nf
 .ft C
+now \- always do a full backup
+
+60m \- 60 minutes
+12h \- 12 hours
 3D \- three days
 2W \- two weeks
 1M \- one month
@@ -144,6 +165,22 @@ e.g.,:
 .fi
 .UNINDENT
 .UNINDENT
+.TP
+.B \-\-skip\-files
+.
+Don\(aqt backup filesystem
+.TP
+.B \-\-skip\-database
+.
+Don\(aqt backup databases
+.TP
+.B \-\-skip\-packages
+.
+Don\(aqt backup new packages
+.TP
+.BI \-\-force\-profile\fB= PROFILE_ID
+.
+Force a specific backup profile
 .UNINDENT
 .sp
 Resolution order for configurable options:

@@ -6,7 +6,7 @@
 <meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
 <title>tklbam-restore</title>
 <meta name="author" content="Liraz Siri &lt;liraz&#64;turnkeylinux.org&gt;" />
-<meta name="date" content="2010-09-01" />
+<meta name="date" content="2012-08-10" />
 <style type="text/css">
 
 /*
@@ -322,7 +322,7 @@ ul.auto-toc {
 <tr><th class="docinfo-name">Author:</th>
 <td>Liraz Siri &lt;<a class="reference external" href="mailto:liraz&#64;turnkeylinux.org">liraz&#64;turnkeylinux.org</a>&gt;</td></tr>
 <tr><th class="docinfo-name">Date:</th>
-<td>2010-09-01</td></tr>
+<td>2012-08-10</td></tr>
 <tr class="field"><th class="docinfo-name">Manual section:</th><td class="field-body">8</td>
 </tr>
 <tr class="field"><th class="docinfo-name">Manual group:</th><td class="field-body">backup</td>
@@ -408,8 +408,43 @@ Default: /var/log/tklbam-restore</td></tr>
 <tr><td class="option-group">
 <kbd><span class="option">--force</span></kbd></td>
 <td>Disable sanity checking</td></tr>
+<tr><td class="option-group">
+<kbd><span class="option">--debug</span></kbd></td>
+<td>Run $SHELL after Duplicity</td></tr>
 </tbody>
 </table>
+<div class="section" id="configurable-options">
+<h2>Configurable options</h2>
+<table class="docutils option-list" frame="void" rules="none">
+<col class="option" />
+<col class="description" />
+<tbody valign="top">
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">--restore-cache-size=<var>SIZE</var></span></kbd></td>
+</tr>
+<tr><td>&nbsp;</td><td>The maximum size of the download cache
+default: 50%</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">--restore-cache-dir=<var>PATH</var></span></kbd></td>
+</tr>
+<tr><td>&nbsp;</td><td>The path to the download cache directory
+default: /var/cache/tklbam/restore</td></tr>
+</tbody>
+</table>
+<p>Resolution order for configurable options:</p>
+<ol class="arabic">
+<li><p class="first">comand line (highest precedence)</p>
+</li>
+<li><p class="first">configuration file (/etc/tklbam/conf):</p>
+<pre class="literal-block">
+# comment
+&lt;option-name&gt; &lt;value&gt;
+</pre>
+</li>
+<li><p class="first">built-in default (lowest precedence)</p>
+</li>
+</ol>
+</div>
 </div>
 <div class="section" id="files">
 <h1>FILES</h1>
@@ -417,7 +452,10 @@ Default: /var/log/tklbam-restore</td></tr>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Hooks:</th><td class="field-body">/etc/tklbam/hooks.d</td>
+<tr class="field"><th class="field-name" colspan="2">Configuration files:</th></tr>
+<tr><td>&nbsp;</td><td class="field-body">/etc/tklbam/conf, /etc/tklbam/hooks.d</td>
+</tr>
+<tr class="field"><th class="field-name">Restore cache:</th><td class="field-body">/var/cache/tklbam/restore</td>
 </tr>
 </tbody>
 </table>
