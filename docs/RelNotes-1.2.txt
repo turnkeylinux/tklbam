@@ -1,0 +1,37 @@
+==================
+v1.2 Release Notes
+==================
+
+* Restore
+
+  - added embedded squid download cache to make it easier to retry
+    failed multi-GB restores without resorting to suicide
+
+  - fixed root cause of the mysql max packet issue by limiting extended
+    insert to 1MB chunks
+
+* Backup
+
+  - session resume allows you to recover from aborted backup sessions
+  - multipart parallel S3 uploads
+  - skip backup components
+  - finer full-backup frequencies (hourly, minutely)
+  - don't upload asynchronously (slower but less confusing)
+  - added --force-profile option to make it easier to force a different
+    backup profile
+
+* General
+
+    TKLBAM_CONF and TKLBAM_REGISTRY environment variables allow multiple
+    configurations of TKLBAM to be run on the same machine 
+  - embedded new versions of duplicity (0.6.18) and python-boto (2.3.0)
+
+* Development
+
+  - added --debug option for backup and restore commands
+  - added wrappers to internal commands
+
+* Bugfixes:
+
+  - log TKLBAM exceptions
+  - many others
