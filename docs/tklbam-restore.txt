@@ -7,7 +7,7 @@ Restore a backup
 ----------------
 
 :Author: Liraz Siri <liraz@turnkeylinux.org>
-:Date:   2010-09-01
+:Date:   2012-08-10
 :Manual section: 8
 :Manual group: backup
 
@@ -69,10 +69,33 @@ OPTIONS
 
 --force                           Disable sanity checking
 
+--debug                           Run $SHELL after Duplicity
+
+Configurable options
+--------------------
+
+--restore-cache-size=SIZE         The maximum size of the download cache
+                                  default: 50%
+
+--restore-cache-dir=PATH          The path to the download cache directory
+                                  default: /var/cache/tklbam/restore
+
+Resolution order for configurable options:
+
+1) comand line (highest precedence)
+2) configuration file (/etc/tklbam/conf)::
+
+      # comment
+      <option-name> <value>
+
+3) built-in default (lowest precedence)
+
 FILES
 =====
 
-:Hooks: /etc/tklbam/hooks.d
+:Configuration files: /etc/tklbam/conf, /etc/tklbam/hooks.d
+
+:Restore cache: /var/cache/tklbam/restore
 
 SEE ALSO
 ========

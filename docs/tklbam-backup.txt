@@ -7,7 +7,7 @@ Backup the current system
 -------------------------
 
 :Author: Liraz Siri <liraz@turnkeylinux.org>
-:Date:   2010-09-01
+:Date:   2012-08-10
 :Manual section: 8
 :Manual group: backup
 
@@ -74,6 +74,10 @@ Examples::
 OPTIONS
 =======
 
+--resume                  Resume aborted backup session
+
+--disable-resume          Disable implicit --resume when rerunning an aborted backup
+
 --address=TARGET_URL      manual backup target URL.
                           Default: automatically configured via Hub
 
@@ -85,22 +89,37 @@ OPTIONS
 --logfile=PATH            Path of file to log output to.
                           Default: /var/log/tklbam-backup
 
+--debug                   Run $SHELL before Duplicity
+
 Configurable options
 --------------------
 
 --volsize MB              Size of backup volume in MBs.
                           Default: 50
 
+--s3-parallel-uploads=N   Number of parallel volume chunk uploads
+                          Default: 1
+
 --full-backup FREQUENCY   Time frequency of full backup.
                           Default: 1M
 
-                          <frequency> := <int>[DWM]
+                          <frequency> := now | <int>[DWM]
 
                             e.g.,::
 
+                                now - always do a full backup
+
+                                60m - 60 minutes
+                                12h - 12 hours
                                 3D - three days
                                 2W - two weeks
                                 1M - one month
+
+--skip-files             Don't backup filesystem
+--skip-database          Don't backup databases
+--skip-packages          Don't backup new packages
+
+--force-profile=PROFILE_ID     Force a specific backup profile
 
 Resolution order for configurable options:
 
