@@ -18,9 +18,11 @@ s3-parallel-uploads	1
 # full-backup: time frequency of full backup
 # (in between full backups we do incremental backups)
 #
-#   format := <int>[DWM]
+#   format := <int>[mhDWM]
 #     
 #     e.g.,
+#     60m - 60 minutes
+#     12h - 12 hours
 #     3D - three days
 #     2W - two weeks
 #     1M - one month

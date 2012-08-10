@@ -96,7 +96,7 @@ class Conf(AttrDict):
         # (including a method in this instance) sets an instance member
 
         if name == 'full_backup':
-            if not re.match(r'^\d+[HDWMY]', val):
+            if not re.match(r'^now$|^\d+[mhDWMY]', val):
                 raise self.Error("bad full-backup value (%s)" % val)
 
         if name == 'volsize':
