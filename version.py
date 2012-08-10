@@ -9,7 +9,7 @@
 # the License, or (at your option) any later version.
 #
 import re
-from executil import getoutput
+import executil
 
 class Error(Exception):
     pass
@@ -18,7 +18,12 @@ def get_turnkey_version():
     try:
         return file("/etc/turnkey_version").readline().strip()
     except:
-        return getoutput("turnkey-version")
+        pass
+
+    try:
+        return executil.getoutput("turnkey-version")
+    except executil.ExecError:
+        return None
 
 def codename(version):
     m = re.match(r'turnkey-(.*?)-([\d\.]+|beta)', version)
