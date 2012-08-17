@@ -26,11 +26,11 @@ from cliwrapper import CliWrapper
 
 from string import Template
 
-import backup
+import conf
 import registry
 
 class CliWrapper(CliWrapper):
-    DESCRIPTION = Template(__doc__).substitute(TKLBAM_CONF=backup.Conf.DEFAULT_PATH,
+    DESCRIPTION = Template(__doc__).substitute(TKLBAM_CONF=conf.Conf.DEFAULT_PATH,
                                                TKLBAM_REGISTRY=registry._Registry.DEFAULT_PATH)
 
     PATH = [ dirname(realpath(__file__)) ]
