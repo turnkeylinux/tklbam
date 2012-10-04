@@ -68,7 +68,7 @@ Configurable options:
 
 Resolution order for configurable options:
 
-  1) comand line (highest precedence)
+  1) command line (highest precedence)
   2) configuration file ($CONF_PATH)
   3) built-in default (lowest precedence)
 
