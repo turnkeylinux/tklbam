@@ -18,6 +18,8 @@ install:
 	$(MAKE) install prefix=$(prefix)
 	mkdir -p $(buildroot)/etc/cron.daily
 	cp contrib/cron.sh $(buildroot)/etc/cron.daily/tklbam-backup
+	mkdir -p $(buildroot)/usr/share/tklbam/contrib
+	cp contrib/cron.sh $(buildroot)/usr/share/tklbam/contrib
 	mkdir -p $(buildroot)/etc/tklbam/hooks.d
 	cp contrib/example-conf $(buildroot)/etc/tklbam/conf
 	cp contrib/example-overrides $(buildroot)/etc/tklbam/overrides

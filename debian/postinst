@@ -1,7 +1,32 @@
 #!/bin/sh
 
+md5sum_match() {
+    digest=$1
+    fpath=$2
+
+    if [ -f $fpath ] && [ $(cat $fpath | md5sum | awk '{print $1}') = "$digest" ]; then
+        return 0;
+    fi
+
+    return 1
+}
+
+safe_overwrite() {
+    dst=$1
+    digest=$2
+    src=$3
+
+    if md5sum_match $digest $dst; then
+        cp $src $dst
+    fi
+}
+
 mkdir -p /var/cache/tklbam/restore
 chown proxy:proxy /var/cache/tklbam/restore
+
+for freq in daily hourly weekly; do
+    safe_overwrite /etc/cron.$freq/tklbam-backup a655f5854491e9475ab7c553b8281164 /usr/share/tklbam/contrib/cron.sh
+done
 
 #DEBHELPER#
 exit 0
