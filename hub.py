@@ -82,11 +82,10 @@ import os
 
 import base64
 import tempfile
-import simplejson as json
 from datetime import datetime
 
 import executil
-from pycurl_wrapper import Curl
+from pycurl_wrapper import API as _API
 from utils import AttrDict
 
 class Error(Exception):
@@ -103,30 +102,19 @@ into the Hub and go to the "Backups" section for instructions."""
 class InvalidBackupError(Error):
     pass
 
-class API:
-    ALL_OK = 200
-    CREATED = 201
-    DELETED = 204
+class API(_API):
+    def request(self, method, url, attrs={}, headers={}):
+        try:
+            return _API.request(self, method, url, attrs, headers)
+        except self.Error, e:
+            if e.name == "BackupRecord.NotFound":
+                raise InvalidBackupError(e.description)
 
-    @classmethod
-    def request(cls, method, url, attrs={}, headers={}):
-        c = Curl(url, headers)
-        func = getattr(c, method.lower())
-        func(attrs)
-
-        if not c.response_code in (cls.ALL_OK, cls.CREATED, cls.DELETED):
-            name, description = c.response_data.split(":", 1)
-
-            if name == "BackupRecord.NotFound":
-                raise InvalidBackupError(description)
-
-            if name in ("BackupAccount.NotSubscribed",
-                        "BackupAccount.NotFound"): 
+            if e.name in ("BackupAccount.NotSubscribed",
+                         "BackupAccount.NotFound"): 
                 raise NotSubscribedError()
 
-            raise Error(c.response_code, name, description)
-
-        return json.loads(c.response_data)
+            raise
 
 class BackupRecord(AttrDict):
     @staticmethod
@@ -153,6 +141,8 @@ class BackupRecord(AttrDict):
         # no interface for this in tklbam, so not returned from hub
         self.sessions = []
 
+        AttrDict.__init__(self)
+
 class Credentials(AttrDict):
     def __init__(self, response):
         self.accesskey = response['accesskey']
@@ -160,10 +150,10 @@ class Credentials(AttrDict):
         self.usertoken = response['usertoken']
         self.producttoken = response['producttoken']
 
+        AttrDict.__init__(self)
+
 class Backups:
     API_URL = os.getenv('TKLBAM_APIURL', 'https://hub.turnkeylinux.org/api/backup/')
-    API_HEADERS = {'Accept': 'application/json'}
-
     Error = Error
 
     def __init__(self, subkey=None):
@@ -171,20 +161,15 @@ class Backups:
             raise Error("no APIKEY - tklbam not initialized")
 
         self.subkey = subkey
+        self.api = API()
 
     def _api(self, method, uri, attrs={}):
-        headers = self.API_HEADERS.copy()
-        headers['subkey'] = str(self.subkey)
-
-        # workaround: http://redmine.lighttpd.net/issues/1017
-        if method == "PUT":
-            headers['Expect'] = ''
-
-        return API.request(method, self.API_URL + uri, attrs, headers)
+        headers = { 'subkey': str(self.subkey) }
+        return self.api.request(method, self.API_URL + uri, attrs, headers)
 
     @classmethod
     def get_sub_apikey(cls, apikey):
-        response = API.request('GET', cls.API_URL + 'subkey/', {'apikey': apikey}, cls.API_HEADERS)
+        response = API().request('GET', cls.API_URL + 'subkey/', {'apikey': apikey})
         return response['subkey']
 
     def get_credentials(self):
