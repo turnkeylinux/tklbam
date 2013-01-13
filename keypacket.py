@@ -46,7 +46,7 @@ def _cipher_key(passphrase, repeats):
     return cipher_key
 
 def _cipher(cipher_key):
-    return AES.new(cipher_key, AES.MODE_CBC)
+    return AES.new(cipher_key, mode=AES.MODE_CBC, IV='\0' * 16)
 
 def fmt(secret, passphrase):
     salt = os.urandom(SALT_LEN)
