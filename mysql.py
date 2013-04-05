@@ -229,6 +229,7 @@ def chunkify(elements, sep, maxlen):
 
                 ## globally correct logic (the lesser evil):
                 yield element
+                chunk = ""
                 continue
 
             chunk = element
