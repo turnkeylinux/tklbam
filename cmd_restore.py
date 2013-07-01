@@ -163,7 +163,7 @@ def get_backup_record(arg):
             raise Error('invalid backup id (%s)' % backup_id)
 
     # treat our argument as a pattern
-    matches = [ hbr for hbr in hb.list_backups() 
+    matches = [ hbr for hbr in hb.list_backups()
                 if re.search(arg, hbr.label, re.IGNORECASE) ]
 
     if not matches:
@@ -250,7 +250,7 @@ def main():
     conf = Conf()
 
     for opt, val in opts:
-        if opt == '--l':
+        if opt == '--limits':
             opt_limits += re.split(r'\s+', val)
         elif opt == '--keyfile':
             if not isfile(val):
