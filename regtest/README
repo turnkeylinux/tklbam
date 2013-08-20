@@ -1,0 +1,40 @@
+Usage
+=====
+
+Run the regression test::
+
+    $ ./regtest.sh 
+    OK: 1 - dirindex creation
+    OK: 2 - dirindex creation with limitation
+    OK: 3 - dirindex comparison
+    OK: 4 - fixstat simulation
+    OK: 5 - fixstat simulation with limitation
+    OK: 6 - fixstat simulation with exclusion
+    OK: 7 - fixstat with uid and gid mapping
+    OK: 8 - fixstat repeated - nothing to do
+    OK: 9 - dirindex comparison with limitation
+    OK: 10 - dirindex comparison with inverted limitation
+    OK: 11 - delete simulation
+    OK: 12 - delete simulation with limitation
+    OK: 13 - delete
+    OK: 14 - delete repeated - nothing to do
+    OK: 15 - merge-userdb passwd
+    OK: 16 - merge-userdb group
+    OK: 17 - merge-userdb output maps
+    OK: 18 - newpkgs
+    OK: 19 - newpkgs-install simulation
+    OK: 20 - mysql2fs verbose output
+    OK: 21 - mysql2fs myfs.tar md5sum
+    OK: 22 - fs2mysql verbose output
+    OK: 23 - fs2mysql tofile=sql
+
+Recreate the regression test references::
+    
+    $ ./regtest.sh --createrefs
+
+Caution - dirindex tests may fail on a different arch/filesystem
+================================================================
+
+The references for the regression test was created on an amd64 architecture
+Linux system on ext4. Running the test on another system may cause it to fail
+due to differences in directory size.
