@@ -41,7 +41,7 @@ for arg; do
 done
 
 [ -n "$DEBUG" ] && set -x
-rm -rf ./testdir && tar xvf $REF/testdir.tar
+rm -rf ./testdir && tar xf $REF/testdir.tar
 
 # test index creation
 cmd dirindex --create index testdir
@@ -53,7 +53,7 @@ cmd dirindex --create index -- ./testdir/ -testdir/subdir/ testdir/subdir/subsub
 testresult ./index "dirindex creation with limitation"
 
 # test dirindex comparison
-cd testdir/
+cd ./testdir/
     mv {file,file-renamed}
     ln -sf file-renamed link
     mv emptydir emptydir-renamed
@@ -78,7 +78,7 @@ cmd dirindex ./index.orig testdir/ > delta
 cp delta delta.orig
 testresult ./delta "dirindex comparison"
 
-cd testdir/
+cd ./testdir/
     chmod 700 subdir/
     chown 0 chown
     chmod 644 chmod
@@ -107,7 +107,7 @@ testresult ./delta "dirindex comparison with limitation"
 cmd dirindex ./index.orig -- testdir/ -testdir/subdir testdir/subdir/subsubdir > delta
 testresult ./delta "dirindex comparison with inverted limitation"
 
-cd testdir
+cd ./testdir
     touch file
     touch subdir/subsubdir/file3
 cd ../

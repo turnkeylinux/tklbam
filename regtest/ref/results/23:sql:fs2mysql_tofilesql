@@ -11,6 +11,65 @@
 
 CREATE DATABASE /*!32312 IF NOT EXISTS*/ `mysql` /*!40100 DEFAULT CHARACTER SET latin1 */;
 USE `mysql`;
+DROP TABLE IF EXISTS `help_category`;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+CREATE TABLE `help_category` (
+  `help_category_id` smallint(5) unsigned NOT NULL,
+  `name` char(64) NOT NULL,
+  `parent_category_id` smallint(5) unsigned default NULL,
+  `url` char(128) NOT NULL,
+  PRIMARY KEY  (`help_category_id`),
+  UNIQUE KEY `name` (`name`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='help categories';
+
+SET character_set_client = @saved_cs_client;
+
+LOCK TABLES `help_category` WRITE;
+/*!40000 ALTER TABLE `help_category` DISABLE KEYS */;
+
+INSERT INTO `help_category` VALUES 
+(1,'Geographic',0,''),
+(2,'Polygon properties',30,''),
+(3,'WKT',30,''),
+(4,'Numeric Functions',34,''),
+(5,'MBR',30,''),
+(6,'Control flow functions',34,''),
+(7,'Transactions',31,''),
+(8,'Account Management',31,''),
+(9,'Point properties',30,''),
+(10,'Encryption Functions',34,''),
+(11,'LineString properties',30,''),
+(12,'Logical operators',34,''),
+(13,'Miscellaneous Functions',34,''),
+(14,'Functions and Modifiers for Use with GROUP BY',31,''),
+(15,'Information Functions',34,''),
+(16,'Storage Engines',31,''),
+(17,'Comparison operators',34,''),
+(18,'Bit Functions',34,''),
+(19,'Table Maintenance',31,''),
+(20,'Data Types',31,''),
+(21,'Triggers',31,''),
+(22,'Geometry constructors',30,''),
+(23,'GeometryCollection properties',1,''),
+(24,'Administration',31,''),
+(25,'Data Manipulation',31,''),
+(26,'Geometry relations',30,''),
+(27,'Language Structure',31,''),
+(28,'Date and Time Functions',34,''),
+(29,'WKB',30,''),
+(30,'Geographic Features',31,''),
+(31,'Contents',0,''),
+(32,'Geometry properties',30,''),
+(33,'String Functions',34,''),
+(34,'Functions',31,''),
+(35,'Stored Routines',31,''),
+(36,'Data Definition',31,'');
+/* CHUNKS: 0 */
+;
+/*!40000 ALTER TABLE `help_category` ENABLE KEYS */;
+UNLOCK TABLES;
+
 DROP TABLE IF EXISTS `help_keyword`;
 SET @saved_cs_client     = @@character_set_client;
 SET character_set_client = utf8;
@@ -26,7 +85,7 @@ SET character_set_client = @saved_cs_client;
 LOCK TABLES `help_keyword` WRITE;
 /*!40000 ALTER TABLE `help_keyword` DISABLE KEYS */;
 
-INSERT INTO `help_keyword` VALUES
+INSERT INTO `help_keyword` VALUES 
 (0,'JOIN'),
 (1,'REPEAT'),
 (2,'SERIALIZABLE'),
@@ -428,6 +487,8 @@ INSERT INTO `help_keyword` VALUES
 (398,'FIXED'),
 (399,'MULTIPOLYGONFROMTEXT'),
 (400,'ROW_FORMAT');
+/* CHUNKS: 0 */
+;
 /*!40000 ALTER TABLE `help_keyword` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -445,7 +506,7 @@ SET character_set_client = @saved_cs_client;
 LOCK TABLES `help_relation` WRITE;
 /*!40000 ALTER TABLE `help_relation` DISABLE KEYS */;
 
-INSERT INTO `help_relation` VALUES
+INSERT INTO `help_relation` VALUES 
 (1,0),
 (334,0),
 (214,1),
@@ -1271,122 +1332,13 @@ INSERT INTO `help_relation` VALUES
 (439,398),
 (184,399),
 (439,400);
+/* CHUNKS: 0 */
+;
 /*!40000 ALTER TABLE `help_relation` ENABLE KEYS */;
-UNLOCK TABLES;
-
-DROP TABLE IF EXISTS `help_category`;
-SET @saved_cs_client     = @@character_set_client;
-SET character_set_client = utf8;
-CREATE TABLE `help_category` (
-  `help_category_id` smallint(5) unsigned NOT NULL,
-  `name` char(64) NOT NULL,
-  `parent_category_id` smallint(5) unsigned default NULL,
-  `url` char(128) NOT NULL,
-  PRIMARY KEY  (`help_category_id`),
-  UNIQUE KEY `name` (`name`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='help categories';
-
-SET character_set_client = @saved_cs_client;
-
-LOCK TABLES `help_category` WRITE;
-/*!40000 ALTER TABLE `help_category` DISABLE KEYS */;
-
-INSERT INTO `help_category` VALUES
-(1,'Geographic',0,''),
-(2,'Polygon properties',30,''),
-(3,'WKT',30,''),
-(4,'Numeric Functions',34,''),
-(5,'MBR',30,''),
-(6,'Control flow functions',34,''),
-(7,'Transactions',31,''),
-(8,'Account Management',31,''),
-(9,'Point properties',30,''),
-(10,'Encryption Functions',34,''),
-(11,'LineString properties',30,''),
-(12,'Logical operators',34,''),
-(13,'Miscellaneous Functions',34,''),
-(14,'Functions and Modifiers for Use with GROUP BY',31,''),
-(15,'Information Functions',34,''),
-(16,'Storage Engines',31,''),
-(17,'Comparison operators',34,''),
-(18,'Bit Functions',34,''),
-(19,'Table Maintenance',31,''),
-(20,'Data Types',31,''),
-(21,'Triggers',31,''),
-(22,'Geometry constructors',30,''),
-(23,'GeometryCollection properties',1,''),
-(24,'Administration',31,''),
-(25,'Data Manipulation',31,''),
-(26,'Geometry relations',30,''),
-(27,'Language Structure',31,''),
-(28,'Date and Time Functions',34,''),
-(29,'WKB',30,''),
-(30,'Geographic Features',31,''),
-(31,'Contents',0,''),
-(32,'Geometry properties',30,''),
-(33,'String Functions',34,''),
-(34,'Functions',31,''),
-(35,'Stored Routines',31,''),
-(36,'Data Definition',31,'');
-/*!40000 ALTER TABLE `help_category` ENABLE KEYS */;
 UNLOCK TABLES;
 
 CREATE DATABASE /*!32312 IF NOT EXISTS*/ `drupal6` /*!40100 DEFAULT CHARACTER SET latin1 */;
 USE `drupal6`;
-DROP TABLE IF EXISTS `book`;
-SET @saved_cs_client     = @@character_set_client;
-SET character_set_client = utf8;
-CREATE TABLE `book` (
-  `mlid` int(10) unsigned NOT NULL default '0',
-  `nid` int(10) unsigned NOT NULL default '0',
-  `bid` int(10) unsigned NOT NULL default '0',
-  PRIMARY KEY  (`mlid`),
-  UNIQUE KEY `nid` (`nid`),
-  KEY `bid` (`bid`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
-
-SET character_set_client = @saved_cs_client;
-
-LOCK TABLES `book` WRITE;
-/*!40000 ALTER TABLE `book` DISABLE KEYS */;
-
-INSERT INTO `book` VALUES
-(291,58,58),
-(292,59,58),
-(293,60,58),
-(294,29,29),
-(295,185,29),
-(296,246,29),
-(1907,767,29),
-(1908,778,29),
-(1909,784,29),
-(300,194,29),
-(301,195,29),
-(302,211,29),
-(303,102,29),
-(1906,766,29),
-(305,121,29),
-(306,30,29),
-(307,47,29),
-(308,48,29),
-(1089,418,29),
-(1877,590,29),
-(1910,790,29),
-(1911,791,29),
-(1912,792,29),
-(1914,800,29),
-(1933,806,29),
-(1934,807,29),
-(1935,808,29),
-(1936,809,29),
-(1937,810,29),
-(1938,815,29),
-(1939,822,29),
-(2001,845,29),
-(2076,966,29);
-/*!40000 ALTER TABLE `book` ENABLE KEYS */;
-UNLOCK TABLES;
-
 DROP TABLE IF EXISTS `filter_formats`;
 SET @saved_cs_client     = @@character_set_client;
 SET character_set_client = utf8;
@@ -1404,12 +1356,14 @@ SET character_set_client = @saved_cs_client;
 LOCK TABLES `filter_formats` WRITE;
 /*!40000 ALTER TABLE `filter_formats` DISABLE KEYS */;
 
-INSERT INTO `filter_formats` VALUES
+INSERT INTO `filter_formats` VALUES 
 (1,'Filtered HTML',',1,2,3,',1),
 (2,'PHP code','',0),
 (3,'Full HTML',',,',1),
 (4,'Messaging plain text','',0),
 (5,'Blog',',3,',1);
+/* CHUNKS: 0 */
+;
 /*!40000 ALTER TABLE `filter_formats` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1438,7 +1392,7 @@ SET character_set_client = @saved_cs_client;
 LOCK TABLES `advpoll` WRITE;
 /*!40000 ALTER TABLE `advpoll` DISABLE KEYS */;
 
-INSERT INTO `advpoll` VALUES
+INSERT INTO `advpoll` VALUES 
 (65,0,'binary',0,1,1,'plurality',1,0,0,0,0,''),
 (66,0,'binary',0,1,1,'plurality',1,0,0,0,0,''),
 (67,0,'binary',0,1,1,'plurality',1,0,0,0,0,''),
@@ -1452,6 +1406,8 @@ INSERT INTO `advpoll` VALUES
 (833,0,'binary',0,1,1,'plurality',1,0,0,0,0,''),
 (834,0,'binary',0,1,1,'plurality',1,0,0,0,0,''),
 (895,0,'binary',0,1,1,'plurality',1,0,0,0,0,'');
+/* CHUNKS: 0 */
+;
 /*!40000 ALTER TABLE `advpoll` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1472,7 +1428,7 @@ SET character_set_client = @saved_cs_client;
 LOCK TABLES `advanced_help_index` WRITE;
 /*!40000 ALTER TABLE `advanced_help_index` DISABLE KEYS */;
 
-INSERT INTO `advanced_help_index` VALUES
+INSERT INTO `advanced_help_index` VALUES 
 (1,'webform','README.txt','en'),
 (101,'filefield','README.txt','en'),
 (3,'advanced_help','using-advanced-help','en'),
@@ -1623,7 +1579,65 @@ INSERT INTO `advanced_help_index` VALUES
 (156,'simplenews','README.txt','en'),
 (158,'simplenews_register','README.txt','en'),
 (159,'simplenews_template','README.txt','en');
+/* CHUNKS: 0 */
+;
 /*!40000 ALTER TABLE `advanced_help_index` ENABLE KEYS */;
+UNLOCK TABLES;
+
+DROP TABLE IF EXISTS `book`;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+CREATE TABLE `book` (
+  `mlid` int(10) unsigned NOT NULL default '0',
+  `nid` int(10) unsigned NOT NULL default '0',
+  `bid` int(10) unsigned NOT NULL default '0',
+  PRIMARY KEY  (`mlid`),
+  UNIQUE KEY `nid` (`nid`),
+  KEY `bid` (`bid`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+
+SET character_set_client = @saved_cs_client;
+
+LOCK TABLES `book` WRITE;
+/*!40000 ALTER TABLE `book` DISABLE KEYS */;
+
+INSERT INTO `book` VALUES 
+(291,58,58),
+(292,59,58),
+(293,60,58),
+(294,29,29),
+(295,185,29),
+(296,246,29),
+(1907,767,29),
+(1908,778,29),
+(1909,784,29),
+(300,194,29),
+(301,195,29),
+(302,211,29),
+(303,102,29),
+(1906,766,29),
+(305,121,29),
+(306,30,29),
+(307,47,29),
+(308,48,29),
+(1089,418,29),
+(1877,590,29),
+(1910,790,29),
+(1911,791,29),
+(1912,792,29),
+(1914,800,29),
+(1933,806,29),
+(1934,807,29),
+(1935,808,29),
+(1936,809,29),
+(1937,810,29),
+(1938,815,29),
+(1939,822,29),
+(2001,845,29),
+(2076,966,29);
+/* CHUNKS: 0 */
+;
+/*!40000 ALTER TABLE `book` ENABLE KEYS */;
 UNLOCK TABLES;
 
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
