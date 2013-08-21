@@ -180,7 +180,10 @@ class _DummyDB(AttrDict):
         if not exists(path):
             return default
 
-        return pickle.load(file(path))
+        try:
+            return pickle.load(file(path))
+        except:
+            return default
 
     def save(self):
         self._save(self.path.users, self.users)
@@ -222,7 +225,10 @@ class _DummyDB(AttrDict):
 
         return matches[0]
 
-dummydb = _DummyDB("/var/tmp/tklbam/dummyhub")
+try:
+    dummydb
+except NameError:
+    dummydb = _DummyDB("/var/tmp/tklbam/dummyhub")
 
 class DummyProfileArchive(ProfileArchive):
     def __del__(self):

@@ -247,7 +247,7 @@ class Restore:
         deleted = list(changes.deleted())
 
         if rollback:
-            rollback.save_files(changes)
+            rollback.save_files(changes, overlay)
 
         print "\nOVERLAY:\n"
         for val in self._iter_apply_overlay(overlay, "/", [ "-" + backup.ExtrasPaths.PATH ] + limits):

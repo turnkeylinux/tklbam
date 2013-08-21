@@ -151,7 +151,8 @@ class DirIndex(dict):
         paths_stat = []
 
         for path in (b - a):
-            if stat.S_ISDIR(other[path].mod):
+            mod = other[path].mod
+            if stat.S_ISDIR(mod) or stat.S_ISSOCK(mod):
                 paths_stat.append(path)
             else:
                 files_new.append(path)
@@ -173,7 +174,8 @@ class DirIndex(dict):
 
         for path in paths_in_both:
             if not attrs_equal(('size', 'mtime'), self[path], other[path]):
-                if not stat.S_ISDIR(other[path].mod) \
+                mod = other[path].mod
+                if not (stat.S_ISDIR(mod) or stat.S_ISSOCK(mod)) \
                    and not symlink_equal(self[path], other[path]):
                     files_edited.append(path)
                     continue

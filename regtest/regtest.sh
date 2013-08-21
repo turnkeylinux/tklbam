@@ -2,6 +2,6 @@
 
 # faketime messes with Python's object caching mechanism
 cd ../
-    make clean
-cd -
-faketime -f "1970-1-1 00:00:00" fakeroot $(dirname $0)/_regtest.sh $@
+    make clean > /dev/null
+cd - > /dev/null
+faketime -f "2000-1-1 00:00:00" fakeroot $(dirname $0)/_regtest.sh $@

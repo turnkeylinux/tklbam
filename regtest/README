@@ -1,0 +1,56 @@
+Overview
+========
+
+The goal of this regression test suite is to minimize regressions when hacking
+on easily broken TKLBAM internals. It works in a fairly crude manner by
+comparing previously saved outputs to current outputs from TKLBAM internals.
+This mechanism is not designed to be cross-system compatible. Minor things like
+the size of your filesystem block size being different from my filesystem block
+size may cause tests to fail.
+
+So before you begin hacking on TKLBAM, make sure all tests pass on the regtest.
+This will be your initial reference point. If you haven't made any changes and
+part of the regtest already fails this is most likely due to minor differences
+between your system and the development system that created these references in
+the first place. In that case, just recreate the reference point files, as shown
+below.
+
+Once all tests pass, you can rerun the regtest to make sure you haven't broken
+anything covered by the regtest.
+
+Usage
+=====
+
+Recreate the regression test references::
+    
+    $ ./regtest.sh --createrefs
+
+Regtest references may need to be recreated on new architectures/filesystems
+(see note below).
+
+Run the regression test::
+
+    $ ./regtest.sh 
+    OK: 1 - dirindex creation
+    OK: 2 - dirindex creation with limitation
+    OK: 3 - dirindex comparison
+    OK: 4 - fixstat simulation
+    OK: 5 - fixstat simulation with limitation
+    OK: 6 - fixstat simulation with exclusion
+    OK: 7 - fixstat with uid and gid mapping
+    OK: 8 - fixstat repeated - nothing to do
+    OK: 9 - dirindex comparison with limitation
+    OK: 10 - dirindex comparison with inverted limitation
+    OK: 11 - delete simulation
+    OK: 12 - delete simulation with limitation
+    OK: 13 - delete
+    OK: 14 - delete repeated - nothing to do
+    OK: 15 - merge-userdb passwd
+    OK: 16 - merge-userdb group
+    OK: 17 - merge-userdb output maps
+    OK: 18 - newpkgs
+    OK: 19 - newpkgs-install simulation
+    OK: 20 - mysql2fs verbose output
+    OK: 21 - mysql2fs myfs.tar md5sum
+    OK: 22 - fs2mysql verbose output
+    OK: 23 - fs2mysql tofile=sql
