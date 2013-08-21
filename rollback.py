@@ -152,7 +152,7 @@ class Rollback:
         if exceptions:
             raise Error("caught %d exceptions during rollback" % exceptions)
 
-    def save_files(self, changes):
+    def save_files(self, changes, overlay_path):
         for fname in ("passwd", "group"):
             shutil.copy(join("/etc", fname), self.paths.etc)
 
@@ -162,6 +162,8 @@ class Rollback:
             if lexists(change.path):
                 di.add_path(change.path)
                 if change.OP in ('o', 'd'):
+                    if change.OP == 'o' and not lexists(overlay_path + change.path):
+                        continue
                     self._move_to_originals(change.path)
         di.save(self.paths.dirindex)
 
