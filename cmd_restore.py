@@ -250,7 +250,7 @@ def main():
     conf = Conf()
 
     for opt, val in opts:
-        if opt == '--l':
+        if opt == '--limits':
             opt_limits += re.split(r'\s+', val)
         elif opt == '--keyfile':
             if not isfile(val):
