@@ -269,7 +269,7 @@ class MyFS_Reader(MyFS):
             if callback:
                 callback(self)
 
-            if self.myfs.add_drop_database:
+            if self.myfs.add_drop_database and self.name != 'mysql':
                 print >> fh, "/*!40000 DROP DATABASE IF EXISTS `%s`*/;" % self.name
             print >> fh, self.sql_init,
             print >> fh, "USE `%s`;" % self.name
