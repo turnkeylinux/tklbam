@@ -218,7 +218,7 @@ class Backup:
 
         args = [ '--s3-unencrypted-connection', '--allow-source-mismatch' ]
 
-        if conf.simulate and conf.verbose:
+        if conf.simulate: 
             args += [ '--dry-run' ]
 
         if conf.s3_parallel_uploads > 1:
