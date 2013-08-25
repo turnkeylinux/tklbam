@@ -308,9 +308,9 @@ If you're feeling adventurous you can force another profile with the
 
     trap = UnitedStdTrap(transparent=True)
     try:
+        hooks.backup.pre()
         b = backup.Backup(conf, registry.profile, credentials, resume=opt_resume)
         try:
-            hooks.backup.pre()
             if is_hub_address:
                 hb.set_backup_inprogress(backup_id, True)
 
