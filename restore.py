@@ -84,7 +84,8 @@ class Restore:
         if not self.simulate:
             system("apt-get update")
 
-        packages = file(newpkgs_file).read().strip().split('\n')
+        packages = file(newpkgs_file).read().strip()
+        packages = [] if not packages else packages.split('\n')
 
         installer = Installer(packages, self.PACKAGES_BLACKLIST)
 
