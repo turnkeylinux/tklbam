@@ -341,7 +341,7 @@ def main():
     address = hbr.address if hbr else opt_address
 
     if hbr:
-        if not opt_force:
+        if not opt_force and not download_path:
             do_compatibility_check(hbr.turnkey_version, interactive)
 
         if opt_key and \
