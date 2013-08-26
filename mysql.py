@@ -70,6 +70,17 @@ def mysql(**conf):
 
     return os.popen(command, "w")
 
+def mysql(**conf):
+    command = "mysql " + _mysql_opts(**conf)
+
+    popen = Popen(command, shell=True, stdin=PIPE, stderr=PIPE, stdout=PIPE)
+    popen.stdin.close()
+    returncode = popen.wait()
+    if returncode != 0:
+        raise Error("mysql error (%d): %s" % (returncode, popen.stderr.read()))
+
+    return os.popen(command, "w")
+
 class MyFS:
     class Limits:
         def __init__(self, limits):
@@ -447,7 +458,12 @@ def backup(myfs, etc, **kws):
     shutil.copy(PATH_DEBIAN_CNF, etc)
 
 def restore(myfs, etc, **kws):
-    fs2mysql(mysql(), myfs, **kws)
+    if kws.pop('simulate', False):
+        fh = file("/dev/null", "w")
+    else:
+        fh = mysql()
+
+    fs2mysql(fh, myfs, **kws)
 
     shutil.copy(join(etc, basename(PATH_DEBIAN_CNF)), PATH_DEBIAN_CNF)
     os.system("killall -HUP mysqld > /dev/null 2>&1")

@@ -45,6 +45,8 @@ Options / Duplicity:
 
 Options / System restore:
 
+    --simulate                        Do a dry run simulation of the system restore
+
     --limits="LIMIT-1 .. LIMIT-N"     Restore filesystem or database limitations
 
       LIMIT := -?( /path/to/include/or/exclude | mysql:database[/table] )
@@ -227,6 +229,7 @@ def main():
     backup_extract_path = None
     download_path = None
 
+    opt_simulate = False
     opt_force = False
     opt_time = None
     opt_limits = []
@@ -246,6 +249,7 @@ def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'h',
                                        ['download-only=',
+                                        'simulate',
                                         'limits=', 'address=', 'keyfile=',
                                         'logfile=',
                                         'restore-cache-size=', 'restore-cache-dir=',
@@ -273,7 +277,9 @@ def main():
                 
             else:
                 os.mkdir(download_path)
-            
+
+        elif opt == '--simulate':
+            opt_simulate = True
         elif opt == '--limits':
             opt_limits += re.split(r'\s+', val)
         elif opt == '--keyfile':
@@ -385,7 +391,7 @@ def main():
             if not backup_extract_path:
                 backup_extract_path = get_backup_extract()
 
-            restore = Restore(backup_extract_path, limits=opt_limits, rollback=not no_rollback)
+            restore = Restore(backup_extract_path, limits=opt_limits, rollback=not no_rollback, simulate=opt_simulate)
             hooks.restore.inspect(restore.extras.path)
             if opt_debug:
                 trap.close()

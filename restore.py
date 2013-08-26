@@ -42,13 +42,17 @@ class Restore:
     def _title(title, c='='):
         return title + "\n" + c * len(title) + "\n"
 
-    def __init__(self, backup_extract_path, limits=[], rollback=True):
+    def __init__(self, backup_extract_path, limits=[], rollback=True, simulate=False):
         extras_path = backup_extract_path + backup.ExtrasPaths.PATH
         if not isdir(extras_path):
             raise self.Error("illegal backup_extract_path: can't find '%s'" % extras_path)
 
-        self.extras = backup.ExtrasPaths(extras_path)
+        if simulate:
+            rollback = False
+
+        self.simulate = simulate
         self.rollback = Rollback.create() if rollback else None
+        self.extras = backup.ExtrasPaths(extras_path)
         self.limits = conf.Limits(limits)
         self.backup_extract_path = backup_extract_path
 
@@ -63,7 +67,7 @@ class Restore:
 
         try:
             mysql.restore(self.extras.myfs, self.extras.etc.mysql,
-                          limits=self.limits.db, callback=mysql.cb_print())
+                          limits=self.limits.db, callback=mysql.cb_print(), simulate=self.simulate)
 
         except mysql.Error, e:
             print "SKIPPING MYSQL DATABASE RESTORE: " + str(e)
@@ -77,12 +81,15 @@ class Restore:
 
         # apt-get update, otherwise installer may skip everything
         print self._title("apt-get update", '-')
-        system("apt-get update")
+        if not self.simulate:
+            system("apt-get update")
 
         packages = file(newpkgs_file).read().strip().split('\n')
+
         installer = Installer(packages, self.PACKAGES_BLACKLIST)
 
         print "\n" + self._title("apt-get install", '-')
+
         if installer.skipping:
             print "SKIPPING: " + " ".join(installer.skipping) + "\n"
 
@@ -91,9 +98,10 @@ class Restore:
             return
 
         print installer.command
-        exitcode = installer()
-        if exitcode != 0:
-            print "# WARNING: non-zero exitcode (%d)" % exitcode
+        if not self.simulate:
+            exitcode = installer()
+            if exitcode != 0:
+                print "# WARNING: non-zero exitcode (%d)" % exitcode
 
         if self.rollback:
             self.rollback.save_new_packages(installer.installed)
@@ -113,7 +121,7 @@ class Restore:
                             r(new_passwd), r(new_group))
 
     @staticmethod
-    def _iter_apply_overlay(overlay, root, limits=[]):
+    def _iter_apply_overlay(overlay, root, limits=[], simulate=False):
         def _walk(dir):
             fnames = []
             subdirs = []
@@ -152,6 +160,10 @@ class Restore:
                 if root_fpath not in pathmap:
                     continue
 
+                if simulate:
+                    yield root_fpath
+                    continue
+
                 try:
                     if not isdir(root_dpath):
                         if exists(root_dpath):
@@ -172,6 +184,7 @@ class Restore:
             return
 
         overlay = self.backup_extract_path
+        simulate = self.simulate
         rollback = self.rollback
         limits = self.limits.fs
 
@@ -192,7 +205,7 @@ class Restore:
             rollback.save_files(changes, overlay)
 
         print "\nOVERLAY:\n"
-        for val in self._iter_apply_overlay(overlay, "/", [ "-" + backup.ExtrasPaths.PATH ] + limits):
+        for val in self._iter_apply_overlay(overlay, "/", [ "-" + backup.ExtrasPaths.PATH ] + limits, simulate):
             print val
 
         emptydirs = list(changes.emptydirs())
@@ -203,22 +216,24 @@ class Restore:
 
         for action in emptydirs:
             print action
-            action()
+            if not simulate:
+                action()
 
         for action in statfixes:
             print action
-            action()
+            if not simulate:
+                action()
 
         for action in deleted:
             print action
 
             # rollback moves deleted to 'originals'
-            if not rollback:
+            if not simulate and not rollback:
                 action()
 
         def w(path, s):
             file(path, "w").write(str(s))
 
-        w("/etc/passwd", passwd)
-        w("/etc/group", group)
-
+        if not simulate:
+            w("/etc/passwd", passwd)
+            w("/etc/group", group)
