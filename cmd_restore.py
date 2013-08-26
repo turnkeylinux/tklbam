@@ -14,7 +14,7 @@ Restore a backup
 
 Arguments:
 
-    <hub-backup> := backup-id || unique label pattern
+    <hub-backup> := backup-id || unique label pattern || path/to/backup/extract
 
 Options / General:
 
@@ -112,6 +112,7 @@ from utils import is_writeable
 
 from conf import Conf
 
+import backup
 import traceback
 
 PATH_LOGFILE = "/var/log/tklbam-restore"
@@ -223,6 +224,7 @@ def usage(e=None):
     sys.exit(1)
 
 def main():
+    backup_extract_path = None
     download_path = None
 
     opt_force = False
@@ -325,48 +327,57 @@ def main():
         if len(args) != 1:
             usage("incorrect number of arguments")
 
-        try:
-            hbr = get_backup_record(args[0])
-            credentials = hub.Backups(registry.sub_apikey).get_credentials()
-        except Error, e:
-            fatal(e)
+        arg = args[0]
+
+        if isdir(arg + backup.ExtrasPaths.PATH):
+            backup_extract_path = arg
+        else:
+            try:
+                hbr = get_backup_record(arg)
+                credentials = hub.Backups(registry.sub_apikey).get_credentials()
+            except Error, e:
+                fatal(e)
 
     else:
         if not opt_address:
             usage()
 
-    if opt_address:
-        if hbr:
-            fatal("a manual --address is incompatible with a <backup-id>")
-
-        if not opt_key:
-            fatal("a manual --address needs a --keyfile")
-
-    address = hbr.address if hbr else opt_address
-
-    if hbr:
-        if not opt_force and not download_path:
-            do_compatibility_check(hbr.turnkey_version, interactive)
-
-        if opt_key and \
-           keypacket.fingerprint(hbr.key) != keypacket.fingerprint(opt_key):
-
-            fatal("invalid escrow key for the selected backup")
-
-    key = opt_key if opt_key else hbr.key
-    secret = decrypt_key(key, interactive)
-
-    def get_backup_extract():
-        print "Restoring backup extract from duplicity archive at %s" % (address)
-        duplicity.restore(download_path, address, restore_cache_size, restore_cache_dir, credentials, secret, opt_time)
-        return download_path
-
-    if download_path:
-        get_backup_extract()
-        return
+    if backup_extract_path:
+        def get_backup_extract():
+            return backup_extract_path
     else:
-        download_path = TempDir(prefix="tklbam-")
-        os.chmod(download_path, 0700)
+        if opt_address:
+            if hbr:
+                fatal("a manual --address is incompatible with a <backup-id>")
+
+            if not opt_key:
+                fatal("a manual --address needs a --keyfile")
+
+        address = hbr.address if hbr else opt_address
+
+        if hbr:
+            if not opt_force and not download_path:
+                do_compatibility_check(hbr.turnkey_version, interactive)
+
+            if opt_key and \
+               keypacket.fingerprint(hbr.key) != keypacket.fingerprint(opt_key):
+
+                fatal("invalid escrow key for the selected backup")
+
+        key = opt_key if opt_key else hbr.key
+        secret = decrypt_key(key, interactive)
+
+        def get_backup_extract():
+            print "Restoring backup extract from duplicity archive at %s" % (address)
+            duplicity.restore(download_path, address, restore_cache_size, restore_cache_dir, credentials, secret, opt_time)
+            return download_path
+
+        if download_path:
+            get_backup_extract()
+            return
+        else:
+            download_path = TempDir(prefix="tklbam-")
+            os.chmod(download_path, 0700)
 
     trap = UnitedStdTrap(usepty=True, transparent=(False if silent else True))
     log_fh = None
