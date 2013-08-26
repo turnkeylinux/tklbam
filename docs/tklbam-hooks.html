@@ -4,9 +4,9 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="Docutils 0.7: http://docutils.sourceforge.net/" />
-<title>tklbam-restore</title>
+<title>/etc/tklbam/hooks.d</title>
 <meta name="author" content="Liraz Siri &lt;liraz&#64;turnkeylinux.org&gt;" />
-<meta name="date" content="2012-08-10" />
+<meta name="date" content="2013-08-26" />
 <style type="text/css">
 
 /*
@@ -312,9 +312,9 @@ ul.auto-toc {
 </style>
 </head>
 <body>
-<div class="document" id="tklbam-restore">
-<h1 class="title">tklbam-restore</h1>
-<h2 class="subtitle" id="restore-a-backup">Restore a backup</h2>
+<div class="document" id="etc-tklbam-hooks-d">
+<h1 class="title">/etc/tklbam/hooks.d</h1>
+<h2 class="subtitle" id="hooks">Hooks</h2>
 <table class="docinfo" frame="void" rules="none">
 <col class="docinfo-name" />
 <col class="docinfo-content" />
@@ -322,147 +322,98 @@ ul.auto-toc {
 <tr><th class="docinfo-name">Author:</th>
 <td>Liraz Siri &lt;<a class="reference external" href="mailto:liraz&#64;turnkeylinux.org">liraz&#64;turnkeylinux.org</a>&gt;</td></tr>
 <tr><th class="docinfo-name">Date:</th>
-<td>2012-08-10</td></tr>
-<tr class="field"><th class="docinfo-name">Manual section:</th><td class="field-body">8</td>
+<td>2013-08-26</td></tr>
+<tr class="field"><th class="docinfo-name">Manual section:</th><td class="field-body">5</td>
 </tr>
 <tr class="field"><th class="docinfo-name">Manual group:</th><td class="field-body">backup</td>
 </tr>
 </tbody>
 </table>
-<div class="section" id="synopsis">
-<h1>SYNOPSIS</h1>
-<p>tklbam-restore [ -options ] [ &lt;hub-backup&gt; ]</p>
-</div>
-<div class="section" id="arguments">
-<h1>ARGUMENTS</h1>
-<p><cite>&lt;hub-backup&gt;</cite> := backup-id || unique label pattern</p>
-</div>
-<div class="section" id="options">
-<h1>OPTIONS</h1>
-<table class="docutils option-list" frame="void" rules="none">
-<col class="option" />
-<col class="description" />
-<tbody valign="top">
-<tr><td class="option-group">
-<kbd><span class="option">--time=<var>TIME</var></span></kbd></td>
-<td><p class="first">Time to restore from</p>
-<p>TIME := YYYY-MM-DD | YYYY-MM-DDThh:mm:ss | &lt;int&gt;[mhDWMY]</p>
-<blockquote class="last">
-<p>e.g.,:</p>
+<div class="section" id="description">
+<h1>DESCRIPTION</h1>
+<p>TKLBAM has a nifty, general purpose hooks mechanism you can use to trigger
+useful actions on backup and restore.</p>
+<p>Things you might want to use hooks for:</p>
+<ul class="simple">
+<li>Cleaning up temporary files</li>
+<li>Stopping/starting services to increase data consistency</li>
+<li>Encoding/decoding data from non-supported databases</li>
+<li>Using LVM to create/restore a snapshot of a fast changing volume</li>
+</ul>
+<p>Hooks are located at /etc/tklbam/hooks.d</p>
+<p>Only executable hooks are executed. To enable a hook:</p>
 <pre class="literal-block">
-2010-08-06 - 2010, August 6th, 00:00
-
-2010-08-07T14:00 - 2010, August 7th 14:00 UTC
-
-6m - 6 minutes
-5h - 5 hours
-4D - 4 days ago
-3W - 3 weeks ago
-2M - 2 months ago
-1Y - 1 year ago
+chmod +x /etc/tklbam/hooks.d/example
 </pre>
-</blockquote>
-</td></tr>
-<tr><td class="option-group" colspan="2">
-<kbd><span class="option">--limits=<var>LIMITS</var></span></kbd></td>
-</tr>
-<tr><td>&nbsp;</td><td><p class="first">Restore filesystem or database limitations</p>
-<p><cite>LIMITS</cite> := &quot;<tt class="docutils literal">LIMIT</tt>-1 .. <tt class="docutils literal">LIMIT</tt>-N&quot;</p>
-<p><tt class="docutils literal">LIMIT</tt> :=</p>
-<blockquote class="last">
--?( /path/to/include/or/exclude | mysql:database[/table] )</blockquote>
-</td></tr>
-<tr><td class="option-group" colspan="2">
-<kbd><span class="option">--keyfile=<var>KEYFILE</var></span></kbd></td>
-</tr>
-<tr><td>&nbsp;</td><td><p class="first">Path to escrow keyfile.</p>
-<p class="last">Default: Hub provides this automatically.</p>
-</td></tr>
-<tr><td class="option-group" colspan="2">
-<kbd><span class="option">--address=<var>TARGET_URL</var></span></kbd></td>
-</tr>
-<tr><td>&nbsp;</td><td><p class="first">manual backup target URL (needs --keyfile).</p>
-<p class="last">Default: Hub provides this automatically.</p>
-</td></tr>
-<tr><td class="option-group">
-<kbd><span class="option">--skip-files</span></kbd></td>
-<td>Don't restore filesystem</td></tr>
-<tr><td class="option-group" colspan="2">
-<kbd><span class="option">--skip-database</span></kbd></td>
-</tr>
-<tr><td>&nbsp;</td><td>Don't restore databases</td></tr>
-<tr><td class="option-group" colspan="2">
-<kbd><span class="option">--skip-packages</span></kbd></td>
-</tr>
-<tr><td>&nbsp;</td><td>Don't restore new packages</td></tr>
-<tr><td class="option-group">
-<kbd><span class="option">--logfile=<var>PATH</var></span></kbd></td>
-<td>Path to log file.
-Default: /var/log/tklbam-restore</td></tr>
-<tr><td class="option-group">
-<kbd><span class="option">--no-rollback</span></kbd></td>
-<td>Disable rollback</td></tr>
-<tr><td class="option-group">
-<kbd><span class="option">--silent</span></kbd></td>
-<td>Disable feedback</td></tr>
-<tr><td class="option-group">
-<kbd><span class="option">--force</span></kbd></td>
-<td>Disable sanity checking</td></tr>
-<tr><td class="option-group">
-<kbd><span class="option">--debug</span></kbd></td>
-<td>Run $SHELL after Duplicity</td></tr>
-</tbody>
-</table>
-<div class="section" id="configurable-options">
-<h2>Configurable options</h2>
-<table class="docutils option-list" frame="void" rules="none">
-<col class="option" />
-<col class="description" />
-<tbody valign="top">
-<tr><td class="option-group" colspan="2">
-<kbd><span class="option">--restore-cache-size=<var>SIZE</var></span></kbd></td>
-</tr>
-<tr><td>&nbsp;</td><td>The maximum size of the download cache
-default: 50%</td></tr>
-<tr><td class="option-group" colspan="2">
-<kbd><span class="option">--restore-cache-dir=<var>PATH</var></span></kbd></td>
-</tr>
-<tr><td>&nbsp;</td><td>The path to the download cache directory
-default: /var/cache/tklbam/restore</td></tr>
-</tbody>
-</table>
-<p>Resolution order for configurable options:</p>
-<ol class="arabic">
-<li><p class="first">comand line (highest precedence)</p>
-</li>
-<li><p class="first">configuration file (/etc/tklbam/conf):</p>
+</div>
+<div class="section" id="outline-of-hook-invocation">
+<h1>Outline of hook invocation</h1>
+<p>Tip: try enabling the example hook and examine the backup or restore console
+output to see where the hook is executed.</p>
+<p>Outline of hook invocation in backup process:</p>
 <pre class="literal-block">
-# comment
-&lt;option-name&gt; &lt;value&gt;
+&quot;pre&quot; hook
+tklbam creates &quot;extras&quot; (backup metadata)
+&quot;inspect&quot; hook: current working directory is /TKLBAM
+tklbam runs duplicity to create/update backup archives
+&quot;post&quot; hook
 </pre>
-</li>
-<li><p class="first">built-in default (lowest precedence)</p>
-</li>
-</ol>
+<p>Outline of hook invocation in restore process:</p>
+<pre class="literal-block">
+&quot;pre&quot; hook
+tklbam runs duplicity to get extras (backup metadata) + overlay
+&quot;inspect&quot; hook: current working directory is /tmp/&lt;random-archive-path&gt;/TKLBAM
+tklbam applies restore to system
+&quot;post&quot; hook
+</pre>
 </div>
+<div class="section" id="example-hook">
+<h1>Example hook</h1>
+<pre class="literal-block">
+#!/bin/bash -e
+# This is a disabled hook example.
+# To enable, make it executable: chmod +x /etc/tklbam/hooks.d/example
+
+# hooks are always called with two arguments
+op=$1
+state=$2
+
+if [ &quot;$op&quot; = &quot;restore&quot; ]; then
+    echo -n &quot;A restore operation called this hook &quot;
+elif [ &quot;$op&quot; = &quot;backup&quot; ]; then
+    echo -n &quot;A backup operation called this hook &quot;
+fi
+
+if [ &quot;$state&quot; = &quot;pre&quot; ]; then
+    echo &quot;BEFORE $op started&quot;
+elif [ &quot;$state&quot; = &quot;inspect&quot;]; then
+
+    if [ &quot;$op&quot; = &quot;restore&quot; ]; then
+        echo -n &quot;Inspect hook runs after duplicity downloaded backup archive. extras path = $(pwd)&quot;
+    elif [ &quot;$op&quot; = &quot;backup&quot; ]; then
+        echo -n &quot;Inspect hook runs before duplicity uploads backup archive. extras path = $(pwd)&quot;
+    fi
+
+elif [ &quot;$state&quot; = &quot;post&quot; ]; then
+    echo &quot;AFTER $op finished&quot;
+fi
+
+# `false` returns a non-zero exitcode
+# Uncomment the next line to raise an error
+
+#false
+</pre>
 </div>
-<div class="section" id="files">
-<h1>FILES</h1>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field"><th class="field-name" colspan="2">Configuration files:</th></tr>
-<tr><td>&nbsp;</td><td class="field-body">/etc/tklbam/conf, /etc/tklbam/hooks.d</td>
-</tr>
-<tr class="field"><th class="field-name">Restore cache:</th><td class="field-body">/var/cache/tklbam/restore</td>
-</tr>
-</tbody>
-</table>
-</div>
-<div class="section" id="see-also">
-<h1>SEE ALSO</h1>
-<p><tt class="docutils literal">tklbam</tt> (8), <tt class="docutils literal"><span class="pre">tklbam-faq</span></tt> (7), <tt class="docutils literal"><span class="pre">tklbam-hooks</span></tt> (5)</p>
+<div class="section" id="default-hooks">
+<h1>Default hooks</h1>
+<ul class="simple">
+<li>/etc/tklbam/hooks.d/fixclock: activated by default, this hooks uses ntpdate
+to sync the clock, to prevent duplicity from ignoring backup archives &quot;from
+the future&quot;.</li>
+<li>/etc/tklbam/hooks.d/example: disabled by default. When enabled this hook
+prints out &quot;debugging&quot; messages showing where the hook is being executed.
+This is designed to illustrate how tklbam hooks work.</li>
+</ul>
 </div>
 </div>
 </body>

@@ -141,4 +141,4 @@ FILES
 SEE ALSO
 ========
 
-``tklbam`` (8), ``tklbam-faq`` (7)
+``tklbam`` (8), ``tklbam-faq`` (7), ``tklbam-hooks`` (5)
