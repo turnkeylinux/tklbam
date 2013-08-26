@@ -314,6 +314,8 @@ If you're feeling adventurous you can force another profile with the
             if is_hub_address:
                 hb.set_backup_inprogress(backup_id, True)
 
+            hooks.backup.inspect(b.extras_paths.path)
+
             if opt_debug:
                 trap.close()
                 trap = None

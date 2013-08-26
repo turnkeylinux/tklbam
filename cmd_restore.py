@@ -342,6 +342,7 @@ def main():
             restore = Restore(address, secret, restore_cache_size, restore_cache_dir,
                               opt_limits, opt_time, credentials=credentials, rollback=not no_rollback)
 
+            hooks.restore.inspect(restore.extras.path)
             if opt_debug:
                 trap.close()
                 trap = None
