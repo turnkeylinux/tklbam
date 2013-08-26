@@ -19,7 +19,8 @@ tklbam-restore [ -options ] [ <hub-backup> ]
 ARGUMENTS
 =========
 
-`<hub-backup>` := backup-id || unique label pattern
+`<hub-backup>` := backup-id || unique label pattern || path/to/backup/extract
+
 
 OPTIONS
 =======

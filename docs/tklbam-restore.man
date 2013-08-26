@@ -35,7 +35,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 tklbam\-restore [ \-options ] [ <hub\-backup> ]
 .SH ARGUMENTS
 .sp
-\fI<hub\-backup>\fP := backup\-id || unique label pattern
+\fI<hub\-backup>\fP := backup\-id || unique label pattern || path/to/backup/extract
 .SH OPTIONS
 .SS General options
 .sp
