@@ -14,6 +14,10 @@ from os.path import *
 import sys
 
 from subprocess import *
+from squid import Squid
+
+import resource
+RLIMIT_NOFILE_MAX = 8192
 
 def _find_duplicity_pylib(path):
     if not isdir(path):
@@ -79,3 +83,43 @@ class Command:
 
     def __str__(self):
         return " ".join(self.command)
+
+
+def _raise_rlimit(type, newlimit):
+
+
+    soft, hard = resource.getrlimit(type)
+    if soft > newlimit:
+        return
+
+    if hard > newlimit:
+        return resource.setrlimit(type, (newlimit, hard))
+
+    try:
+        resource.setrlimit(type, (newlimit, newlimit))
+    except ValueError:
+        return
+
+def restore(download_path, address, cache_size, cache_dir, credentials, secret, time=None):
+    if time:
+        opts = [("restore-time", time)]
+    else:
+        opts = []
+
+    squid = Squid(cache_size, cache_dir)
+    squid.start()
+
+    orig_env = os.environ.get('http_proxy')
+    os.environ['http_proxy'] = squid.address
+
+    _raise_rlimit(resource.RLIMIT_NOFILE, RLIMIT_NOFILE_MAX)
+    Command(opts, '--s3-unencrypted-connection', address, download_path).run(secret, credentials)
+
+    if orig_env:
+        os.environ['http_proxy'] = orig_env
+    else:
+        del os.environ['http_proxy']
+
+    sys.stdout.flush()
+
+    squid.stop()

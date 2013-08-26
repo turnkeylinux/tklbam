@@ -94,9 +94,10 @@ import re
 
 from os.path import *
 from restore import Restore
+import duplicity
 
 from stdtrap import UnitedStdTrap
-from temp import TempFile
+from temp import TempDir
 import executil
 
 import hub
@@ -109,7 +110,6 @@ from registry import registry
 from version import get_turnkey_version, codename
 from utils import is_writeable
 
-import backup
 from conf import Conf
 
 import traceback
@@ -132,8 +132,8 @@ def do_compatibility_check(backup_turnkey_version, interactive=True):
     if local_codename == backup_codename:
         return
 
-    def fmt(codename):
-        return codename.upper().replace("-", " ")
+    def fmt(s):
+        return s.upper().replace("-", " ")
 
     backup_codename = fmt(backup_codename)
     local_codename = fmt(local_codename)
@@ -265,6 +265,10 @@ def main():
             if exists(download_path):
                 if not isdir(download_path):
                     fatal("--download-only=%s is not a directory" % download_path)
+
+                if os.listdir(download_path) != []:
+                    fatal("--download-only=%s is not an empty directory" % download_path)
+                
             else:
                 os.mkdir(download_path)
             
@@ -352,26 +356,32 @@ def main():
     key = opt_key if opt_key else hbr.key
     secret = decrypt_key(key, interactive)
 
-    if download_path:
-        restore = Restore(address, secret, restore_cache_size, restore_cache_dir,
-                          opt_limits, opt_time, credentials=credentials, download_path=download_path)
+    def get_backup_extract():
+        print "Restoring backup extract from duplicity archive at %s" % (address)
+        duplicity.restore(download_path, address, restore_cache_size, restore_cache_dir, credentials, secret, opt_time)
+        return download_path
 
+    if download_path:
+        get_backup_extract()
         return
+    else:
+        download_path = TempDir(prefix="tklbam-")
+        os.chmod(download_path, 0700)
 
     trap = UnitedStdTrap(usepty=True, transparent=(False if silent else True))
     log_fh = None
     try:
         try:
             hooks.restore.pre()
-            restore = Restore(address, secret, restore_cache_size, restore_cache_dir,
-                              opt_limits, opt_time, credentials=credentials, rollback=not no_rollback)
 
+            extract_path = get_backup_extract()
+            restore = Restore(extract_path, limits=opt_limits, rollback=not no_rollback)
             hooks.restore.inspect(restore.extras.path)
             if opt_debug:
                 trap.close()
                 trap = None
 
-                os.chdir(restore.backup_archive)
+                os.chdir(extract_path)
                 executil.system(os.environ.get("SHELL", "/bin/bash"))
                 os.chdir('/')
 

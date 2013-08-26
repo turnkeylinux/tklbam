@@ -13,46 +13,20 @@ import sys
 import os
 from os.path import *
 
-import resource
-
-import shutil
-import commands
-
 import userdb
-from paths import Paths
 from changes import Changes
 from pathmap import PathMap
-from dirindex import DirIndex
 from pkgman import Installer
 from rollback import Rollback
-from temp import TempDir
 
 import utils
 
 import backup
 import conf
 import mysql
-import duplicity
-
-from squid import Squid
 
 class Error(Exception):
     pass
-
-RLIMIT_NOFILE_MAX = 8192
-
-def raise_rlimit(type, newlimit):
-    soft, hard = resource.getrlimit(type)
-    if soft > newlimit:
-        return
-
-    if hard > newlimit:
-        return resource.setrlimit(type, (newlimit, hard))
-
-    try:
-        resource.setrlimit(type, (newlimit, newlimit))
-    except ValueError:
-        return
 
 def system(command):
     sys.stdout.flush()
@@ -68,48 +42,15 @@ class Restore:
     def _title(title, c='='):
         return title + "\n" + c * len(title) + "\n"
 
-    @staticmethod
-    def _duplicity_restore(address, cache_size, cache_dir, credentials, secret, time=None, download_path=None):
-        if not download_path:
-            download_path = TempDir(prefix="tklbam-")
-            os.chmod(download_path, 0700)
+    def __init__(self, backup_extract_path, limits=[], rollback=True):
+        extras_path = backup_extract_path + backup.ExtrasPaths.PATH
+        if not isdir(extras_path):
+            raise self.Error("illegal backup_extract_path: can't find '%s'" % extras_path)
 
-        if time:
-            opts = [("restore-time", time)]
-        else:
-            opts = []
-
-        squid = Squid(cache_size, cache_dir)
-        squid.start()
-
-        orig_env = os.environ.get('http_proxy')
-        os.environ['http_proxy'] = squid.address
-
-        raise_rlimit(resource.RLIMIT_NOFILE, RLIMIT_NOFILE_MAX)
-        duplicity.Command(opts, '--s3-unencrypted-connection', address, download_path).run(secret, credentials)
-
-        if orig_env:
-            os.environ['http_proxy'] = orig_env
-        else:
-            del os.environ['http_proxy']
-
-        sys.stdout.flush()
-
-        squid.stop()
-
-        return download_path
-
-    def __init__(self, address, secret, cache_size, cache_dir,
-                 limits=[], time=None, credentials=None, rollback=True, download_path=None):
-        print "Restoring duplicity archive from " + address
-        backup_archive = self._duplicity_restore(address, cache_size, cache_dir, credentials, secret, time, download_path)
-
-        extras_path = backup_archive + backup.ExtrasPaths.PATH
         self.extras = backup.ExtrasPaths(extras_path)
         self.rollback = Rollback.create() if rollback else None
         self.limits = conf.Limits(limits)
-        self.credentials = credentials
-        self.backup_archive = backup_archive
+        self.backup_extract_path = backup_extract_path
 
     def database(self):
         if not exists(self.extras.myfs):
@@ -173,7 +114,7 @@ class Restore:
 
     @staticmethod
     def _iter_apply_overlay(overlay, root, limits=[]):
-        def walk(dir):
+        def _walk(dir):
             fnames = []
             subdirs = []
 
@@ -188,7 +129,7 @@ class Restore:
             yield dir, fnames
 
             for subdir in subdirs:
-                for val in walk(subdir):
+                for val in _walk(subdir):
                     yield val
 
         class OverlayError:
@@ -201,7 +142,7 @@ class Restore:
 
         pathmap = PathMap(limits)
         overlay = overlay.rstrip('/')
-        for overlay_dpath, fnames in walk(overlay):
+        for overlay_dpath, fnames in _walk(overlay):
             root_dpath = root + overlay_dpath[len(overlay) + 1:]
 
             for fname in fnames:
@@ -230,7 +171,7 @@ class Restore:
         if not exists(extras.fsdelta):
             return
 
-        overlay = self.backup_archive
+        overlay = self.backup_extract_path
         rollback = self.rollback
         limits = self.limits.fs
 
