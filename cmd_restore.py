@@ -163,7 +163,7 @@ def get_backup_record(arg):
             raise Error('invalid backup id (%s)' % backup_id)
 
     # treat our argument as a pattern
-    matches = [ hbr for hbr in hb.list_backups() 
+    matches = [ hbr for hbr in hb.list_backups()
                 if re.search(arg, hbr.label, re.IGNORECASE) ]
 
     if not matches:
