@@ -2,7 +2,7 @@
 .
 .TH /ETC/TKLBAM/HOOKS.D 5 "2013-08-26" "" "backup"
 .SH NAME
-/etc/tklbam/hooks.d \- Hooks
+/etc/tklbam/hooks.d \- TKLBAM Hooks
 .
 .nr rst2man-indent-level 0
 .

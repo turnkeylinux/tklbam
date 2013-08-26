@@ -37,6 +37,10 @@ tklbam\-restore [ \-options ] [ <hub\-backup> ]
 .sp
 \fI<hub\-backup>\fP := backup\-id || unique label pattern
 .SH OPTIONS
+.SS General options
+.sp
+\-\-download\-only=path/to/backup/   Download backup to directory without doing a system restore
+.SS Duplicity related options
 .INDENT 0.0
 .TP
 .BI \-\-time\fB= TIME
@@ -66,6 +70,21 @@ e.g.,:
 .UNINDENT
 .UNINDENT
 .TP
+.BI \-\-keyfile\fB= KEYFILE
+.
+Path to escrow keyfile.
+.sp
+Default: Hub provides this automatically.
+.TP
+.BI \-\-address\fB= TARGET_URL
+.
+manual backup target URL (needs \-\-keyfile).
+.sp
+Default: Hub provides this automatically.
+.UNINDENT
+.SS System restore options
+.INDENT 0.0
+.TP
 .BI \-\-limits\fB= LIMITS
 .
 Restore filesystem or database limitations
@@ -79,18 +98,6 @@ Restore filesystem or database limitations
 \-?( /path/to/include/or/exclude | mysql:database[/table] )
 .UNINDENT
 .UNINDENT
-.TP
-.BI \-\-keyfile\fB= KEYFILE
-.
-Path to escrow keyfile.
-.sp
-Default: Hub provides this automatically.
-.TP
-.BI \-\-address\fB= TARGET_URL
-.
-manual backup target URL (needs \-\-keyfile).
-.sp
-Default: Hub provides this automatically.
 .TP
 .B \-\-skip\-files
 .

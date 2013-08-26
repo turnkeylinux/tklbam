@@ -16,7 +16,12 @@ Arguments:
 
     <hub-backup> := backup-id || unique label pattern
 
-Options:
+Options / General:
+
+    --download-only=path/to/backup/   Download backup to directory without doing a system restore
+
+Options / Duplicity:
+
     --time=TIME                       Time to restore Duplicity backup archive from
 
       TIME := YYYY-MM-DD | YYYY-MM-DDThh:mm:ss | <int>[mhDWMY]
@@ -32,15 +37,17 @@ Options:
               2M - 2 months ago
               1Y - 1 year ago
 
-    --limits="LIMIT-1 .. LIMIT-N"     Restore filesystem or database limitations
-
-      LIMIT := -?( /path/to/include/or/exclude | mysql:database[/table] )
-
     --keyfile=KEYFILE                 Path to escrow keyfile.
                                       default: Hub provides this automatically.
 
     --address=TARGET_URL              manual backup target URL (needs --keyfile)
                                       default: Hub provides this automatically.
+
+Options / System restore:
+
+    --limits="LIMIT-1 .. LIMIT-N"     Restore filesystem or database limitations
+
+      LIMIT := -?( /path/to/include/or/exclude | mysql:database[/table] )
 
     --skip-files                      Don't restore filesystem
     --skip-database                   Don't restore databases
@@ -58,7 +65,7 @@ Options:
 
     --debug                           Run $$SHELL after Duplicity
 
-Configurable options:
+Options / Configurable (see resolution order below):
 
     --restore-cache-size=SIZE         The maximum size of the download cache
                                       default: $CONF_RESTORE_CACHE_SIZE
@@ -216,6 +223,8 @@ def usage(e=None):
     sys.exit(1)
 
 def main():
+    download_path = None
+
     opt_force = False
     opt_time = None
     opt_limits = []
@@ -231,10 +240,11 @@ def main():
     interactive = True
 
     opt_debug = False
-
+    
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'h',
-                                       ['limits=', 'address=', 'keyfile=',
+                                       ['download-only=',
+                                        'limits=', 'address=', 'keyfile=',
                                         'logfile=',
                                         'restore-cache-size=', 'restore-cache-dir=',
                                         'force',
@@ -250,7 +260,15 @@ def main():
     conf = Conf()
 
     for opt, val in opts:
-        if opt == '--limits':
+        if opt == '--download-only':
+            download_path = val
+            if exists(download_path):
+                if not isdir(download_path):
+                    fatal("--download-only=%s is not a directory" % download_path)
+            else:
+                os.mkdir(download_path)
+            
+        elif opt == '--limits':
             opt_limits += re.split(r'\s+', val)
         elif opt == '--keyfile':
             if not isfile(val):
@@ -333,6 +351,12 @@ def main():
 
     key = opt_key if opt_key else hbr.key
     secret = decrypt_key(key, interactive)
+
+    if download_path:
+        restore = Restore(address, secret, restore_cache_size, restore_cache_dir,
+                          opt_limits, opt_time, credentials=credentials, download_path=download_path)
+
+        return
 
     trap = UnitedStdTrap(usepty=True, transparent=(False if silent else True))
     log_fh = None

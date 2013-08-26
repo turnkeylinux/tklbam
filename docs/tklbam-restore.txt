@@ -24,6 +24,14 @@ ARGUMENTS
 OPTIONS
 =======
 
+General options
+---------------
+
+--download-only=path/to/backup/   Download backup to directory without doing a system restore
+
+Duplicity related options
+-------------------------
+
 --time=TIME                       Time to restore from
 
   TIME := YYYY-MM-DD | YYYY-MM-DDThh:mm:ss | <int>[mhDWMY]
@@ -41,14 +49,6 @@ OPTIONS
           2M - 2 months ago
           1Y - 1 year ago
 
---limits=LIMITS                    Restore filesystem or database limitations
-
-  `LIMITS` := "``LIMIT``-1 .. ``LIMIT``-N"
-  
-  ``LIMIT`` :=  
-  
-    -?( /path/to/include/or/exclude | mysql:database[/table] )
-
 --keyfile=KEYFILE                 Path to escrow keyfile.
                                   
                                   Default: Hub provides this automatically.
@@ -56,6 +56,17 @@ OPTIONS
 --address=TARGET_URL              manual backup target URL (needs --keyfile).
                                   
                                   Default: Hub provides this automatically.
+
+System restore options
+----------------------
+
+--limits=LIMITS                   Restore filesystem or database limitations
+
+  `LIMITS` := "``LIMIT``-1 .. ``LIMIT``-N"
+  
+  ``LIMIT`` :=  
+  
+    -?( /path/to/include/or/exclude | mysql:database[/table] )
 
 --skip-files                      Don't restore filesystem
 --skip-database                   Don't restore databases

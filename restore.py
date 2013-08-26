@@ -69,9 +69,10 @@ class Restore:
         return title + "\n" + c * len(title) + "\n"
 
     @staticmethod
-    def _duplicity_restore(address, cache_size, cache_dir, credentials, secret, time=None):
-        tmpdir = TempDir(prefix="tklbam-")
-        os.chmod(tmpdir, 0700)
+    def _duplicity_restore(address, cache_size, cache_dir, credentials, secret, time=None, download_path=None):
+        if not download_path:
+            download_path = TempDir(prefix="tklbam-")
+            os.chmod(download_path, 0700)
 
         if time:
             opts = [("restore-time", time)]
@@ -85,7 +86,7 @@ class Restore:
         os.environ['http_proxy'] = squid.address
 
         raise_rlimit(resource.RLIMIT_NOFILE, RLIMIT_NOFILE_MAX)
-        duplicity.Command(opts, '--s3-unencrypted-connection', address, tmpdir).run(secret, credentials)
+        duplicity.Command(opts, '--s3-unencrypted-connection', address, download_path).run(secret, credentials)
 
         if orig_env:
             os.environ['http_proxy'] = orig_env
@@ -96,12 +97,12 @@ class Restore:
 
         squid.stop()
 
-        return tmpdir
+        return download_path
 
     def __init__(self, address, secret, cache_size, cache_dir,
-                 limits=[], time=None, credentials=None, rollback=True):
+                 limits=[], time=None, credentials=None, rollback=True, download_path=None):
         print "Restoring duplicity archive from " + address
-        backup_archive = self._duplicity_restore(address, cache_size, cache_dir, credentials, secret, time)
+        backup_archive = self._duplicity_restore(address, cache_size, cache_dir, credentials, secret, time, download_path)
 
         extras_path = backup_archive + backup.ExtrasPaths.PATH
         self.extras = backup.ExtrasPaths(extras_path)

@@ -339,6 +339,12 @@ ul.auto-toc {
 </div>
 <div class="section" id="options">
 <h1>OPTIONS</h1>
+<div class="section" id="general-options">
+<h2>General options</h2>
+<p>--download-only=path/to/backup/   Download backup to directory without doing a system restore</p>
+</div>
+<div class="section" id="duplicity-related-options">
+<h2>Duplicity related options</h2>
 <table class="docutils option-list" frame="void" rules="none">
 <col class="option" />
 <col class="description" />
@@ -364,15 +370,6 @@ ul.auto-toc {
 </blockquote>
 </td></tr>
 <tr><td class="option-group" colspan="2">
-<kbd><span class="option">--limits=<var>LIMITS</var></span></kbd></td>
-</tr>
-<tr><td>&nbsp;</td><td><p class="first">Restore filesystem or database limitations</p>
-<p><cite>LIMITS</cite> := &quot;<tt class="docutils literal">LIMIT</tt>-1 .. <tt class="docutils literal">LIMIT</tt>-N&quot;</p>
-<p><tt class="docutils literal">LIMIT</tt> :=</p>
-<blockquote class="last">
--?( /path/to/include/or/exclude | mysql:database[/table] )</blockquote>
-</td></tr>
-<tr><td class="option-group" colspan="2">
 <kbd><span class="option">--keyfile=<var>KEYFILE</var></span></kbd></td>
 </tr>
 <tr><td>&nbsp;</td><td><p class="first">Path to escrow keyfile.</p>
@@ -383,6 +380,24 @@ ul.auto-toc {
 </tr>
 <tr><td>&nbsp;</td><td><p class="first">manual backup target URL (needs --keyfile).</p>
 <p class="last">Default: Hub provides this automatically.</p>
+</td></tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="system-restore-options">
+<h2>System restore options</h2>
+<table class="docutils option-list" frame="void" rules="none">
+<col class="option" />
+<col class="description" />
+<tbody valign="top">
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">--limits=<var>LIMITS</var></span></kbd></td>
+</tr>
+<tr><td>&nbsp;</td><td><p class="first">Restore filesystem or database limitations</p>
+<p><cite>LIMITS</cite> := &quot;<tt class="docutils literal">LIMIT</tt>-1 .. <tt class="docutils literal">LIMIT</tt>-N&quot;</p>
+<p><tt class="docutils literal">LIMIT</tt> :=</p>
+<blockquote class="last">
+-?( /path/to/include/or/exclude | mysql:database[/table] )</blockquote>
 </td></tr>
 <tr><td class="option-group">
 <kbd><span class="option">--skip-files</span></kbd></td>
@@ -413,6 +428,7 @@ Default: /var/log/tklbam-restore</td></tr>
 <td>Run $SHELL after Duplicity</td></tr>
 </tbody>
 </table>
+</div>
 <div class="section" id="configurable-options">
 <h2>Configurable options</h2>
 <table class="docutils option-list" frame="void" rules="none">
