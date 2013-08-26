@@ -85,6 +85,10 @@ Default: Hub provides this automatically.
 .SS System restore options
 .INDENT 0.0
 .TP
+.B \-\-simulate
+.
+Do a dry run simulation of the system restore
+.TP
 .BI \-\-limits\fB= LIMITS
 .
 Restore filesystem or database limitations

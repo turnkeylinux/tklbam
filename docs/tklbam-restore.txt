@@ -61,6 +61,8 @@ Duplicity related options
 System restore options
 ----------------------
 
+--simulate                        Do a dry run simulation of the system restore
+
 --limits=LIMITS                   Restore filesystem or database limitations
 
   `LIMITS` := "``LIMIT``-1 .. ``LIMIT``-N"
