@@ -17,7 +17,7 @@ Arguments:
     <hub-backup> := backup-id || unique label pattern
 
 Options:
-    --time=TIME                       Time to restore from
+    --time=TIME                       Time to restore Duplicity backup archive from
 
       TIME := YYYY-MM-DD | YYYY-MM-DDThh:mm:ss | <int>[mhDWMY]
 
