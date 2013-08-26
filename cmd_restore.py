@@ -342,10 +342,7 @@ def main():
         if not opt_address:
             usage()
 
-    if backup_extract_path:
-        def get_backup_extract():
-            return backup_extract_path
-    else:
+    if not backup_extract_path:
         if opt_address:
             if hbr:
                 fatal("a manual --address is incompatible with a <backup-id>")
@@ -385,14 +382,16 @@ def main():
         try:
             hooks.restore.pre()
 
-            extract_path = get_backup_extract()
-            restore = Restore(extract_path, limits=opt_limits, rollback=not no_rollback)
+            if not backup_extract_path:
+                backup_extract_path = get_backup_extract()
+
+            restore = Restore(backup_extract_path, limits=opt_limits, rollback=not no_rollback)
             hooks.restore.inspect(restore.extras.path)
             if opt_debug:
                 trap.close()
                 trap = None
 
-                os.chdir(extract_path)
+                os.chdir(backup_extract_path)
                 executil.system(os.environ.get("SHELL", "/bin/bash"))
                 os.chdir('/')
 
