@@ -191,13 +191,17 @@ class Restore:
 
         print "\n" + self._title("Restoring filesystem")
 
-        print "MERGING USERS AND GROUPS\n"
         passwd, group, uidmap, gidmap = self._userdb_merge(extras.etc, "/etc")
 
-        for olduid in uidmap:
-            print "UID %d => %d" % (olduid, uidmap[olduid])
-        for oldgid in gidmap:
-            print "GID %d => %d" % (oldgid, gidmap[oldgid])
+        if uidmap or gidmap:
+            print "MERGING USERS AND GROUPS\n"
+
+            for olduid in uidmap:
+                print "UID %d => %d" % (olduid, uidmap[olduid])
+            for oldgid in gidmap:
+                print "GID %d => %d" % (oldgid, gidmap[oldgid])
+
+            print
 
         changes = Changes.fromfile(extras.fsdelta, limits)
         deleted = list(changes.deleted())
@@ -205,7 +209,7 @@ class Restore:
         if rollback:
             rollback.save_files(changes, overlay)
 
-        print "\nOVERLAY:\n"
+        print "OVERLAY:\n"
         for val in self._iter_apply_overlay(overlay, "/", [ "-" + backup.ExtrasPaths.PATH ] + limits, simulate):
             print val
 
