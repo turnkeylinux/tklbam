@@ -18,7 +18,7 @@ Arguments:
 
 Options / General:
 
-    --download-only=path/to/backup/   Download backup to directory without doing a system restore
+    --download-only=path/to/backup/   Download backup extract without doing a system restore
 
 Options / Duplicity:
 
