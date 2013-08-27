@@ -97,6 +97,11 @@ mysql:drupal6
 .SH OPTIONS
 .INDENT 0.0
 .TP
+.BI \-\-dump\fB= DIR
+.
+Dump a raw backup extract to path.
+Tip: tklbam\-restore path/to/raw/extract/
+.TP
 .B \-\-resume
 .
 Resume aborted backup session

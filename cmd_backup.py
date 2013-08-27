@@ -18,6 +18,9 @@ Arguments:
     Default overrides read from $CONF_OVERRIDES
 
 Options:
+    --dump=path/to/extract/        Dump a raw backup extract to path
+                                   Tip: tklbam-restore path/to/raw/extract/
+
     --resume                       Resume aborted backup session
     --disable-resume               Disable implicit --resume when rerunning an aborted backup
 
@@ -72,6 +75,7 @@ Configuration file format ($CONF_PATH):
 
 """
 
+import os
 from os.path import *
 
 import sys
@@ -134,6 +138,7 @@ def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'qsh',
                                        ['help',
+                                        'dump=',
                                         'skip-files', 'skip-database', 'skip-packages',
                                         'debug',
                                         'resume', 'disable-resume',
@@ -144,6 +149,8 @@ def main():
     except getopt.GetoptError, e:
         usage(e)
 
+    opt_dump_path = None
+
     opt_debug = False
     opt_resume = None
     opt_disable_resume = False
@@ -153,10 +160,25 @@ def main():
     conf.secretfile = registry.path.secret
 
     for opt, val in opts:
-        if opt in ('-s', '--simulate'):
+        if opt == '--dump':
+            opt_dump_path = val
+
+            if exists(opt_dump_path):
+                if not isdir(opt_dump_path):
+                    fatal("--dump=%s is not a directory" % opt_dump_path)
+
+                if os.listdir(opt_dump_path) != []:
+                    fatal("--dump=%s is not an empty directory" % opt_dump_path)
+                
+            else:
+                os.mkdir(opt_dump_path)
+
+            conf.verbose = False
+
+        elif opt in ('-s', '--simulate'):
             conf.simulate = True
 
-        if opt == '--resume':
+        elif opt == '--resume':
             opt_resume = True
 
         elif opt == '--disable-resume':
@@ -316,11 +338,15 @@ If you're feeling adventurous you can force another profile with the
 
             hooks.backup.inspect(b.extras_paths.path)
 
-            if opt_debug:
+            if opt_debug or opt_dump_path:
                 trap.close()
                 trap = None
 
-            b.run(opt_debug)
+            if opt_dump_path:
+                b.dump(opt_dump_path)
+            else:
+                b.run(opt_debug)
+
             hooks.backup.post()
         except:
             if not conf.checkpoint_restore:

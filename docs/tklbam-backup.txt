@@ -74,6 +74,9 @@ Examples::
 OPTIONS
 =======
 
+--dump=DIR                Dump a raw backup extract to path.
+                          Tip: tklbam-restore path/to/raw/extract/
+
 --resume                  Resume aborted backup session
 
 --disable-resume          Disable implicit --resume when rerunning an aborted backup

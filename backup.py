@@ -8,6 +8,7 @@
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
 #
+
 import os
 from os.path import exists, join
 
@@ -22,6 +23,8 @@ from pkgman import Packages
 
 import duplicity
 import mysql
+
+import executil
 
 from utils import AttrDict
 
@@ -245,6 +248,15 @@ class Backup:
         verbose("\n# PASSPHRASE=$(cat %s) %s" % (conf.secretfile, backup_command))
 
         backup_command.run(passphrase, self.credentials, debug=debug)
+
+    def dump(self, path):
+
+        def r(p):
+            return join(path, p.lstrip('/'))
+
+        shutil.copytree(self.extras_paths.path, r(self.extras_paths.path))
+        executil.getoutput("tar --create --files-from=%s | tar --extract --directory %s" % 
+                           (self.extras_paths.fsdelta_olist, executil.mkarg(path)))
 
     def cleanup(self):
         _rmdir(self.extras_paths.path)
