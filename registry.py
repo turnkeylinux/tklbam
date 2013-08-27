@@ -201,7 +201,7 @@ class _Registry(object):
             if not self.profile or (self.profile.profile_id != profile_id):
                 raise
 
-            raise self.CachedProfile("using cached profile because of a Hub error: " + str(e))
+            raise self.CachedProfile("using cached profile because of a Hub error: " + desc)
 
 class Profile(str):
     def __new__(cls, path, profile_id, timestamp):

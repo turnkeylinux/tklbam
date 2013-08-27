@@ -114,7 +114,7 @@ class API(_API):
                          "BackupAccount.NotFound"): 
                 raise NotSubscribedError()
 
-            raise
+            raise Error(*e.args)
 
 class BackupRecord(AttrDict):
     @staticmethod
