@@ -86,6 +86,9 @@ class BackupConf(AttrDict):
         simplejson.dump(dict(self), file(path, "w"))
 
 class Backup:
+    class Error(Exception):
+        pass
+
     @staticmethod
     def _write_new_packages(dest, base_packages):
         base_packages = Packages.fromfile(base_packages)
@@ -139,7 +142,7 @@ class Backup:
         verbose = print_if(conf.verbose)
 
         if not profile:
-            raise Error("can't backup without a profile")
+            raise self.Error("can't backup without a profile")
 
         profile_paths = ProfilePaths(profile.path)
         extras_paths = ExtrasPaths()
