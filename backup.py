@@ -13,6 +13,7 @@ import os
 from os.path import exists, join
 
 import shutil
+import utils
 import simplejson
 
 from paths import Paths
@@ -23,8 +24,6 @@ from pkgman import Packages
 
 import duplicity
 import mysql
-
-import executil
 
 from utils import AttrDict
 
@@ -257,8 +256,7 @@ class Backup:
             return join(path, p.lstrip('/'))
 
         shutil.copytree(self.extras_paths.path, r(self.extras_paths.path))
-        executil.getoutput("tar --create --files-from=%s | tar --extract --directory %s" % 
-                           (self.extras_paths.fsdelta_olist, executil.mkarg(path)))
+        utils.apply_overlay('/', path, self.extras_paths.fsdelta_olist)
 
     def cleanup(self):
         _rmdir(self.extras_paths.path)

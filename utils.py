@@ -11,6 +11,7 @@
 import os
 from os.path import *
 
+import executil
 import shutil
 import stat
 
@@ -60,3 +61,11 @@ def move(src, dst):
     else: 
         shutil.move(src, dst) 
         os.lchown(dst, st.st_uid, st.st_gid)
+
+def apply_overlay(src, dst, olist_path):
+    orig_cwd = os.getcwd()
+    os.chdir(src)
+    executil.getoutput("tar --create --files-from=%s | tar --extract --directory %s" % 
+                       (olist_path, executil.mkarg(dst)))
+
+    os.chdir(orig_cwd)

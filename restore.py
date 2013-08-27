@@ -25,6 +25,8 @@ import backup
 import conf
 import mysql
 
+from temp import TempFile
+
 class Error(Exception):
     pass
 
@@ -122,62 +124,20 @@ class Restore:
                             r(new_passwd), r(new_group))
 
     @staticmethod
-    def _iter_apply_overlay(overlay, root, limits=[], simulate=False):
-        def _walk(dir):
-            fnames = []
-            subdirs = []
-
-            for dentry in os.listdir(dir):
-                path = join(dir, dentry)
-
-                if not islink(path) and isdir(path):
-                    subdirs.append(path)
-                else:
-                    fnames.append(dentry)
-
-            yield dir, fnames
-
-            for subdir in subdirs:
-                for val in _walk(subdir):
-                    yield val
-
-        class OverlayError:
-            def __init__(self, path, exc):
-                self.path = path
-                self.exc = exc
-
-            def __str__(self):
-                return "OVERLAY ERROR @ %s: %s" % (self.path, self.exc)
-
+    def _get_fsdelta_olist(fsdelta_olist_path, limits=[]):
         pathmap = PathMap(limits)
-        overlay = overlay.rstrip('/')
-        for overlay_dpath, fnames in _walk(overlay):
-            root_dpath = root + overlay_dpath[len(overlay) + 1:]
+        return [ fpath 
+                 for fpath in file(fsdelta_olist_path).read().splitlines() 
+                 if fpath in pathmap ] 
 
-            for fname in fnames:
-                overlay_fpath = join(overlay_dpath, fname)
-                root_fpath = join(root_dpath, fname)
+    @staticmethod
+    def _apply_overlay(src, dst, olist):
+        tmp = TempFile("fsdelta-olist-")
+        for fpath in olist:
+            print >> tmp, fpath.lstrip('/')
+        tmp.close()
 
-                if root_fpath not in pathmap:
-                    continue
-
-                if simulate:
-                    yield root_fpath
-                    continue
-
-                try:
-                    if not isdir(root_dpath):
-                        if exists(root_dpath):
-                            os.remove(root_dpath)
-                        os.makedirs(root_dpath)
-
-                    if lexists(root_fpath):
-                        utils.remove_any(root_fpath)
-
-                    utils.move(overlay_fpath, root_fpath)
-                    yield root_fpath
-                except Exception, e:
-                    yield OverlayError(root_fpath, e)
+        utils.apply_overlay(src, dst, tmp.path)
 
     def files(self):
         extras = self.extras
@@ -209,9 +169,13 @@ class Restore:
         if rollback:
             rollback.save_files(changes, overlay)
 
-        print "OVERLAY:\n"
-        for val in self._iter_apply_overlay(overlay, "/", [ "-" + backup.ExtrasPaths.PATH ] + limits, simulate):
-            print val
+        fsdelta_olist = self._get_fsdelta_olist(extras.fsdelta_olist, limits)
+        if fsdelta_olist:
+            print "OVERLAY:\n"
+            print "\n".join(fsdelta_olist)
+
+            if not simulate:
+                self._apply_overlay(overlay, '/', fsdelta_olist)
 
         emptydirs = list(changes.emptydirs())
         statfixes = list(changes.statfixes(uidmap, gidmap))
