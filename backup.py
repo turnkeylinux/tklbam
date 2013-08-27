@@ -138,7 +138,7 @@ class Backup:
             except mysql.Error:
                 pass
 
-    def __init__(self, conf, profile, credentials=None, resume=False):
+    def __init__(self, conf, profile, resume=False):
         verbose = print_if(conf.verbose)
 
         if not profile:
@@ -204,9 +204,8 @@ class Backup:
 
         self.conf = conf
         self.extras_paths = extras_paths
-        self.credentials = credentials
 
-    def run(self, debug=False):
+    def upload(self, credentials, debug=False):
         verbose = print_if(self.conf.verbose)
 
         conf = self.conf
@@ -220,7 +219,7 @@ class Backup:
             verbose("\n# " + str(cleanup_command))
 
             if not conf.simulate:
-                cleanup_command.run(passphrase, self.credentials)
+                cleanup_command.run(passphrase, credentials)
 
         opts += [('volsize', conf.volsize),
                  ('full-if-older-than', conf.full_backup),
@@ -250,7 +249,7 @@ class Backup:
 
         verbose("\n# PASSPHRASE=$(cat %s) %s" % (conf.secretfile, backup_command))
 
-        backup_command.run(passphrase, self.credentials, debug=debug)
+        backup_command.run(passphrase, credentials, debug=debug)
 
     def dump(self, path):
 

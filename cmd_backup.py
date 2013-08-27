@@ -173,6 +173,7 @@ def main():
             else:
                 os.mkdir(opt_dump_path)
 
+            opt_disable_resume = True
             conf.verbose = False
 
         elif opt in ('-s', '--simulate'):
@@ -256,7 +257,7 @@ def main():
     try:
         registry.update_profile(hb, conf.force_profile)
     except registry.CachedProfile, e:
-        warn(str(e) + "\n")
+        warn(e)
     except registry.ProfileNotFound, e:
         print >> sys.stderr, "TurnKey Hub Error: %s" % str(e)
         if not conf.force_profile:
@@ -269,7 +270,7 @@ If you're feeling adventurous you can force another profile with the
         sys.exit(1)
 
     credentials = None
-    if not conf.address:
+    if not conf.address and not opt_dump_path:
         try:
             registry.credentials = hb.get_credentials()
         except hb.Error, e:
@@ -282,7 +283,7 @@ If you're feeling adventurous you can force another profile with the
             if not registry.credentials:
                 pass
 
-            warn(e)
+            warn("using cached backup credentials: " + e.description)
 
         credentials = registry.credentials
 
@@ -300,7 +301,7 @@ If you're feeling adventurous you can force another profile with the
                     warn("old backup record deleted, creating new ... ")
                     registry.hbr = None
                 else:
-                    warn(e)
+                    warn("using cached backup record: " + str(e))
 
         if not registry.hbr:
             registry.hbr = hb.new_backup_record(registry.key,
@@ -331,10 +332,13 @@ If you're feeling adventurous you can force another profile with the
     trap = UnitedStdTrap(transparent=True)
     try:
         hooks.backup.pre()
-        b = backup.Backup(conf, registry.profile, credentials, resume=opt_resume)
+        b = backup.Backup(conf, registry.profile, resume=opt_resume)
         try:
             if is_hub_address:
-                hb.set_backup_inprogress(backup_id, True)
+                try:
+                    hb.set_backup_inprogress(backup_id, True)
+                except hb.Error, e:
+                    warn("can't update Hub of backup in progress: " + str(e))
 
             hooks.backup.inspect(b.extras_paths.path)
 
@@ -345,7 +349,7 @@ If you're feeling adventurous you can force another profile with the
             if opt_dump_path:
                 b.dump(opt_dump_path)
             else:
-                b.run(opt_debug)
+                b.upload(credentials, opt_debug)
 
             hooks.backup.post()
         except:
@@ -357,7 +361,10 @@ If you're feeling adventurous you can force another profile with the
 
     finally:
         if is_hub_address:
-            hb.set_backup_inprogress(backup_id, False)
+            try:
+                hb.set_backup_inprogress(backup_id, False)
+            except hb.Error, e:
+                warn("can't update Hub backup completed: " + str(e))
 
         if trap:
             sys.stdout.flush()
@@ -387,8 +394,11 @@ If you're feeling adventurous you can force another profile with the
 
     registry.backup_resume_conf = None
 
-    if not conf.simulate:
-        hb.updated_backup(conf.address)
+    if not (conf.simulate or opt_dump_path):
+        try:
+            hb.updated_backup(conf.address)
+        except:
+            pass
 
 if __name__=="__main__":
     main()

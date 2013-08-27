@@ -89,7 +89,16 @@ from pycurl_wrapper import API as _API
 from utils import AttrDict
 
 class Error(Exception):
-    pass
+    def __init__(self, description, *args):
+        Exception.__init__(self, description, *args)
+        self.description = description
+
+    def __str__(self):
+        return self.description
+
+class APIError(Error, _API.Error):
+    def __init__(self, code, name, description):
+        _API.Error.__init__(self, code, name, description)
 
 class NotSubscribedError(Error):
     DESC = """\
@@ -114,7 +123,7 @@ class API(_API):
                          "BackupAccount.NotFound"): 
                 raise NotSubscribedError()
 
-            raise Error(*e.args)
+            raise APIError(e.code, e.name, e.description)
 
 class BackupRecord(AttrDict):
     @staticmethod
@@ -154,7 +163,7 @@ class Credentials(AttrDict):
 
 class Backups:
     API_URL = os.getenv('TKLBAM_APIURL', 'https://hub.turnkeylinux.org/api/backup/')
-    Error = Error
+    Error = APIError
 
     def __init__(self, subkey=None):
         if subkey is None:
