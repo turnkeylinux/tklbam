@@ -4,6 +4,7 @@ from os.path import *
 import re
 
 from paths import Paths
+import duplicity
 
 class Error(Exception):
     pass
@@ -129,6 +130,7 @@ class Conf(AttrDict):
         AttrDict.__setitem__(self, name, val)
 
     def __init__(self, path=None):
+        AttrDict.__init__(self)
         if path is None:
             path = self.DEFAULT_PATH
 
@@ -142,13 +144,12 @@ class Conf(AttrDict):
         self.verbose = True
         self.simulate = False
 
-        self.checkpoint_restore = True
+        self.volsize = duplicity.Uploader.VOLSIZE
+        self.s3_parallel_uploads = duplicity.Uploader.S3_PARALLEL_UPLOADS
+        self.full_backup = duplicity.Uploader.FULL_IF_OLDER_THAN
 
-        self.volsize = 25
-        self.s3_parallel_uploads = 1
-        self.full_backup = "1M"
-        self.restore_cache_size = "50%"
-        self.restore_cache_dir = "/var/cache/tklbam/restore"
+        self.restore_cache_size = duplicity.Downloader.CACHE_SIZE
+        self.restore_cache_dir = duplicity.Downloader.CACHE_DIR
 
         self.backup_skip_files = False
         self.backup_skip_database = False

@@ -370,9 +370,12 @@ def main():
         key = opt_key if opt_key else hbr.key
         secret = decrypt_key(key, interactive)
 
+        target = duplicity.Target(address, credentials, secret)
+        downloader = duplicity.Downloader(opt_time, restore_cache_size, restore_cache_dir)
+
         def get_backup_extract():
             print "Restoring backup extract from duplicity archive at %s" % (address)
-            duplicity.download(download_path, address, restore_cache_size, restore_cache_dir, credentials, secret, opt_time)
+            downloader(download_path, target)
             return download_path
 
         if download_path:

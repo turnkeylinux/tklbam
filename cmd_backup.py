@@ -89,6 +89,8 @@ from pidlock import PidLock
 
 import hub
 import backup
+import duplicity
+
 import hooks
 from registry import registry
 from conf import Conf
@@ -332,7 +334,10 @@ If you're feeling adventurous you can force another profile with the
     trap = UnitedStdTrap(transparent=True)
     try:
         hooks.backup.pre()
-        b = backup.Backup(conf, registry.profile, resume=opt_resume)
+        b = backup.Backup(registry.profile, 
+                          conf.overrides, 
+                          conf.backup_skip_packages, conf.backup_skip_packages, conf.backup_skip_database, 
+                          opt_resume, conf.verbose)
         try:
             if is_hub_address:
                 try:
@@ -349,7 +354,27 @@ If you're feeling adventurous you can force another profile with the
             if opt_dump_path:
                 b.dump(opt_dump_path)
             else:
-                b.upload(credentials, opt_debug)
+                def _print(s):
+                    print "\n# " + str(s)
+
+                if conf.verbose:
+                    _print("export PASSPHRASE=$(cat %s)" % conf.secretfile)
+
+                secret = file(conf.secretfile).readline().strip()
+                target = duplicity.Target(conf.address, credentials, secret)
+
+                uploader = duplicity.Uploader(conf.verbose, 
+                                              conf.volsize, 
+                                              conf.full_backup, 
+                                              conf.s3_parallel_uploads,
+                                              includes=[ b.extras_paths.path ],
+                                              include_filelist=b.extras_paths.fsdelta_olist,
+                                              excludes=[ '**' ])
+
+                force_cleanup = not b.resume
+
+                uploader('/', target, force_cleanup, dry_run=conf.simulate, debug=opt_debug, 
+                         log=(_print if conf.verbose else None))
 
             hooks.backup.post()
         except:
