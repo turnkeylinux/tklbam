@@ -246,6 +246,9 @@ def main():
     if conf.simulate and registry.backup_resume_conf and not opt_disable_resume:
         fatal("--simulate will destroy your aborted backup session. To force use --disable-resume")
 
+    if conf.simulate and opt_dump_path:
+        fatal("--simulate and --dump incompatible")
+
     lock = PidLock("/var/run/tklbam-backup.pid", nonblock=True)
     try:
         lock.lock()
