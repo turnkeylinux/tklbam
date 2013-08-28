@@ -21,11 +21,11 @@ Options:
     --dump=path/to/extract/        Dump a raw backup extract to path
                                    Tip: tklbam-restore path/to/raw/extract/
 
+    --address=TARGET_URL           manual backup target URL
+                                   default: S3 storage bucket automatically configured via Hub
+
     --resume                       Resume aborted backup session
     --disable-resume               Disable implicit --resume when rerunning an aborted backup
-
-    --address=TARGET_URL           manual backup target URL
-                                   default: automatically configured via Hub
 
     -s --simulate                  Do a dry run simulation of the backup.
 

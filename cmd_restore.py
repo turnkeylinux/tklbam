@@ -18,7 +18,7 @@ Arguments:
 
 Options / General:
 
-    --download-only=path/to/backup/   Download backup extract without doing a system restore
+    --download-only=PATH              Use Duplicity to download raw backup extract to path
 
 Options / Duplicity:
 
@@ -41,7 +41,7 @@ Options / Duplicity:
                                       default: Hub provides this automatically.
 
     --address=TARGET_URL              manual backup target URL (needs --keyfile)
-                                      default: Hub provides this automatically.
+                                      default: S3 storage bucket automatically provided by Hub
 
 Options / System restore:
 
