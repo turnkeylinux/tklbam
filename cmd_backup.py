@@ -27,7 +27,7 @@ Options:
     --resume                       Resume aborted backup session
     --disable-resume               Disable implicit --resume when rerunning an aborted backup
 
-    -s --simulate                  Do a dry run simulation of the backup.
+    --simulate                     Do a dry run simulation of the backup.
 
     -q --quiet                     Be less verbose
     --logfile=PATH                 Path of file to log to
@@ -138,7 +138,7 @@ def get_server_id():
 
 def main():
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], 'qsh',
+        opts, args = getopt.gnu_getopt(sys.argv[1:], 'qh',
                                        ['help',
                                         'dump=',
                                         'skip-files', 'skip-database', 'skip-packages',
@@ -178,7 +178,7 @@ def main():
             opt_disable_resume = True
             conf.verbose = False
 
-        elif opt in ('-s', '--simulate'):
+        elif opt == '--simulate':
             conf.simulate = True
 
         elif opt == '--resume':
