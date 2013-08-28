@@ -100,7 +100,7 @@ def _raise_rlimit(type, newlimit):
     except ValueError:
         return
 
-def restore(download_path, address, cache_size, cache_dir, credentials, secret, time=None):
+def download(download_path, address, cache_size, cache_dir, credentials, secret, time=None):
     if time:
         opts = [("restore-time", time)]
     else:

@@ -372,7 +372,7 @@ def main():
 
         def get_backup_extract():
             print "Restoring backup extract from duplicity archive at %s" % (address)
-            duplicity.restore(download_path, address, restore_cache_size, restore_cache_dir, credentials, secret, opt_time)
+            duplicity.download(download_path, address, restore_cache_size, restore_cache_dir, credentials, secret, opt_time)
             return download_path
 
         if download_path:
