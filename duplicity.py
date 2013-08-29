@@ -45,7 +45,7 @@ class Duplicity:
         """Duplicity command. The first member of args can be a an array of tuple arguments"""
 
         if isinstance(args[0], list):
-            opts = args[0]
+            opts = args[0][:]
             args = args[1:]
         else:
             opts = []
