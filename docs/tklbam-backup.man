@@ -102,6 +102,15 @@ mysql:drupal6
 Dump a raw backup extract to path.
 Tip: tklbam\-restore path/to/raw/extract/
 .TP
+.BI \-\-raw\-upload\fB= PATH
+.
+Use Duplicity to upload raw path contents to \-\-address
+.TP
+.BI \-\-address\fB= TARGET_URL
+.
+manual backup target URL.
+Default: automatically configured via Hub
+.TP
 .B \-\-resume
 .
 Resume aborted backup session
@@ -110,12 +119,7 @@ Resume aborted backup session
 .
 Disable implicit \-\-resume when rerunning an aborted backup
 .TP
-.BI \-\-address\fB= TARGET_URL
-.
-manual backup target URL.
-Default: automatically configured via Hub
-.TP
-.B \-\-simulate,  \-s
+.B \-\-simulate
 .
 Simulate operation. Don\(aqt actually backup.
 Useful for inspecting /TKLBAM by hand.

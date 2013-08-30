@@ -28,7 +28,7 @@ OPTIONS
 General options
 ---------------
 
---download-only=path/to/backup/   Download backup to directory without doing a system restore
+--raw-download=path/to/backup/    Download backup to directory without doing a system restore
 
 Duplicity related options
 -------------------------

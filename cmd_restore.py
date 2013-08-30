@@ -18,7 +18,8 @@ Arguments:
 
 Options / General:
 
-    --download-only=PATH              Use Duplicity to download raw backup extract to path
+    --raw-download=PATH               Use Duplicity to download raw backup extract
+                                      without performing a system restore
 
 Options / Duplicity:
 
@@ -227,7 +228,7 @@ def usage(e=None):
 
 def main():
     backup_extract_path = None
-    download_path = None
+    raw_download_path = None
 
     opt_simulate = False
     opt_force = False
@@ -248,7 +249,7 @@ def main():
     
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'h',
-                                       ['download-only=',
+                                       ['raw-download=',
                                         'simulate',
                                         'limits=', 'address=', 'keyfile=',
                                         'logfile=',
@@ -266,17 +267,17 @@ def main():
     conf = Conf()
 
     for opt, val in opts:
-        if opt == '--download-only':
-            download_path = val
-            if exists(download_path):
-                if not isdir(download_path):
-                    fatal("--download-only=%s is not a directory" % download_path)
+        if opt == '--raw-download':
+            raw_download_path = val
+            if exists(raw_download_path):
+                if not isdir(raw_download_path):
+                    fatal("%s=%s is not a directory" % (opt, val))
 
-                if os.listdir(download_path) != []:
-                    fatal("--download-only=%s is not an empty directory" % download_path)
+                if os.listdir(raw_download_path) != []:
+                    fatal("%s=%s is not an empty directory" % (opt, val))
                 
             else:
-                os.mkdir(download_path)
+                os.mkdir(raw_download_path)
 
         elif opt == '--simulate':
             opt_simulate = True
@@ -359,7 +360,7 @@ def main():
         address = hbr.address if hbr else opt_address
 
         if hbr:
-            if not opt_force and not download_path:
+            if not opt_force and not raw_download_path:
                 do_compatibility_check(hbr.turnkey_version, interactive)
 
             if opt_key and \
@@ -375,15 +376,15 @@ def main():
 
         def get_backup_extract():
             print "Restoring backup extract from duplicity archive at %s" % (address)
-            downloader(download_path, target)
-            return download_path
+            downloader(raw_download_path, target)
+            return raw_download_path
 
-        if download_path:
+        if raw_download_path:
             get_backup_extract()
             return
         else:
-            download_path = TempDir(prefix="tklbam-")
-            os.chmod(download_path, 0700)
+            raw_download_path = TempDir(prefix="tklbam-")
+            os.chmod(raw_download_path, 0700)
 
     trap = UnitedStdTrap(usepty=True, transparent=(False if silent else True))
     log_fh = None

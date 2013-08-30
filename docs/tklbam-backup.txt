@@ -77,14 +77,16 @@ OPTIONS
 --dump=DIR                Dump a raw backup extract to path.
                           Tip: tklbam-restore path/to/raw/extract/
 
---resume                  Resume aborted backup session
-
---disable-resume          Disable implicit --resume when rerunning an aborted backup
+--raw-upload=PATH         Use Duplicity to upload raw path contents to --address
 
 --address=TARGET_URL      manual backup target URL.
                           Default: automatically configured via Hub
 
---simulate, -s            Simulate operation. Don't actually backup.
+--resume                  Resume aborted backup session
+
+--disable-resume          Disable implicit --resume when rerunning an aborted backup
+
+--simulate                Simulate operation. Don't actually backup.
                           Useful for inspecting /TKLBAM by hand.
 
 --quiet, -q               Be less verbose

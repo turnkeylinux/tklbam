@@ -389,6 +389,15 @@ mysql:drupal6
 <kbd><span class="option">--dump=<var>DIR</var></span></kbd></td>
 <td>Dump a raw backup extract to path.
 Tip: tklbam-restore path/to/raw/extract/</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">--raw-upload=<var>PATH</var></span></kbd></td>
+</tr>
+<tr><td>&nbsp;</td><td>Use Duplicity to upload raw path contents to --address</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">--address=<var>TARGET_URL</var></span></kbd></td>
+</tr>
+<tr><td>&nbsp;</td><td>manual backup target URL.
+Default: automatically configured via Hub</td></tr>
 <tr><td class="option-group">
 <kbd><span class="option">--resume</span></kbd></td>
 <td>Resume aborted backup session</td></tr>
@@ -396,13 +405,8 @@ Tip: tklbam-restore path/to/raw/extract/</td></tr>
 <kbd><span class="option">--disable-resume</span></kbd></td>
 </tr>
 <tr><td>&nbsp;</td><td>Disable implicit --resume when rerunning an aborted backup</td></tr>
-<tr><td class="option-group" colspan="2">
-<kbd><span class="option">--address=<var>TARGET_URL</var></span></kbd></td>
-</tr>
-<tr><td>&nbsp;</td><td>manual backup target URL.
-Default: automatically configured via Hub</td></tr>
 <tr><td class="option-group">
-<kbd><span class="option">--simulate</span>, <span class="option">-s</span></kbd></td>
+<kbd><span class="option">--simulate</span></kbd></td>
 <td>Simulate operation. Don't actually backup.
 Useful for inspecting /TKLBAM by hand.</td></tr>
 <tr><td class="option-group">

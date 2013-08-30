@@ -39,7 +39,7 @@ tklbam\-restore [ \-options ] [ <hub\-backup> ]
 .SH OPTIONS
 .SS General options
 .sp
-\-\-download\-only=path/to/backup/   Download backup to directory without doing a system restore
+\-\-raw\-download=path/to/backup/    Download backup to directory without doing a system restore
 .SS Duplicity related options
 .INDENT 0.0
 .TP
