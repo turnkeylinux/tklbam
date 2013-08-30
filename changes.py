@@ -8,6 +8,7 @@
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
 #
+import sys
 import os
 from os.path import *
 
@@ -17,6 +18,10 @@ from dirindex import DirIndex
 from pathmap import PathMap
 
 import stat
+import errno
+
+class Error(Exception):
+    pass
 
 class Change:
     """
@@ -223,7 +228,7 @@ class Changes(list):
 
             if change.OP == 's':
                 if not islink(change.path) and \
-                   stat.S_IMODE(st.st_mode) != change.mode:
+                   stat.S_IMODE(st.st_mode) != stat.S_IMODE(change.mode):
                     yield self.Action(os.chmod, change.path, change.mode)
 
 def whatchanged(di_path, paths):
@@ -234,11 +239,11 @@ def whatchanged(di_path, paths):
     di_fs = DirIndex()
     di_fs.walk(*paths)
 
-    new, edited, stat = di_saved.diff(di_fs)
+    new, edited, statfix = di_saved.diff(di_fs)
     changes = Changes()
 
     changes += [ Change.Overwrite(path) for path in new + edited ]
-    changes += [ Change.Stat(path) for path in stat ]
+    changes += [ Change.Stat(path) for path in statfix ]
 
     di_saved.prune(*paths)
     deleted = set(di_saved) - set(di_fs)
