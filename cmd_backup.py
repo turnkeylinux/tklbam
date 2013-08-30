@@ -157,6 +157,7 @@ def main():
     raw_upload_path = None
     dump_path = None
 
+    opt_verbose = True
     opt_simulate = False
     opt_debug = False
     opt_resume = None
@@ -181,7 +182,7 @@ def main():
                 os.mkdir(dump_path)
 
             opt_disable_resume = True
-            conf.verbose = False
+            opt_verbose = False
 
         elif opt == '--raw-upload':
             if not isdir(val):
@@ -202,7 +203,7 @@ def main():
             conf.force_profile = val
 
         elif opt in ('-q', '--quiet'):
-            conf.verbose = False
+            opt_verbose = False
 
         elif opt == '--secretfile':
             if not exists(val):
@@ -363,18 +364,18 @@ def main():
     def _print(s):
         print "\n# " + str(s)
 
-    if conf.verbose:
+    if opt_verbose:
         _print("export PASSPHRASE=$(cat %s)" % conf.secretfile)
 
     if raw_upload_path:
         backup_inprogress(True)
-        uploader = duplicity.Uploader(conf.verbose, 
+        uploader = duplicity.Uploader(opt_verbose, 
                                       conf.volsize, 
                                       conf.full_backup, 
                                       conf.s3_parallel_uploads)
         try:
             uploader(raw_upload_path, target, force_cleanup=not opt_resume, dry_run=opt_simulate, debug=opt_debug, 
-                     log=(_print if conf.verbose else None))
+                     log=(_print if opt_verbose else None))
 
         finally:
             backup_inprogress(False)
@@ -386,7 +387,7 @@ def main():
             b = backup.Backup(registry.profile, 
                               conf.overrides, 
                               conf.backup_skip_packages, conf.backup_skip_packages, conf.backup_skip_database, 
-                              opt_resume, conf.verbose)
+                              opt_resume, opt_verbose)
 
             backup_inprogress(True)
             hooks.backup.inspect(b.extras_paths.path)
@@ -398,7 +399,7 @@ def main():
             if dump_path:
                 b.dump(dump_path)
             else:
-                uploader = duplicity.Uploader(conf.verbose, 
+                uploader = duplicity.Uploader(opt_verbose, 
                                               conf.volsize, 
                                               conf.full_backup, 
                                               conf.s3_parallel_uploads,
@@ -407,7 +408,7 @@ def main():
                                               excludes=[ '**' ])
 
                 uploader('/', target, force_cleanup=not b.resume, dry_run=opt_simulate, debug=opt_debug, 
-                         log=(_print if conf.verbose else None))
+                         log=(_print if opt_verbose else None))
 
             hooks.backup.post()
 

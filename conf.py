@@ -141,7 +141,6 @@ class Conf(AttrDict):
         self.address = None
         self.force_profile = None
         self.overrides = Limits.fromfile(self.paths.overrides)
-        self.verbose = True
 
         self.volsize = duplicity.Uploader.VOLSIZE
         self.s3_parallel_uploads = duplicity.Uploader.S3_PARALLEL_UPLOADS
