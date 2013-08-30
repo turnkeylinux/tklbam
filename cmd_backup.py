@@ -272,20 +272,22 @@ def main():
         warn("s3-parallel-uploads > volsize / 5 (minimum upload chunk is 5MB)")
 
     hb = hub.Backups(registry.sub_apikey)
-    try:
-        registry.update_profile(hb, conf.force_profile)
-    except registry.CachedProfile, e:
-        warn(e)
-    except registry.ProfileNotFound, e:
-        print >> sys.stderr, "TurnKey Hub Error: %s" % str(e)
-        if not conf.force_profile:
-            # be extra nice to people who aren't using --force-profile
-            print """
-This probably means that TKLBAM doesn't yet fully support your system.
-If you're feeling adventurous you can force another profile with the
---force-profile option. Sorry about that."""
 
-        sys.exit(1)
+    if not raw_upload_path:
+        try:
+            registry.update_profile(hb, conf.force_profile)
+        except registry.CachedProfile, e:
+            warn(e)
+        except registry.ProfileNotFound, e:
+            print >> sys.stderr, "TurnKey Hub Error: %s" % str(e)
+            if not conf.force_profile:
+                # be extra nice to people who aren't using --force-profile
+                print """
+    This probably means that TKLBAM doesn't yet fully support your system.
+    If you're feeling adventurous you can force another profile with the
+    --force-profile option. Sorry about that."""
+
+            sys.exit(1)
 
     credentials = None
     if not conf.address and not dump_path:
