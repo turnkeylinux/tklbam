@@ -157,6 +157,7 @@ def main():
     raw_upload_path = None
     dump_path = None
 
+    opt_simulate = False
     opt_debug = False
     opt_resume = None
     opt_disable_resume = False
@@ -189,7 +190,7 @@ def main():
             raw_upload_path = val
 
         elif opt == '--simulate':
-            conf.simulate = True
+            opt_simulate = True
 
         elif opt == '--resume':
             opt_resume = True
@@ -244,7 +245,7 @@ def main():
 
     if opt_resume:
         # explicit resume
-        if conf.simulate:
+        if opt_simulate:
             fatal("--resume and --simulate incompatible: you can only resume real backups")
 
         if opt_disable_resume:
@@ -253,10 +254,10 @@ def main():
         if registry.backup_resume_conf is None:
             fatal("no previous backup session to resume from")
 
-    if conf.simulate and registry.backup_resume_conf and not opt_disable_resume:
+    if opt_simulate and registry.backup_resume_conf and not opt_disable_resume:
         fatal("--simulate will destroy your aborted backup session. To force use --disable-resume")
 
-    if conf.simulate and dump_path:
+    if opt_simulate and dump_path:
         fatal("--simulate and --dump are incompatible")
 
     if raw_upload_path and dump_path:
@@ -334,7 +335,7 @@ def main():
         conf = registry.backup_resume_conf
     else:
         # implicit resume
-        if not conf.simulate and not opt_disable_resume and registry.backup_resume_conf == conf:
+        if not opt_simulate and not opt_disable_resume and registry.backup_resume_conf == conf:
             print "Implicit --resume: Detected a rerun of an aborted backup session"
             print "                   You can disable this with the --disable-resume option"
             print
@@ -343,14 +344,14 @@ def main():
             opt_resume = True
 
     registry.backup_resume_conf = None
-    if not conf.simulate:
+    if not opt_simulate:
         registry.backup_resume_conf = conf
 
     backup_id = registry.hbr.backup_id
 
     def backup_inprogress(bool):
         is_hub_address = registry.hbr and registry.hbr.address == conf.address
-        if not conf.simulate and is_hub_address:
+        if not opt_simulate and is_hub_address:
             try:
                 hb.set_backup_inprogress(backup_id, bool)
             except hb.Error, e:
@@ -372,7 +373,7 @@ def main():
                                       conf.full_backup, 
                                       conf.s3_parallel_uploads)
         try:
-            uploader(raw_upload_path, target, force_cleanup=not opt_resume, dry_run=conf.simulate, debug=opt_debug, 
+            uploader(raw_upload_path, target, force_cleanup=not opt_resume, dry_run=opt_simulate, debug=opt_debug, 
                      log=(_print if conf.verbose else None))
 
         finally:
@@ -405,7 +406,7 @@ def main():
                                               include_filelist=b.extras_paths.fsdelta_olist,
                                               excludes=[ '**' ])
 
-                uploader('/', target, force_cleanup=not b.resume, dry_run=conf.simulate, debug=opt_debug, 
+                uploader('/', target, force_cleanup=not b.resume, dry_run=opt_simulate, debug=opt_debug, 
                          log=(_print if conf.verbose else None))
 
             hooks.backup.post()
@@ -417,7 +418,7 @@ def main():
                 sys.stderr.flush()
 
                 trap.close()
-                if not conf.simulate:
+                if not opt_simulate:
                     fh = file(opt_logfile, "a")
 
                     timestamp = "### %s ###" % datetime.datetime.now().ctime()
@@ -433,14 +434,14 @@ def main():
                         traceback.print_exc(file=fh)
                     fh.close()
 
-        if conf.simulate:
+        if opt_simulate:
             print "Completed --simulate: Leaving /TKLBAM intact so you can manually inspect it"
         else:
             b.cleanup()
 
     registry.backup_resume_conf = None
 
-    if not (conf.simulate or dump_path):
+    if not (opt_simulate or dump_path):
         try:
             hb.updated_backup(conf.address)
         except:
