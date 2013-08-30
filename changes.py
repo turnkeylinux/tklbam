@@ -98,8 +98,6 @@ class Change:
                 else:
                     self.mode = int(mode, 8)
 
-            self.mode = stat.S_IMODE(self.mode)
-
         def __str__(self):
             return self.fmt(self.uid, self.gid, oct(self.mode))
 
@@ -195,7 +193,8 @@ class Changes(list):
     def emptydirs(self):
         for change in self:
             if not lexists(change.path) and change.OP == 's':
-                yield self.Action(mkdir, change.path)
+                if stat.S_IMODE(change.mode) == change.mode or stat.S_ISDIR(change.mode):
+                    yield self.Action(mkdir, change.path)
 
     def statfixes(self, uidmap={}, gidmap={}):
         class TransparentMap(dict):
@@ -229,7 +228,7 @@ class Changes(list):
             if change.OP == 's':
                 if not islink(change.path) and \
                    stat.S_IMODE(st.st_mode) != stat.S_IMODE(change.mode):
-                    yield self.Action(os.chmod, change.path, change.mode)
+                    yield self.Action(os.chmod, change.path, stat.S_IMODE(change.mode))
 
 def whatchanged(di_path, paths):
     """Compared current filesystem with a saved dirindex from before.
