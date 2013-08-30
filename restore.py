@@ -177,16 +177,10 @@ class Restore:
             if not simulate:
                 self._apply_overlay(overlay, '/', fsdelta_olist)
 
-        emptydirs = list(changes.emptydirs())
         statfixes = list(changes.statfixes(uidmap, gidmap))
 
-        if emptydirs or statfixes or deleted:
+        if statfixes or deleted:
             print "\nPOST-OVERLAY FIXES:\n"
-
-        for action in emptydirs:
-            print action
-            if not simulate:
-                action()
 
         for action in statfixes:
             print action

@@ -190,12 +190,6 @@ class Changes(list):
 
             yield self.Action(os.remove, change.path)
 
-    def emptydirs(self):
-        for change in self:
-            if not lexists(change.path) and change.OP == 's':
-                if stat.S_IMODE(change.mode) == change.mode or stat.S_ISDIR(change.mode):
-                    yield self.Action(mkdir, change.path)
-
     def statfixes(self, uidmap={}, gidmap={}):
         class TransparentMap(dict):
             def __getitem__(self, key):
@@ -208,6 +202,12 @@ class Changes(list):
 
         for change in self:
             if not lexists(change.path):
+                # backwards compat: old backups only stored IMODE in fsdelta, so we assume S_ISDIR
+                if change.OP == 's' and (stat.S_IMODE(change.mode) == change.mode or stat.S_ISDIR(change.mode)):
+                    yield self.Action(mkdir, change.path)
+                    yield self.Action(os.lchown, change.path, uidmap[change.uid], gidmap[change.gid])
+                    yield self.Action(os.chmod, change.path, stat.S_IMODE(change.mode))
+
                 continue
 
             if change.OP == 'd':
