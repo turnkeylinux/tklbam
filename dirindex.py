@@ -152,7 +152,12 @@ class DirIndex(dict):
 
         for path in (b - a):
             mod = other[path].mod
-            if stat.S_ISDIR(mod) or stat.S_ISSOCK(mod):
+
+            # ignore Unix sockets
+            if stat.S_ISSOCK(mod):
+                continue
+
+            if stat.S_ISDIR(mod):
                 paths_stat.append(path)
             else:
                 files_new.append(path)
