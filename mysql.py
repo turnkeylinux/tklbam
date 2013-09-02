@@ -70,17 +70,6 @@ def mysql(**conf):
 
     return os.popen(command, "w")
 
-def mysql(**conf):
-    command = "mysql " + _mysql_opts(**conf)
-
-    popen = Popen(command, shell=True, stdin=PIPE, stderr=PIPE, stdout=PIPE)
-    popen.stdin.close()
-    returncode = popen.wait()
-    if returncode != 0:
-        raise Error("mysql error (%d): %s" % (returncode, popen.stderr.read()))
-
-    return os.popen(command, "w")
-
 class MyFS:
     class Limits:
         def __init__(self, limits):
