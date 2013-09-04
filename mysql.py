@@ -162,6 +162,13 @@ def _parse_statements(fh, delimiter=';'):
 
 class MyFS_Writer(MyFS):
     class Database(MyFS.Database):
+        class View(MyFS.View):
+            def __init__(self, views_path, name):
+                paths = self.Paths(join(views_path, name))
+                if not exists(paths):
+                    os.makedirs(paths)
+                self.paths = paths
+
         def __init__(self, outdir, name, sql):
             self.paths = self.Paths(join(outdir, name))
             if not exists(self.paths):
@@ -171,18 +178,12 @@ class MyFS_Writer(MyFS):
             self.name = name
 
         def add_view_pre(self, name, sql):
-            view_paths = MyFS.View.Paths(join(self.paths.views, name))
-            if not exists(view_paths):
-                os.makedirs(view_paths)
-
-            print >> file(view_paths.pre, "w"), sql
+            view = self.View(self.paths.views, name)
+            print >> file(view.paths.pre, "w"), sql
 
         def add_view_post(self, name, sql):
-            view_paths = MyFS.View.Paths(join(self.paths.views, name))
-            if not exists(view_paths):
-                os.makedirs(view_paths)
-
-            print >> file(view_paths.post, "w"), sql
+            view = self.View(self.paths.views, name)
+            print >> file(view.paths.post, "w"), sql
 
     class Table(MyFS.Table):
         def __init__(self, database, name, sql):
