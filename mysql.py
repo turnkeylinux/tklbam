@@ -226,7 +226,7 @@ class MyFS_Writer(MyFS):
                 table.add_row(statement)
 
             elif re.match(r'^/\*!50003 CREATE\*/.* TRIGGER ', statement):
-                if not table:
+                if not database or not table:
                     continue
 
                 table.add_trigger(statement)
