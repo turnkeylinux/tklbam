@@ -134,12 +134,27 @@ class MyFS:
 
     class Table:
         class Paths(Paths):
-            files = [ 'init', 'rows' ]
+            files = [ 'init', 'triggers', 'rows' ]
 
 def _match_name(sql):
     sql = re.sub(r'/\*.*?\*/', "", sql)
     name = sql.split(None, 3)[2]
     return re.sub(r'`(.*)`', '\\1', name)
+
+def _parse_statements(fh, delimiter=';'):
+    statement = ""
+    for line in fh.xreadlines():
+        if line.startswith("--"):
+            continue
+        if not line.strip():
+            continue
+        if line.startswith("DELIMITER"):
+            delimiter = line.split()[1]
+            continue
+        statement += line
+        if statement.strip().endswith(delimiter):
+            yield statement.strip()
+            statement = ""
 
 class MyFS_Writer(MyFS):
     class Database(MyFS.Database):
@@ -158,40 +173,28 @@ class MyFS_Writer(MyFS):
                 os.makedirs(self.paths)
 
             print >> file(self.paths.init, "w"), sql
+            if exists(self.paths.triggers):
+                os.remove(self.paths.triggers)
 
             self.rows_fh = file(self.paths.rows, "w")
             self.name = name
             self.database = database
 
-        def addrow(self, sql):
+        def add_row(self, sql):
             print >> self.rows_fh, re.sub(r'.*?VALUES \((.*)\);', '\\1', sql)
+
+        def add_trigger(self, sql):
+            print >> file(self.paths.triggers, "a"), sql + "\n"
 
     def __init__(self, outdir, limits=[]):
         self.limits = self.Limits(limits)
         self.outdir = outdir
 
-    @staticmethod
-    def _parse(fh):
-        statement = ""
-        delimiter = ";"
-        for line in fh.xreadlines():
-            if line.startswith("--"):
-                continue
-            if not line.strip():
-                continue
-            if line.startswith("DELIMITER"):
-                delimiter = line.split()[1]
-                continue
-            statement += line
-            if statement.strip().endswith(delimiter):
-                yield statement.strip()
-                statement = ""
-
     def fromfile(self, fh, callback=None):
         database = None
         table = None
 
-        for statement in self._parse(fh):
+        for statement in _parse_statements(fh):
             if statement.startswith("CREATE DATABASE"):
                 database_name = _match_name(statement)
 
@@ -220,7 +223,13 @@ class MyFS_Writer(MyFS):
                     continue
 
                 assert _match_name(statement) == table.name
-                table.addrow(statement)
+                table.add_row(statement)
+
+            elif re.match(r'^/\*!50003 CREATE\*/.* TRIGGER ', statement):
+                if not table:
+                    continue
+
+                table.add_trigger(statement)
 
 def mysql2fs(fh, outdir, limits=[], callback=None):
     MyFS_Writer(outdir, limits).fromfile(fh, callback)
@@ -307,6 +316,25 @@ LOCK TABLES `$name` WRITE;
 UNLOCK TABLES;
 """
 
+        TPL_TRIGGERS_PRE = """\
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8 */ ;
+/*!50003 SET character_set_results = utf8 */ ;
+/*!50003 SET collation_connection  = utf8_general_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'STRICT_TRANS_TABLES,STRICT_ALL_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,TRADITIONAL,NO_AUTO_CREATE_USER' */ ;
+DELIMITER ;;
+"""
+        TPL_TRIGGERS_POST = """\
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+"""
+
         def __init__(self, database, fname):
             self.paths = self.Paths(join(database.paths.tables, fname))
             self.sql_init = file(self.paths.init).read()
@@ -321,6 +349,13 @@ UNLOCK TABLES;
                 yield line.strip()
 
         rows = property(rows)
+
+        def triggers(self):
+            if not exists(self.paths.triggers):
+                return []
+
+            return list(_parse_statements(file(self.paths.triggers), ';;'))
+        triggers = property(triggers)
 
         def tofile(self, fh):
             skip_extended_insert = self.database.myfs.skip_extended_insert
@@ -365,6 +400,12 @@ UNLOCK TABLES;
 
                 tpl = Template(self.TPL_INSERT_POST)
                 print >> fh, tpl.substitute(name=self.name)
+
+            if self.triggers:
+                print >> fh, self.TPL_TRIGGERS_PRE
+                for trigger in self.triggers:
+                    print >> fh, trigger
+                print >> fh, self.TPL_TRIGGERS_POST
 
     PRE = """\
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
