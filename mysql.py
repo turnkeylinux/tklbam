@@ -173,9 +173,17 @@ class MyFS_Writer(MyFS):
     @staticmethod
     def _parse(fh):
         statement = ""
+        delimiter = ";"
         for line in fh.xreadlines():
+            if line.startswith("--"):
+                continue
+            if not line.strip():
+                continue
+            if line.startswith("DELIMITER"):
+                delimiter = line.split()[1]
+                continue
             statement += line
-            if statement.strip().endswith(";"):
+            if statement.strip().endswith(delimiter):
                 yield statement.strip()
                 statement = ""
 
@@ -199,6 +207,7 @@ class MyFS_Writer(MyFS):
                     continue
 
                 table_name = _match_name(statement)
+
                 table = self.Table(database, table_name, statement)
                 if (database.name, table_name) in self.limits:
                     if callback:
