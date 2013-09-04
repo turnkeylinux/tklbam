@@ -364,45 +364,31 @@ DELIMITER ;
             tpl = Template(self.TPL_CREATE)
             print >> fh, tpl.substitute(name=self.name, init=self.sql_init)
 
-            index = None
+            print >> fh, Template(self.TPL_INSERT_PRE).substitute(name=self.name).strip()
 
             insert_prefix = "INSERT INTO `%s` VALUES " % self.name
-            insert_suffix = ";"
-
             if skip_extended_insert:
-                for index, row in enumerate(self.rows):
-                    if index == 0:
-                        tpl = Template(self.TPL_INSERT_PRE)
-                        print >> fh, tpl.substitute(name=self.name)
-
-                    print >> fh, insert_prefix + "(%s)" % row + insert_suffix
+                for  row in self.rows:
+                    print >> fh, insert_prefix + "(%s);" % row
                     
             else:
                 rows = ( "(%s)" % row for row in self.rows )
-                row_chunks = chunkify(rows, ",\n", max_extended_insert - len(insert_prefix + insert_suffix))
+                row_chunks = chunkify(rows, ",\n", max_extended_insert - len(insert_prefix + ";"))
 
+                index = None
                 for index, chunk in enumerate(row_chunks):
-                    if index == 0:
-                        tpl = Template(self.TPL_INSERT_PRE)
-                        print >> fh, tpl.substitute(name=self.name)
 
                     fh.write(insert_prefix + "\n")
-                    fh.write(chunk)
-                    fh.write(insert_suffix)
+                    fh.write(chunk + ";")
                     fh.write("\n")
 
                 if index is not None:
-                    print >> fh, "/* CHUNKS: %d */" % index
+                    print >> fh, "\n-- CHUNKS: %d\n" % (index + 1)
 
-            if index is not None:
-                if not skip_extended_insert:
-                    print >> fh, ";"
-
-                tpl = Template(self.TPL_INSERT_POST)
-                print >> fh, tpl.substitute(name=self.name)
+            print >> fh, Template(self.TPL_INSERT_POST).substitute(name=self.name)
 
             if self.triggers:
-                print >> fh, self.TPL_TRIGGERS_PRE
+                print >> fh, self.TPL_TRIGGERS_PRE.strip()
                 for trigger in self.triggers:
                     print >> fh, trigger
                 print >> fh, self.TPL_TRIGGERS_POST
