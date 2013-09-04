@@ -137,10 +137,10 @@ class MyFS:
             files = [ 'init', 'triggers', 'rows' ]
 
 def _match_name(sql):
-    sql = re.sub(r'/\*.*?\*/', "", sql)
-    name = sql.split(None, 3)[2]
-    return re.sub(r'`(.*)`', '\\1', name)
-
+    m = re.search(r'`(.*?)`', sql)
+    if m:
+        return m.group(1)
+    
 def _parse_statements(fh, delimiter=';'):
     statement = ""
     for line in fh.xreadlines():
@@ -299,7 +299,6 @@ class MyFS_Reader(MyFS):
 
     class Table(MyFS.Table):
         TPL_CREATE = """\
-DROP TABLE IF EXISTS `$name`;
 SET @saved_cs_client     = @@character_set_client;
 SET character_set_client = utf8;
 $init
@@ -348,6 +347,11 @@ DELIMITER ;
             for line in file(self.paths.rows).xreadlines():
                 yield line.strip()
 
+        def has_rows(self):
+            if exists(self.paths.rows) and os.lstat(self.paths.rows).st_size != 0:
+                return True
+            return False
+
         rows = property(rows)
 
         def triggers(self):
@@ -361,31 +365,38 @@ DELIMITER ;
             skip_extended_insert = self.database.myfs.skip_extended_insert
             max_extended_insert = self.database.myfs.max_extended_insert
 
-            tpl = Template(self.TPL_CREATE)
-            print >> fh, tpl.substitute(name=self.name, init=self.sql_init)
+            is_log_table = (self.database.name == "mysql" and self.name in ('general_log', 'slow_log'))
 
-            print >> fh, Template(self.TPL_INSERT_PRE).substitute(name=self.name).strip()
+            if not is_log_table:
+                print >> fh, "DROP TABLE IF EXISTS `%s`;" % self.name
 
-            insert_prefix = "INSERT INTO `%s` VALUES " % self.name
-            if skip_extended_insert:
-                for  row in self.rows:
-                    print >> fh, insert_prefix + "(%s);" % row
-                    
-            else:
-                rows = ( "(%s)" % row for row in self.rows )
-                row_chunks = chunkify(rows, ",\n", max_extended_insert - len(insert_prefix + ";"))
+            print >> fh, Template(self.TPL_CREATE).substitute(init=self.sql_init)
 
-                index = None
-                for index, chunk in enumerate(row_chunks):
+            if self.has_rows():
+                if not is_log_table:
+                    print >> fh, Template(self.TPL_INSERT_PRE).substitute(name=self.name).strip()
 
-                    fh.write(insert_prefix + "\n")
-                    fh.write(chunk + ";")
-                    fh.write("\n")
+                insert_prefix = "INSERT INTO `%s` VALUES " % self.name
+                if skip_extended_insert:
+                    for  row in self.rows:
+                        print >> fh, insert_prefix + "(%s);" % row
+                        
+                else:
+                    rows = ( "(%s)" % row for row in self.rows )
+                    row_chunks = chunkify(rows, ",\n", max_extended_insert - len(insert_prefix + ";"))
 
-                if index is not None:
-                    print >> fh, "\n-- CHUNKS: %d\n" % (index + 1)
+                    index = None
+                    for index, chunk in enumerate(row_chunks):
 
-            print >> fh, Template(self.TPL_INSERT_POST).substitute(name=self.name)
+                        fh.write(insert_prefix + "\n")
+                        fh.write(chunk + ";")
+                        fh.write("\n")
+
+                    if index is not None:
+                        print >> fh, "\n-- CHUNKS: %d\n" % (index + 1)
+
+                if not is_log_table:
+                    print >> fh, Template(self.TPL_INSERT_POST).substitute(name=self.name)
 
             if self.triggers:
                 print >> fh, self.TPL_TRIGGERS_PRE.strip()
