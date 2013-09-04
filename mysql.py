@@ -130,11 +130,15 @@ class MyFS:
 
     class Database:
         class Paths(Paths):
-            files = [ 'init', 'tables' ]
+            files = [ 'init', 'tables', 'views' ]
 
     class Table:
         class Paths(Paths):
             files = [ 'init', 'triggers', 'rows' ]
+
+    class View:
+        class Paths(Paths):
+            files = [ 'pre', 'post' ]
 
 def _match_name(sql):
     m = re.search(r'`(.*?)`', sql)
@@ -166,6 +170,20 @@ class MyFS_Writer(MyFS):
             print >> file(self.paths.init, "w"), sql
             self.name = name
 
+        def add_view_pre(self, name, sql):
+            view_paths = MyFS.View.Paths(join(self.paths.views, name))
+            if not exists(view_paths):
+                os.makedirs(view_paths)
+
+            print >> file(view_paths.pre, "w"), sql
+
+        def add_view_post(self, name, sql):
+            view_paths = MyFS.View.Paths(join(self.paths.views, name))
+            if not exists(view_paths):
+                os.makedirs(view_paths)
+
+            print >> file(view_paths.post, "w"), sql
+
     class Table(MyFS.Table):
         def __init__(self, database, name, sql):
             self.paths = self.Paths(join(database.paths.tables, name))
@@ -191,6 +209,7 @@ class MyFS_Writer(MyFS):
         self.outdir = outdir
 
     def fromfile(self, fh, callback=None):
+        databases = {}
         database = None
         table = None
 
@@ -202,13 +221,33 @@ class MyFS_Writer(MyFS):
                     database = self.Database(self.outdir, database_name, statement)
                     if callback:
                         callback(database)
+
+                    databases[database.name] = database
                 else:
                     database = None
 
-            elif statement.startswith("CREATE TABLE"):
+            elif statement.startswith("USE "):
+                database_name = _match_name(statement)
+
+                database = databases.get(database_name)
                 if not database:
                     continue
 
+                table = None
+
+            if not database:
+                continue
+
+            m = re.match(r'^/\*!50001 CREATE.* VIEW `(.*?)`', statement, re.DOTALL)
+            if m:
+                view_name = m.group(1)
+                database.add_view_post(view_name, statement)
+
+            elif re.match(r'^/\*!50001 CREATE TABLE', statement):
+                view_name = _match_name(statement)
+                database.add_view_pre(view_name, statement)
+
+            elif statement.startswith("CREATE TABLE"):
                 table_name = _match_name(statement)
 
                 table = self.Table(database, table_name, statement)
@@ -218,17 +257,14 @@ class MyFS_Writer(MyFS):
                 else:
                     table = None
 
-            elif statement.startswith("INSERT INTO"):
-                if not database or not table:
-                    continue
+            if not table:
+                continue
 
+            if statement.startswith("INSERT INTO"):
                 assert _match_name(statement) == table.name
                 table.add_row(statement)
 
-            elif re.match(r'^/\*!50003 CREATE\*/.* TRIGGER ', statement):
-                if not database or not table:
-                    continue
-
+            elif re.match(r'^/\*!50003 CREATE.* TRIGGER ', statement, re.DOTALL):
                 table.add_trigger(statement)
 
 def mysql2fs(fh, outdir, limits=[], callback=None):
