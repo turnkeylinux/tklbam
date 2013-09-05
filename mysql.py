@@ -14,7 +14,7 @@ import os
 from os.path import *
 
 import re
-from paths import Paths
+from paths import Paths as _Paths
 
 import shutil
 from string import Template
@@ -129,15 +129,15 @@ class MyFS:
 
 
     class Database:
-        class Paths(Paths):
+        class Paths(_Paths):
             files = [ 'init', 'tables', 'views' ]
 
     class Table:
-        class Paths(Paths):
+        class Paths(_Paths):
             files = [ 'init', 'triggers', 'rows' ]
 
     class View:
-        class Paths(Paths):
+        class Paths(_Paths):
             files = [ 'pre', 'post' ]
 
 def _match_name(sql):
@@ -271,10 +271,10 @@ class MyFS_Writer(MyFS):
 def mysql2fs(fh, outdir, limits=[], callback=None):
     MyFS_Writer(outdir, limits).fromfile(fh, callback)
 
-def chunkify(elements, sep, maxlen):
+def chunkify(elements, delim, maxlen):
     chunk = ""
     for element in elements:
-        if len(chunk) + len(sep) + len(element) > maxlen:
+        if len(chunk) + len(delim) + len(element) > maxlen:
             if chunk:
                 yield chunk
 
@@ -292,7 +292,7 @@ def chunkify(elements, sep, maxlen):
             if not chunk:
                 chunk = element
             else:
-                chunk += sep + element
+                chunk += delim + element
 
     if chunk:
         yield chunk
