@@ -301,6 +301,53 @@ class MyFS_Reader(MyFS):
     MAX_EXTENDED_INSERT = 1000000 - 1024
 
     class Database(MyFS.Database):
+        class View(MyFS.View):
+            TPL_PRE = """\
+DROP TABLE IF EXISTS `$name`;
+/*!50001 DROP VIEW IF EXISTS `$name`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+$sql
+SET character_set_client = @saved_cs_client;
+"""
+
+            TPL_POST = """\
+/*!50001 DROP TABLE IF EXISTS `$name`*/;
+/*!50001 DROP VIEW IF EXISTS `$name`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8 */;
+/*!50001 SET character_set_results     = utf8 */;
+$sql    
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+"""
+            class Error(Exception):
+                pass
+
+            def __init__(self, views_path, name):
+                paths = self.Paths(join(views_path, name))
+                if not isdir(paths):
+                    raise self.Error("not a directory '%s'" % paths)
+                self.paths = paths
+                self.name = name
+
+            def pre(self):
+                if not exists(self.paths.pre):
+                    return
+                sql = file(self.paths.pre).read().strip()
+                return Template(self.TPL_PRE).substitute(name=self.name, sql=sql)
+            pre = property(pre)
+
+            def post(self):
+                if not exists(self.paths.post):
+                    return
+                sql = file(self.paths.post).read().strip()
+                return Template(self.TPL_POST).substitute(name=self.name, sql=sql)
+            post = property(post)
+            
         def __init__(self, myfs, fname):
             self.paths = self.Paths(join(myfs.path, fname))
             self.sql_init = file(self.paths.init).read()
@@ -320,6 +367,19 @@ class MyFS_Reader(MyFS):
                     yield table
         tables = property(tables)
 
+        def views(self):
+            if not exists(self.paths.views):
+                return
+
+            for fname in os.listdir(self.paths.views):
+                try:
+                    view = self.View(self.paths.views, fname)
+                except self.View.Error:
+                    continue
+
+                yield view
+        views = property(views)
+
         def tofile(self, fh, callback=None):
             if callback:
                 callback(self)
@@ -333,6 +393,10 @@ class MyFS_Reader(MyFS):
                 if callback:
                     callback(table)
                 table.tofile(fh)
+
+            for view in self.views:
+                if view.pre:
+                    print >> fh, "\n" + view.pre
 
     class Table(MyFS.Table):
         TPL_CREATE = """\
@@ -489,6 +553,15 @@ DELIMITER ;
 
         for database in self:
             database.tofile(fh, callback)
+
+        for database in self:
+            views = list(database.views)
+            if not views:
+                continue
+
+            print >> fh, "USE `%s`;" % database.name
+            for view in views:
+                print >> fh, "\n" + view.post
 
         print >> fh, self.POST
 
