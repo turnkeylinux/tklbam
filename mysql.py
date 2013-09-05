@@ -255,18 +255,20 @@ class MyFS_Writer(MyFS):
                 if (database.name, table_name) in self.limits:
                     if callback:
                         callback(table)
+
+                    table_ignore_inserts = False
                 else:
-                    table = None
+                    table_ignore_inserts = True
 
             if not table:
                 continue
 
-            if statement.startswith("INSERT INTO"):
+            if re.match(r'^/\*!50003 CREATE.* TRIGGER ', statement, re.DOTALL):
+                table.add_trigger(statement)
+
+            elif not table_ignore_inserts and statement.startswith("INSERT INTO"):
                 assert _match_name(statement) == table.name
                 table.add_row(statement)
-
-            elif re.match(r'^/\*!50003 CREATE.* TRIGGER ', statement, re.DOTALL):
-                table.add_trigger(statement)
 
 def mysql2fs(fh, outdir, limits=[], callback=None):
     MyFS_Writer(outdir, limits).fromfile(fh, callback)
