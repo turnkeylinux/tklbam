@@ -7,7 +7,7 @@ Frequently Asked Questions
 --------------------------
 
 :Author: Liraz Siri <liraz@turnkeylinux.org>
-:Date:   2010-09-01
+:Date:   2013-09-05
 :Manual section: 7
 :Manual group: backup
 
@@ -79,11 +79,10 @@ Which TurnKey appliances are supported?
 ---------------------------------------
 
 With a few exceptions, all TurnKey appliances images from the
-2009.02 release batch onwards will work with TKLBAM, including the
-recent Lucid and Lenny based Core betas.
+2009.02 release batch onwards will work with TKLBAM.
 
-Unfortunately, at this time Zimbra and the PostgreSQL based appliances
-(PostgreSQL, LAPP, OpenBravo) are not yet supported.
+Unfortunately, at this time PostgreSQL based appliances (PostgreSQL, LAPP,
+OpenBravo) are not yet supported.
 
 PostgreSQL support is in the works but it's not ready yet.
 
@@ -127,7 +126,7 @@ If you notice $0.00 in the backups console, there's no need to open a
 support request. It's not a bug. At 15 cents per gigabyte, if you have
 just a few megabytes of data Amazon doesn't charge you anything.
 
-Backups start from about 10KB for a freshly installed TurnKey appliance.
+Backups start from about 100KB for a freshly installed TurnKey appliance.
 Remember, TKLBAM only saves changes you've made since the appliance was
 installed. 
 
@@ -159,6 +158,12 @@ following text files:
 Users can override which files and directories are checked for changes by
 configuring overrides (See below).
 
+Why is an override called an override?
+--------------------------------------
+
+Because it "overrides" the default backup configuration in the appliance
+profile.
+
 How do I remove a file or directory from being included in my backup?
 ---------------------------------------------------------------------
 
@@ -166,12 +171,20 @@ By adding a negative override to /etc/tklbam/overrides::
 
     echo -/var/www/*/logs >> /etc/tklbam/overrides
 
+You can also specify overrides on the command line at backup time::
+
+    tklbam-backup -- -/var/www/*/logs
+
 How do I add a directory to my backup?
 --------------------------------------
 
 By adding an override to /etc/tklbam/overrides::
 
     echo /mnt/images >> /etc/tklbam/overrides
+
+Or on the command line::
+
+    tklbam-backup /var/www/*/logs
 
 Make sure you understand the implications of doing this. For example, if
 you add a directory handled by package management this may break package
@@ -188,14 +201,88 @@ By adding a negative database override to /etc/tklbam/overrides::
     # exclude sessions table in drupal6 database
     echo -mysql:drupal6/sessions >> /etc/tklbam/overrides
 
-By default ALL databases are backed up so adding a negative database
-override override excludes only that database or table from the backup.
+Or on the command line::
 
-By contrast, a positive database override changes the default behavior
-so that only the database or table specified in the override is included
-in the backup.
+    tklbam-backup -- -mysql:drupal6/page_cache
+
+By default ALL databases are backed up so adding a negative database override
+excludes only that database or table from the backup.
+
+Excluding a table only excludes its data. The schema is still backed up as long
+as the database is included.
+
+Specifying a positive database override changes the default behavior so that
+only the database or table specified in the override is included in the backup.
 
 You can mix positive overrides with negative overrides.
+
+Can I have multiple TKLBAM backups on a single system?
+======================================================
+
+Yes. For example, let's say your default TKLBAM backup is several gigabytes in
+size and you'd like to create a lighter 100 MB backup that will be updated more
+frequently and take less time to update/restore.
+
+    cp -a /etc/tklbam /etc/tklbam.light
+
+    echo -/var/www/\*/logs >> /etc/tklbam.light/overrides
+    echo -/home/liraz/bigfiles >> /etc/tklbam.light/overrides
+    echo -mysql:mydatabase/bigtable >> /etc/tklbam.light/overrides
+
+    export TKLBAM_CONF=/etc/tklbam.light
+
+    mkdir /var/lib/tklbam.light
+    export TKLBAM_REGISTRY=/var/lib/tklbam.light
+
+    tklbam-init
+    tklbam-backup
+
+For convenience you may want to create a script that sets the TKLBAM_REGISTRY
+and TKLBAM_CONF environment variables::
+
+    cat > /usr/local/bin/tklbam-backup-light << EOF
+    #!/bin/bash
+    export TKLBAM_CONF=/etc/tklbam.light
+    export TKLBAM_REGISTRY=/var/lib/tklbam.light
+
+    tklbam-backup
+    EOF
+
+    chmod +x /usr/local/bin/tklbam-backup-light
+
+Can I use TKLBAM to only backup a single directory?
+===================================================
+
+Yes. There are a couple of ways to do this:
+
+1) The hard way: Configure TKLBAM overrides to create a system-level backup
+   that only backs up a single directory. Tweak the configuration, test it with
+   `tklbam-backup --simulate`, rinse repeat until your backup doesn't include
+   anything you don't want.
+
+2) The easy way: Use the --raw-upload option. This dashes TKLBAM's brains out
+   so instead of creating a system level backup it just backs up the directory
+   you specify. In other words, --raw-upload turns TKLBAM into a
+   directory-level backup tool rather than a system-level backup tool.
+
+   For example, let's say you have a collection of big files that you don't
+   want to include in your system backup because you don't want to bloat your backup.
+
+   So you configure an overrides to exclude that directory from your default
+   backup and create another TKLBAM backup just for the big files::
+   
+        echo -/home/liraz/bigfiles >> /etc/tklbam/overrides
+        
+        export TKLBAM_REGISTRY=/var/lib/tklbam.bigfiles tklbam-backup
+        --raw-upload=/home/liraz/bigfiles
+
+   Keep if you use the --raw-upload option you'll also need to use the
+   --raw-download option when you restore::
+
+        tklbam-restore --raw-download=/home/liraz/bigfiles <your-backup-id>
+
+   If you don't use the raw-download option, TKLBAM will assume you are trying
+   to restore a system-level backup and you'll probably get an error.
 
 What's the difference between a full backup and an incremental backup?
 ----------------------------------------------------------------------
@@ -258,20 +345,37 @@ AMAZON S3 QUESTIONS
 Do I have to use Amazon S3 for storage?
 ---------------------------------------
 
-No. Any storage target supported by Duplicity can be forced by adding
-the --address option when you backup and restore, but consider yourself
-warned...
+No. You can dump the raw TKLBAM backup to a directory and then store it anyhow
+you want. 
 
-Here Be Dragons! 
+For example here's how we'd a system backup into a simple unencrypted tarball::
 
-Doing this complicates usage as the Hub only helps you manage your
-backups when it auto-configures the storage address. If you specify a
-manual address you are on your own. You will need to manage backups,
-encryption keys and authentication credentials by hand.  You may also
-run into unexpected bugs because this functionality has received limited
-attention so far.
+    cd /tmp
+    mkdir mybackup
+    tklbam-backup --dump=mybackup/
+    tar jcvf mybackup.tar.bz2 mybackup/
 
-In short. Many things can go wrong so please be extra careful.
+And later restore it like this::
+
+    cd /tmp
+    tar jxvf mybackup.tar.bz2
+    tklbam-restore mybackup/
+
+The --dump option bypasses Duplicity, which usually create a series of
+encrypted archive files that can be incrementally updated. These archive files
+are stored by default in the Amazon S3 storage cloud but you can override this
+with the --address option and specify any storage back-end supported by
+Duplicity (e.g., local directory, rsync over ssh, ftp, sftp, etc).
+
+Duplicity can be forced by adding the --address option when you backup and
+restore but make sure you know what you're doing because doing this complicates
+usage.
+
+The Hub normally helps you manage your backups metadata when it auto-configures
+the storage address. If you specify a manual address you need to manage storage
+locations, encryption keys and authentication credentials by hand.
+
+Many things can go wrong so please be careful and always rehearse a restore.
 
 Why can't I access TKLBAM storage buckets with other Amazon S3 tools?
 ---------------------------------------------------------------------
@@ -304,6 +408,7 @@ more permanent than a credit card.
 In any case, if your payment method is invalidated (e.g., cancelled or
 expired credit card), billing will fail and Amazon will attempt to
 contact you (e.g., by e-mail) to provide a new, valid payment method. 
+
 
 FAULT TOLERANCE FOR THE PARANOID IT GUY
 =======================================
