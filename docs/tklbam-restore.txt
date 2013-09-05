@@ -7,7 +7,7 @@ Restore a backup
 ----------------
 
 :Author: Liraz Siri <liraz@turnkeylinux.org>
-:Date:   2012-08-10
+:Date:   2013-09-05
 :Manual section: 8
 :Manual group: backup
 
@@ -63,7 +63,8 @@ System restore options
 
 --simulate                        Do a dry run simulation of the system restore
 
---limits=LIMITS                   Restore filesystem or database limitations
+--limits=LIMITS                   Restore filesystem or database limitations. You can use this 
+                                  to control what parts of the backup will be restored.
 
   `LIMITS` := "``LIMIT``-1 .. ``LIMIT``-N"
   
