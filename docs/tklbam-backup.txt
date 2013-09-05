@@ -7,7 +7,7 @@ Backup the current system
 -------------------------
 
 :Author: Liraz Siri <liraz@turnkeylinux.org>
-:Date:   2012-08-10
+:Date:   2013-09-05
 :Manual section: 8
 :Manual group: backup
 
@@ -57,9 +57,18 @@ Database overrides
 
 ``<database-override>`` := -?mysql:database[/table]
 
-By default ALL databases are backed up. Adding a positive override
-changes the default behavior so that only the database or table
-specified in the override is included in the backup.
+By default ALL databases and database tables are backed up. 
+
+Adding a positive override (e.g., mysql:mydatabase) changes the default
+behavior so that only the database or table specified in the override is
+included in the backup.
+
+Negative overrides exclude a database (e.g., -mysql:mydatabase) or table (e.g.,
+-mysql:mydatabase/mytable) from being included in the backup. 
+
+Excluding a table only excludes its data. The schema of an excluded table is
+still backed up, as it takes up a trivial amount of space and other tables or
+views may depend on it.
 
 You can mix positive overrides with negative overrides.
 
