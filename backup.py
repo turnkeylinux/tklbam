@@ -23,6 +23,7 @@ from changes import whatchanged
 from pkgman import Packages
 
 import mysql
+import pgsql
 
 from utils import AttrDict
 
@@ -40,7 +41,7 @@ class ExtrasPaths(Paths):
     def __new__(cls, path=None):
         return str.__new__(cls, path)
 
-    files = [ 'backup-conf', 'fsdelta', 'fsdelta-olist', 'newpkgs', 'myfs', 'etc', 'etc/mysql' ]
+    files = [ 'backup-conf', 'fsdelta', 'fsdelta-olist', 'newpkgs', 'pgfs', 'myfs', 'etc', 'etc/mysql' ]
 
 def _rmdir(path):
     if exists(path):
@@ -132,8 +133,13 @@ class Backup:
         if not conf.skip_database:
             try:
                 mysql.backup(extras.myfs, extras.etc.mysql,
-                             limits=conf.overrides.db)
+                             limits=conf.overrides.mydb)
             except mysql.Error:
+                pass
+
+            try:
+                pgsql.backup(extras.pgfs, conf.overrides.pgdb)
+            except pgsql.Error:
                 pass
 
     def __init__(self, profile, overrides, 

@@ -37,7 +37,7 @@ def list_databases():
         name = m.group(1)
         yield name
 
-def dumpdb(outdir, name, tlimits):
+def dumpdb(outdir, name, tlimits=[]):
     path = join(outdir, name)
     if isdir(path):
         shutil.rmtree(path)
@@ -55,7 +55,7 @@ def dumpdb(outdir, name, tlimits):
     manifest = getoutput(su(pg_dump) + " | tar xvC %s" % path)
     file(join(path, FNAME_MANIFEST), "w").write(manifest + "\n")
 
-def restoredb(dbdump, dbname, tlimits):
+def restoredb(dbdump, dbname, tlimits=[]):
     manifest = file(join(dbdump, FNAME_MANIFEST)).read().splitlines()
 
     try:
@@ -78,7 +78,7 @@ def restoredb(dbdump, dbname, tlimits):
     finally:
         os.chdir(orig_cwd)
 
-def pgsql2fs(outdir, limits):
+def pgsql2fs(outdir, limits=[]):
     limits = DBLimits(limits)
 
     for dbname in list_databases():
@@ -90,7 +90,7 @@ def pgsql2fs(outdir, limits):
     globals = getoutput(su("pg_dumpall --globals"))
     file(join(outdir, FNAME_GLOBALS), "w").write(globals)
 
-def fs2pgsql(outdir, limits):
+def fs2pgsql(outdir, limits=[]):
     limits = DBLimits(limits)
     for (database, table) in limits.tables:
         if (database, table) not in limits:
@@ -106,3 +106,23 @@ def fs2pgsql(outdir, limits):
             continue
 
         restoredb(fpath, dbname, limits[dbname])
+
+def backup(outdir, limits=[]):
+    if isdir(outdir):
+        shutil.rmtree(outdir)
+
+    if not exists(outdir):
+        os.makedirs(outdir)
+
+    try:
+        pgsql2fs(outdir, limits)
+    except Exception, e:
+        if isdir(outdir):
+            shutil.rmtree(outdir)
+        raise Error("pgsql backup failed: " + str(e))
+
+def restore(path, limits=[]):
+    try:
+        fs2pgsql(path, limits)
+    except Exception, e:
+        raise Error("pgsql restore failed: " + str(e))

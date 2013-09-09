@@ -40,13 +40,7 @@ def main():
     outdir = args[0]
     limits = args[1:]
 
-    if isdir(outdir):
-        shutil.rmtree(outdir)
-
-    if not exists(outdir):
-        os.mkdir(outdir)
-
-    pgsql.pgsql2fs(outdir, limits)
+    pgsql.backup(outdir, limits)
 
 if __name__ == "__main__":
     main()

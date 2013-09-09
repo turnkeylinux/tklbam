@@ -24,6 +24,7 @@ import utils
 import backup
 import conf
 import mysql
+import pgsql
 
 from temp import TempFile
 
@@ -59,7 +60,7 @@ class Restore:
         self.backup_extract_path = backup_extract_path
 
     def database(self):
-        if not exists(self.extras.myfs):
+        if not exists(self.extras.myfs) and not exists(self.extras.pgfs):
             return
 
         if self.rollback:
@@ -67,12 +68,26 @@ class Restore:
 
         print "\n" + self._title("Restoring databases")
 
-        try:
-            mysql.restore(self.extras.myfs, self.extras.etc.mysql,
-                          limits=self.limits.db, callback=mysql.cb_print(), simulate=self.simulate)
+        if exists(self.extras.myfs):
+            try:
+                mysql.restore(self.extras.myfs, self.extras.etc.mysql,
+                              limits=self.limits.mydb, callback=mysql.cb_print(), simulate=self.simulate)
 
-        except mysql.Error, e:
-            print "SKIPPING MYSQL DATABASE RESTORE: " + str(e)
+            except mysql.Error, e:
+                print "SKIPPING MYSQL DATABASE RESTORE: " + str(e)
+
+        if exists(self.extras.pgfs):
+        
+            if self.simulate:
+                print "CAN't SIMULATE PGSQL RESTORE, SKIPPING"
+                return
+
+            try:
+                pgsql.restore(self.extras.pgfs, self.limits.pgdb)
+
+            except pgsql.Error, e:
+                print "SKIPPING PGSQL DATABASE RESTORE: " + str(e)
+
 
     def packages(self):
         newpkgs_file = self.extras.newpkgs
