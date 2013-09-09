@@ -88,11 +88,12 @@ class MyFS:
                 if '/' in limit:
                     database, table = limit.split('/')
                     d[(database, table)] = sign
+                    
+                    if sign:
+                        self.databases.append(database)
                 else:
                     database = limit
                     d[database] = sign
-
-                self.databases.append(database)
 
             self.d = d
 
@@ -122,6 +123,10 @@ class MyFS:
 
             else:
                 database = val
+
+                if database in self.d:
+                    return self.d[database]
+
                 if database in self.databases:
                     return True
 
