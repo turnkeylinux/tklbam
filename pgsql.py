@@ -8,6 +8,7 @@
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
 #
+import sys
 import os
 from os.path import *
 
@@ -78,19 +79,22 @@ def restoredb(dbdump, dbname, tlimits=[]):
     finally:
         os.chdir(orig_cwd)
 
-def pgsql2fs(outdir, limits=[]):
+def pgsql2fs(outdir, limits=[], callback=None):
     limits = DBLimits(limits)
 
     for dbname in list_databases():
         if dbname not in limits or dbname == 'postgres' or re.match(r'template\d', dbname):
             continue
 
+        if callback:
+            callback(dbname)
+
         dumpdb(outdir, dbname, limits[dbname])
 
     globals = getoutput(su("pg_dumpall --globals"))
     file(join(outdir, FNAME_GLOBALS), "w").write(globals)
 
-def fs2pgsql(outdir, limits=[]):
+def fs2pgsql(outdir, limits=[], callback=None):
     limits = DBLimits(limits)
     for (database, table) in limits.tables:
         if (database, table) not in limits:
@@ -101,13 +105,26 @@ def fs2pgsql(outdir, limits=[]):
     getoutput_popen(su("psql -q -o /dev/null"), globals)
 
     for dbname in os.listdir(outdir):
+
         fpath = join(outdir, dbname)
         if not isdir(fpath) or dbname not in limits:
             continue
 
+        if callback:
+            callback(dbname)
+
         restoredb(fpath, dbname, limits[dbname])
 
-def backup(outdir, limits=[]):
+def cb_print(fh=None):
+    if not fh:
+        fh = sys.stdout
+
+    def func(val):
+        print >> fh, "database: " + val
+
+    return func
+
+def backup(outdir, limits=[], callback=None):
     if isdir(outdir):
         shutil.rmtree(outdir)
 
@@ -115,14 +132,14 @@ def backup(outdir, limits=[]):
         os.makedirs(outdir)
 
     try:
-        pgsql2fs(outdir, limits)
+        pgsql2fs(outdir, limits, callback)
     except Exception, e:
         if isdir(outdir):
             shutil.rmtree(outdir)
         raise Error("pgsql backup failed: " + str(e))
 
-def restore(path, limits=[]):
+def restore(path, limits=[], callback=None):
     try:
-        fs2pgsql(path, limits)
+        fs2pgsql(path, limits, callback=None)
     except Exception, e:
         raise Error("pgsql restore failed: " + str(e))

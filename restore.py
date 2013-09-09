@@ -66,9 +66,10 @@ class Restore:
         if self.rollback:
             self.rollback.save_database()
 
-        print "\n" + self._title("Restoring databases")
-
         if exists(self.extras.myfs):
+
+            print "\n" + self._title("Restoring MySQL databases")
+
             try:
                 mysql.restore(self.extras.myfs, self.extras.etc.mysql,
                               limits=self.limits.mydb, callback=mysql.cb_print(), simulate=self.simulate)
@@ -78,12 +79,14 @@ class Restore:
 
         if exists(self.extras.pgfs):
         
+            print "\n" + self._title("Restoring PgSQL databases")
+
             if self.simulate:
                 print "CAN't SIMULATE PGSQL RESTORE, SKIPPING"
                 return
 
             try:
-                pgsql.restore(self.extras.pgfs, self.limits.pgdb)
+                pgsql.restore(self.extras.pgfs, self.limits.pgdb, callback=pgsql.cb_print())
 
             except pgsql.Error, e:
                 print "SKIPPING PGSQL DATABASE RESTORE: " + str(e)
