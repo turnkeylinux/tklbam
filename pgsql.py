@@ -17,14 +17,19 @@ import shutil
 
 from executil import system, getoutput, getoutput_popen
 
+from dblimits import DBLimits
+
 FNAME_GLOBALS = ".globals.sql"
 FNAME_MANIFEST = "manifest.txt"
 
-def _pg(command):
+class Error(Exception):
+    pass
+
+def su(command):
     return "su postgres -c" + commands.mkarg(command)
 
 def list_databases():
-    for line in getoutput(_pg('psql -l')).splitlines():
+    for line in getoutput(su('psql -l')).splitlines():
         m = re.match(r'^ (\S+?)\s', line)
         if not m:
             continue
@@ -32,20 +37,29 @@ def list_databases():
         name = m.group(1)
         yield name
 
-def dumpdb(outdir, name):
+def dumpdb(outdir, name, tlimits):
     path = join(outdir, name)
     if isdir(path):
         shutil.rmtree(path)
     os.makedirs(path)
 
-    manifest = getoutput(_pg("pg_dump --format=tar " + name) + " | tar xvC %s" % path)
+    # format pg_dump command
+    pg_dump = "pg_dump --format=tar"
+    for (table, sign) in tlimits:
+        if sign:
+            pg_dump += " --table=" + table
+        else:
+            pg_dump += " --exclude-table=" + table
+    pg_dump += " " + name
+
+    manifest = getoutput(su(pg_dump) + " | tar xvC %s" % path)
     file(join(path, FNAME_MANIFEST), "w").write(manifest + "\n")
 
-def restoredb(dbdump, dbname):
+def restoredb(dbdump, dbname, tlimits):
     manifest = file(join(dbdump, FNAME_MANIFEST)).read().splitlines()
 
     try:
-        getoutput(_pg("dropdb " + dbname))
+        getoutput(su("dropdb " + dbname))
     except:
         pass
 
@@ -55,34 +69,40 @@ def restoredb(dbdump, dbname):
     try:
         command = "tar c %s 2>/dev/null" % " ".join(manifest)
         command += " | pg_restore --create --format=tar"
-        command += " | " + _pg("psql")
-
+        for (table, sign) in tlimits:
+            if sign:
+                command += " --table=" + table
+        command += " | " + su("psql")
         system(command)
         
     finally:
         os.chdir(orig_cwd)
 
 def pgsql2fs(outdir, limits):
-    for name in list_databases():
-        if name == 'postgres' or re.match(r'template\d', name):
+    limits = DBLimits(limits)
+
+    for dbname in list_databases():
+        if dbname not in limits or dbname == 'postgres' or re.match(r'template\d', dbname):
             continue
 
-        dumpdb(outdir, name)
+        dumpdb(outdir, dbname, limits[dbname])
 
-    globals = getoutput(_pg("pg_dumpall --globals"))
+    globals = getoutput(su("pg_dumpall --globals"))
     file(join(outdir, FNAME_GLOBALS), "w").write(globals)
 
 def fs2pgsql(outdir, limits):
+    limits = DBLimits(limits)
+    for (database, table) in limits.tables:
+        if (database, table) not in limits:
+            raise Error("can't exclude %s/%s: table excludes not supported for postgres" % (database, table))
 
     # load globals first, suppress noise (e.g., "ERROR: role "postgres" already exists)
     globals = file(join(outdir, FNAME_GLOBALS)).read()
-    getoutput_popen(_pg("psql -q -o /dev/null"), globals)
+    getoutput_popen(su("psql -q -o /dev/null"), globals)
 
-    for fname in os.listdir(outdir):
-        fpath = join(outdir, fname)
-        if not isdir(fpath):
+    for dbname in os.listdir(outdir):
+        fpath = join(outdir, dbname)
+        if not isdir(fpath) or dbname not in limits:
             continue
 
-        restoredb(fpath, fname)
-
-
+        restoredb(fpath, dbname, limits[dbname])

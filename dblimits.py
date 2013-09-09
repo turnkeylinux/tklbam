@@ -2,6 +2,7 @@ class DBLimits:
     def __init__(self, limits):
         self.default = True
         self.databases = []
+        self.tables = []
 
         d = {}
         for limit in limits:
@@ -14,6 +15,7 @@ class DBLimits:
 
             if '/' in limit:
                 database, table = limit.split('/')
+                self.tables.append((database, table))
 
                 d[(database, table)] = sign
                 if sign:
@@ -57,3 +59,14 @@ class DBLimits:
                 return True
 
             return self.default
+
+    def __getitem__(self, database_limit):
+        table_limits = []
+        for database, table in self.tables:
+            if database != database_limit:
+                continue
+
+            sign = self.d[(database, table)]
+            table_limits.append((table, sign))
+
+        return table_limits
