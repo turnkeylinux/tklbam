@@ -3,7 +3,7 @@ from os.path import *
 
 import re
 
-from paths import Paths
+from paths import Paths as _Paths
 import duplicity
 
 class Error(Exception):
@@ -12,7 +12,7 @@ class Error(Exception):
 class Limits(list):
     @staticmethod
     def _is_db_limit(val):
-        if re.match(r'^-?mysql:', val):
+        if re.match(r'^-?(mysql|pgsql):', val):
             return True
         else:
             return False
@@ -51,10 +51,10 @@ class Limits(list):
         return [ val for val in self if not self._is_db_limit(val) ]
     fs = property(fs)
 
-    def db(self):
+    def _db(self, namespace):
         db_limits = []
         for limit in self:
-            m = re.match(r'^-?mysql:(.*)', limit)
+            m = re.match(r'^-?' + namespace + ':(.*)', limit)
             if not m:
                 continue
 
@@ -69,11 +69,18 @@ class Limits(list):
                     return True
             return False
 
-        if any_positives(db_limits):
+        if namespace == 'mysql' and any_positives(db_limits):
             db_limits.append('mysql')
 
         return db_limits
-    db = property(db)
+
+    def mydb(self):
+        return self._db('mysql')
+    mydb = property(mydb)
+
+    def pgdb(self):
+        return self._db('pgsql')
+    pgdb = property(pgdb)
 
     def __add__(self, b):
         cls = type(self)
@@ -86,7 +93,7 @@ class Conf(AttrDict):
     class Error(Exception):
         pass
 
-    class Paths(Paths):
+    class Paths(_Paths):
         files = [ 'overrides', 'conf' ]
 
     def _error(self, s):
