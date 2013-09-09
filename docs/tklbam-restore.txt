@@ -66,11 +66,16 @@ System restore options
 --limits=LIMITS                   Restore filesystem or database limitations. You can use this 
                                   to control what parts of the backup will be restored.
 
+                                  Preceding a limit with a minus sign
+                                  turns it into an exclusion.
+
   `LIMITS` := "``LIMIT``-1 .. ``LIMIT``-N"
   
-  ``LIMIT`` :=  
-  
-    -?( /path/to/include/or/exclude | mysql:database[/table] )
+  ``LIMIT`` :=  -?( /path/to/include/or/exclude | 
+                     mysql:database[/table] |
+                     pgsql:database[/table] )
+
+
 
 --skip-files                      Don't restore filesystem
 --skip-database                   Don't restore databases

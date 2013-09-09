@@ -57,6 +57,8 @@ Database overrides
 
 ``<database-override>`` := -?mysql:database[/table]
 
+``<database-override>`` := -?pgsql:database[/table]
+
 By default ALL databases and database tables are backed up. 
 
 Adding a positive override (e.g., mysql:mydatabase) changes the default
@@ -79,6 +81,9 @@ Examples::
 
     # only include drupal6 database
     mysql:drupal6
+
+    # only include mahara postgres database
+    pgsql:mahara
 
 OPTIONS
 =======

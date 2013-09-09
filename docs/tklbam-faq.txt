@@ -89,9 +89,7 @@ PostgreSQL support is in the works but it's not ready yet.
 Which databases are supported?
 ------------------------------
 
-Currently only MySQL. PostgreSQL support is under development.
-Support for additional databases will be added as needed. Currently
-TurnKey appliances only include MySQL and PostgreSQL databases.
+MySQL and PostgreSQL.
 
 PRICING QUESTIONS
 =================
