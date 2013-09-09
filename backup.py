@@ -22,7 +22,6 @@ from dirindex import read_paths
 from changes import whatchanged
 from pkgman import Packages
 
-import duplicity
 import mysql
 
 from utils import AttrDict
