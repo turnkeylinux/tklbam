@@ -12,12 +12,9 @@
 """
 Dump PostgreSQL databases to a filesystem path.
 """
-import os
 from os.path import *
 
 import sys
-import shutil
-
 import pgsql
 
 def fatal(e):
