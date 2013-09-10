@@ -7,7 +7,7 @@ Restore a backup
 ----------------
 
 :Author: Liraz Siri <liraz@turnkeylinux.org>
-:Date:   2012-08-10
+:Date:   2013-09-05
 :Manual section: 8
 :Manual group: backup
 
@@ -19,10 +19,19 @@ tklbam-restore [ -options ] [ <hub-backup> ]
 ARGUMENTS
 =========
 
-`<hub-backup>` := backup-id || unique label pattern
+`<hub-backup>` := backup-id || unique label pattern || path/to/backup/extract
+
 
 OPTIONS
 =======
+
+General options
+---------------
+
+--raw-download=path/to/backup/    Download backup to directory without doing a system restore
+
+Duplicity related options
+-------------------------
 
 --time=TIME                       Time to restore from
 
@@ -41,14 +50,6 @@ OPTIONS
           2M - 2 months ago
           1Y - 1 year ago
 
---limits=LIMITS                    Restore filesystem or database limitations
-
-  `LIMITS` := "``LIMIT``-1 .. ``LIMIT``-N"
-  
-  ``LIMIT`` :=  
-  
-    -?( /path/to/include/or/exclude | mysql:database[/table] )
-
 --keyfile=KEYFILE                 Path to escrow keyfile.
                                   
                                   Default: Hub provides this automatically.
@@ -56,6 +57,25 @@ OPTIONS
 --address=TARGET_URL              manual backup target URL (needs --keyfile).
                                   
                                   Default: Hub provides this automatically.
+
+System restore options
+----------------------
+
+--simulate                        Do a dry run simulation of the system restore
+
+--limits=LIMITS                   Restore filesystem or database limitations. You can use this 
+                                  to control what parts of the backup will be restored.
+
+                                  Preceding a limit with a minus sign
+                                  turns it into an exclusion.
+
+  `LIMITS` := "``LIMIT``-1 .. ``LIMIT``-N"
+  
+  ``LIMIT`` :=  -?( /path/to/include/or/exclude | 
+                     mysql:database[/table] |
+                     pgsql:database[/table] )
+
+
 
 --skip-files                      Don't restore filesystem
 --skip-database                   Don't restore databases
@@ -100,4 +120,4 @@ FILES
 SEE ALSO
 ========
 
-``tklbam`` (8), ``tklbam-faq`` (7)
+``tklbam`` (8), ``tklbam-faq`` (7), ``tklbam-hooks`` (5)

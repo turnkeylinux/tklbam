@@ -8,6 +8,7 @@
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
 #
+import sys
 import os
 from os.path import *
 
@@ -17,6 +18,10 @@ from dirindex import DirIndex
 from pathmap import PathMap
 
 import stat
+import errno
+
+class Error(Exception):
+    pass
 
 class Change:
     """
@@ -92,8 +97,6 @@ class Change:
                     self.mode = mode
                 else:
                     self.mode = int(mode, 8)
-
-            self.mode = stat.S_IMODE(self.mode)
 
         def __str__(self):
             return self.fmt(self.uid, self.gid, oct(self.mode))
@@ -187,11 +190,6 @@ class Changes(list):
 
             yield self.Action(os.remove, change.path)
 
-    def emptydirs(self):
-        for change in self:
-            if not lexists(change.path) and change.OP == 's':
-                yield self.Action(mkdir, change.path)
-
     def statfixes(self, uidmap={}, gidmap={}):
         class TransparentMap(dict):
             def __getitem__(self, key):
@@ -204,6 +202,12 @@ class Changes(list):
 
         for change in self:
             if not lexists(change.path):
+                # backwards compat: old backups only stored IMODE in fsdelta, so we assume S_ISDIR
+                if change.OP == 's' and (stat.S_IMODE(change.mode) == change.mode or stat.S_ISDIR(change.mode)):
+                    yield self.Action(mkdir, change.path)
+                    yield self.Action(os.lchown, change.path, uidmap[change.uid], gidmap[change.gid])
+                    yield self.Action(os.chmod, change.path, stat.S_IMODE(change.mode))
+
                 continue
 
             if change.OP == 'd':
@@ -223,8 +227,8 @@ class Changes(list):
 
             if change.OP == 's':
                 if not islink(change.path) and \
-                   stat.S_IMODE(st.st_mode) != change.mode:
-                    yield self.Action(os.chmod, change.path, change.mode)
+                   stat.S_IMODE(st.st_mode) != stat.S_IMODE(change.mode):
+                    yield self.Action(os.chmod, change.path, stat.S_IMODE(change.mode))
 
 def whatchanged(di_path, paths):
     """Compared current filesystem with a saved dirindex from before.
@@ -234,11 +238,11 @@ def whatchanged(di_path, paths):
     di_fs = DirIndex()
     di_fs.walk(*paths)
 
-    new, edited, stat = di_saved.diff(di_fs)
+    new, edited, statfix = di_saved.diff(di_fs)
     changes = Changes()
 
     changes += [ Change.Overwrite(path) for path in new + edited ]
-    changes += [ Change.Stat(path) for path in stat ]
+    changes += [ Change.Stat(path) for path in statfix ]
 
     di_saved.prune(*paths)
     deleted = set(di_saved) - set(di_fs)

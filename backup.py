@@ -1,7 +1,19 @@
+#
+# Copyright (c) 2010-2013 Liraz Siri <liraz@turnkeylinux.org>
+#
+# This file is part of TKLBAM (TurnKey Linux BAckup and Migration).
+#
+# TKLBAM is open source software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 3 of
+# the License, or (at your option) any later version.
+#
+
 import os
 from os.path import exists, join
 
 import shutil
+import utils
 import simplejson
 
 from paths import Paths
@@ -10,8 +22,8 @@ from dirindex import read_paths
 from changes import whatchanged
 from pkgman import Packages
 
-import duplicity
 import mysql
+import pgsql
 
 from utils import AttrDict
 
@@ -29,7 +41,7 @@ class ExtrasPaths(Paths):
     def __new__(cls, path=None):
         return str.__new__(cls, path)
 
-    files = [ 'backup-conf', 'fsdelta', 'fsdelta-olist', 'newpkgs', 'myfs', 'etc', 'etc/mysql' ]
+    files = [ 'backup-conf', 'fsdelta', 'fsdelta-olist', 'newpkgs', 'pgfs', 'myfs', 'etc', 'etc/mysql' ]
 
 def _rmdir(path):
     if exists(path):
@@ -73,6 +85,9 @@ class BackupConf(AttrDict):
         simplejson.dump(dict(self), file(path, "w"))
 
 class Backup:
+    class Error(Exception):
+        pass
+
     @staticmethod
     def _write_new_packages(dest, base_packages):
         base_packages = Packages.fromfile(base_packages)
@@ -107,26 +122,33 @@ class Backup:
         shutil.copy("/etc/passwd", etc)
         shutil.copy("/etc/group", etc)
 
-        if not conf.backup_skip_files:
+        if not conf.skip_files:
             cls._write_whatchanged(extras.fsdelta, extras.fsdelta_olist,
                                    profile.dirindex, profile.dirindex_conf,
                                    conf.overrides.fs)
 
-        if not conf.backup_skip_packages:
+        if not conf.skip_packages:
             cls._write_new_packages(extras.newpkgs, profile.packages)
 
-        if not conf.backup_skip_database:
+        if not conf.skip_database:
             try:
                 mysql.backup(extras.myfs, extras.etc.mysql,
-                             limits=conf.overrides.db)
+                             limits=conf.overrides.mydb)
             except mysql.Error:
                 pass
 
-    def __init__(self, conf, profile, credentials=None, resume=False):
-        verbose = print_if(conf.verbose)
+            try:
+                pgsql.backup(extras.pgfs, conf.overrides.pgdb)
+            except pgsql.Error:
+                pass
+
+    def __init__(self, profile, overrides, 
+                 skip_files=False, skip_packages=False, skip_database=False, resume=False, verbose=True):
+
+        log = print_if(verbose)
 
         if not profile:
-            raise Error("can't backup without a profile")
+            raise self.Error("can't backup without a profile")
 
         profile_paths = ProfilePaths(profile.path)
         extras_paths = ExtrasPaths()
@@ -134,29 +156,29 @@ class Backup:
         # decide whether we can allow resume=True
         # /TKLBAM has to exist and the backup configuration has to match
         backup_conf = BackupConf(profile.profile_id,
-                                 conf.overrides,
-                                 conf.backup_skip_files,
-                                 conf.backup_skip_packages,
-                                 conf.backup_skip_database)
+                                 overrides,
+                                 skip_files,
+                                 skip_packages,
+                                 skip_database)
 
         saved_backup_conf = BackupConf.fromfile(extras_paths.backup_conf)
 
-        if backup_conf != saved_backup_conf or not conf.checkpoint_restore:
+        if backup_conf != saved_backup_conf:
             resume = False
 
-        self.force_cleanup = False
         if not resume:
             _rmdir(extras_paths.path)
-            self.force_cleanup = True
         else:
-            verbose("ATTEMPTING TO RESUME ABORTED BACKUP SESSION")
+            log("ATTEMPTING TO RESUME ABORTED BACKUP SESSION")
+
+        self.resume = resume
 
         # create or re-use /TKLBAM
         if not exists(extras_paths.path):
-            verbose("CREATING " + extras_paths.path)
+            log("CREATING " + extras_paths.path)
 
             try:
-                self._create_extras(extras_paths, profile_paths, conf)
+                self._create_extras(extras_paths, profile_paths, backup_conf)
                 backup_conf.tofile(extras_paths.backup_conf)
             except:
                 # destroy potentially incomplete extras
@@ -164,12 +186,12 @@ class Backup:
                 raise
 
         # print uncompressed footprint
-        if conf.verbose:
+        if verbose:
 
             # files in /TKLBAM + /TKLBAM/fsdelta-olist
             fpaths= _fpaths(extras_paths.path)
 
-            if not conf.backup_skip_files:
+            if not skip_files:
                 fsdelta_olist = file(extras_paths.fsdelta_olist).read().splitlines()
                 fpaths += _filter_deleted(fsdelta_olist)
 
@@ -183,59 +205,17 @@ class Backup:
             else:
                 size_fmt = "%.2f KB" % (float(size) / 1024)
 
-            print "FULL UNCOMPRESSED FOOTPRINT: %s in %d files" % (size_fmt,
-                                                                   len(fpaths))
+            log("FULL UNCOMPRESSED FOOTPRINT: %s in %d files" % (size_fmt, len(fpaths)))
 
-        self.conf = conf
         self.extras_paths = extras_paths
-        self.credentials = credentials
 
-    def run(self, debug=False):
-        verbose = print_if(self.conf.verbose)
+    def dump(self, path):
 
-        conf = self.conf
-        passphrase = file(conf.secretfile).readline().strip()
-        opts = []
-        if conf.verbose:
-            opts += [('verbosity', 5)]
+        def r(p):
+            return join(path, p.lstrip('/'))
 
-        if not conf.checkpoint_restore or self.force_cleanup:
-            cleanup_command = duplicity.Command(opts, "cleanup", "--force", conf.address)
-            verbose("\n# " + str(cleanup_command))
-
-            if not conf.simulate:
-                cleanup_command.run(passphrase, self.credentials)
-
-        opts += [('volsize', conf.volsize),
-                 ('full-if-older-than', conf.full_backup),
-                 ('include', self.extras_paths.path),
-                 ('gpg-options', '--cipher-algo=aes')]
-
-        if not conf.backup_skip_files:
-            opts += [('include-filelist', self.extras_paths.fsdelta_olist)]
-
-        opts += [('exclude', '**')]
-
-        args = [ '--s3-unencrypted-connection', '--allow-source-mismatch' ]
-
-        if conf.simulate and conf.verbose:
-            args += [ '--dry-run' ]
-
-        if conf.s3_parallel_uploads > 1:
-            s3_multipart_chunk_size = conf.volsize / conf.s3_parallel_uploads
-            if s3_multipart_chunk_size < 5:
-                s3_multipart_chunk_size = 5
-            args += [ '--s3-use-multiprocessing', '--s3-multipart-chunk-size=%d' % s3_multipart_chunk_size ]
-
-        args += [ '/', conf.address ]
-
-
-        backup_command = duplicity.Command(opts, *args)
-
-        verbose("\n# PASSPHRASE=$(cat %s) %s" % (conf.secretfile, backup_command))
-
-        backup_command.run(passphrase, self.credentials, debug=debug)
+        shutil.copytree(self.extras_paths.path, r(self.extras_paths.path))
+        utils.apply_overlay('/', path, self.extras_paths.fsdelta_olist)
 
     def cleanup(self):
         _rmdir(self.extras_paths.path)
-

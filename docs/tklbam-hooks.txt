@@ -1,0 +1,103 @@
+===================
+/etc/tklbam/hooks.d
+===================
+
+------------
+TKLBAM Hooks
+------------
+
+:Author: Liraz Siri <liraz@turnkeylinux.org>
+:Date:   2013-08-26
+:Manual section: 5
+:Manual group: backup
+
+
+DESCRIPTION
+===========
+
+TKLBAM has a nifty, general purpose hooks mechanism you can use to trigger
+useful actions on backup and restore.
+
+Things you might want to use hooks for:
+
+- Cleaning up temporary files
+- Stopping/starting services to increase data consistency
+- Encoding/decoding data from non-supported databases
+- Using LVM to create/restore a snapshot of a fast changing volume
+
+Hooks are located at /etc/tklbam/hooks.d
+
+Only executable hooks are executed. To enable a hook::
+
+    chmod +x /etc/tklbam/hooks.d/example
+
+Outline of hook invocation
+==========================
+
+Tip: try enabling the example hook and examine the backup or restore console
+output to see where the hook is executed.
+
+Outline of hook invocation in backup process::
+
+    "pre" hook
+    tklbam creates "extras" (backup metadata)
+    "inspect" hook: current working directory is /TKLBAM
+    tklbam runs duplicity to create/update backup archives
+    "post" hook
+
+Outline of hook invocation in restore process::
+
+    "pre" hook
+    tklbam runs duplicity to get extras (backup metadata) + overlay
+    "inspect" hook: current working directory is /tmp/<random-archive-path>/TKLBAM
+    tklbam applies restore to system
+    "post" hook
+
+Example hook
+============
+
+:: 
+
+    #!/bin/bash -e
+    # This is a disabled hook example. 
+    # To enable, make it executable: chmod +x /etc/tklbam/hooks.d/example
+
+    # hooks are always called with two arguments
+    op=$1
+    state=$2
+
+    if [ "$op" = "restore" ]; then
+        echo -n "A restore operation called this hook "
+    elif [ "$op" = "backup" ]; then
+        echo -n "A backup operation called this hook "
+    fi
+
+    if [ "$state" = "pre" ]; then
+        echo "BEFORE $op started"
+    elif [ "$state" = "inspect"]; then
+
+        if [ "$op" = "restore" ]; then
+            echo -n "Inspect hook runs after duplicity downloaded backup archive. extras path = $(pwd)"
+        elif [ "$op" = "backup" ]; then
+            echo -n "Inspect hook runs before duplicity uploads backup archive. extras path = $(pwd)"
+        fi
+
+    elif [ "$state" = "post" ]; then
+        echo "AFTER $op finished"
+    fi
+
+    # `false` returns a non-zero exitcode
+    # Uncomment the next line to raise an error
+
+    #false
+
+Default hooks
+=============
+
+- /etc/tklbam/hooks.d/fixclock: activated by default, this hooks uses ntpdate
+  to sync the clock, to prevent duplicity from ignoring backup archives "from
+  the future".
+
+- /etc/tklbam/hooks.d/example: disabled by default. When enabled this hook
+  prints out "debugging" messages showing where the hook is being executed.
+  This is designed to illustrate how tklbam hooks work.

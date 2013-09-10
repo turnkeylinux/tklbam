@@ -1,6 +1,6 @@
 #!/usr/bin/python
 #
-# Copyright (c) 2010-2012 Liraz Siri <liraz@turnkeylinux.org>
+# Copyright (c) 2010-2013 Liraz Siri <liraz@turnkeylinux.org>
 #
 # This file is part of TKLBAM (TurnKey Linux BAckup and Migration).
 #
@@ -18,13 +18,18 @@ Arguments:
     Default overrides read from $CONF_OVERRIDES
 
 Options:
+    --dump=path/to/extract/        Dump a raw backup extract to path
+                                   Tip: tklbam-restore path/to/raw/extract/
+
+    --raw-upload=PATH              Use Duplicity to upload raw path contents to --address
+
+    --address=TARGET_URL           manual backup target URL
+                                   default: S3 storage bucket automatically configured via Hub
+
     --resume                       Resume aborted backup session
     --disable-resume               Disable implicit --resume when rerunning an aborted backup
 
-    --address=TARGET_URL           manual backup target URL
-                                   default: automatically configured via Hub
-
-    -s --simulate                  Do a dry run simulation of the backup.
+    --simulate                     Do a dry run simulation of the backup.
 
     -q --quiet                     Be less verbose
     --logfile=PATH                 Path of file to log to
@@ -72,6 +77,7 @@ Configuration file format ($CONF_PATH):
 
 """
 
+import os
 from os.path import *
 
 import sys
@@ -85,6 +91,8 @@ from pidlock import PidLock
 
 import hub
 import backup
+import duplicity
+
 import hooks
 from registry import registry
 from conf import Conf
@@ -132,8 +140,10 @@ def get_server_id():
 
 def main():
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], 'qsh',
+        opts, args = getopt.gnu_getopt(sys.argv[1:], 'qh',
                                        ['help',
+                                        'dump=',
+                                        'raw-upload=',
                                         'skip-files', 'skip-database', 'skip-packages',
                                         'debug',
                                         'resume', 'disable-resume',
@@ -144,6 +154,11 @@ def main():
     except getopt.GetoptError, e:
         usage(e)
 
+    raw_upload_path = None
+    dump_path = None
+
+    opt_verbose = True
+    opt_simulate = False
     opt_debug = False
     opt_resume = None
     opt_disable_resume = False
@@ -153,10 +168,32 @@ def main():
     conf.secretfile = registry.path.secret
 
     for opt, val in opts:
-        if opt in ('-s', '--simulate'):
-            conf.simulate = True
+        if opt == '--dump':
+            dump_path = val
 
-        if opt == '--resume':
+            if exists(dump_path):
+                if not isdir(dump_path):
+                    fatal("--dump=%s is not a directory" % dump_path)
+
+                if os.listdir(dump_path) != []:
+                    fatal("--dump=%s is not an empty directory" % dump_path)
+                
+            else:
+                os.mkdir(dump_path)
+
+            opt_disable_resume = True
+            opt_verbose = False
+
+        elif opt == '--raw-upload':
+            if not isdir(val):
+                fatal("%s=%s is not a directory" % (opt, val))
+
+            raw_upload_path = val
+
+        elif opt == '--simulate':
+            opt_simulate = True
+
+        elif opt == '--resume':
             opt_resume = True
 
         elif opt == '--disable-resume':
@@ -166,7 +203,7 @@ def main():
             conf.force_profile = val
 
         elif opt in ('-q', '--quiet'):
-            conf.verbose = False
+            opt_verbose = False
 
         elif opt == '--secretfile':
             if not exists(val):
@@ -209,7 +246,7 @@ def main():
 
     if opt_resume:
         # explicit resume
-        if conf.simulate:
+        if opt_simulate:
             fatal("--resume and --simulate incompatible: you can only resume real backups")
 
         if opt_disable_resume:
@@ -218,8 +255,14 @@ def main():
         if registry.backup_resume_conf is None:
             fatal("no previous backup session to resume from")
 
-    if conf.simulate and registry.backup_resume_conf and not opt_disable_resume:
+    if opt_simulate and registry.backup_resume_conf and not opt_disable_resume:
         fatal("--simulate will destroy your aborted backup session. To force use --disable-resume")
+
+    if opt_simulate and dump_path:
+        fatal("--simulate and --dump are incompatible")
+
+    if raw_upload_path and dump_path:
+        fatal("--raw-upload and --dump are incompatible")
 
     lock = PidLock("/var/run/tklbam-backup.pid", nonblock=True)
     try:
@@ -231,23 +274,25 @@ def main():
         warn("s3-parallel-uploads > volsize / 5 (minimum upload chunk is 5MB)")
 
     hb = hub.Backups(registry.sub_apikey)
-    try:
-        registry.update_profile(hb, conf.force_profile)
-    except registry.CachedProfile, e:
-        warn(str(e) + "\n")
-    except registry.ProfileNotFound, e:
-        print >> sys.stderr, "TurnKey Hub Error: %s" % str(e)
-        if not conf.force_profile:
-            # be extra nice to people who aren't using --force-profile
-            print """
-This probably means that TKLBAM doesn't yet fully support your system.
-If you're feeling adventurous you can force another profile with the
---force-profile option. Sorry about that."""
 
-        sys.exit(1)
+    if not raw_upload_path:
+        try:
+            registry.update_profile(hb, conf.force_profile)
+        except registry.CachedProfile, e:
+            warn(e)
+        except registry.ProfileNotFound, e:
+            print >> sys.stderr, "TurnKey Hub Error: %s" % str(e)
+            if not conf.force_profile:
+                # be extra nice to people who aren't using --force-profile
+                print """
+    This probably means that TKLBAM doesn't yet fully support your system.
+    If you're feeling adventurous you can force another profile with the
+    --force-profile option. Sorry about that."""
+
+            sys.exit(1)
 
     credentials = None
-    if not conf.address:
+    if not conf.address and not dump_path:
         try:
             registry.credentials = hb.get_credentials()
         except hb.Error, e:
@@ -260,7 +305,7 @@ If you're feeling adventurous you can force another profile with the
             if not registry.credentials:
                 pass
 
-            warn(e)
+            warn("using cached backup credentials: " + e.description)
 
         credentials = registry.credentials
 
@@ -278,7 +323,7 @@ If you're feeling adventurous you can force another profile with the
                     warn("old backup record deleted, creating new ... ")
                     registry.hbr = None
                 else:
-                    warn(e)
+                    warn("using cached backup record: " + str(e))
 
         if not registry.hbr:
             registry.hbr = hb.new_backup_record(registry.key,
@@ -291,7 +336,7 @@ If you're feeling adventurous you can force another profile with the
         conf = registry.backup_resume_conf
     else:
         # implicit resume
-        if not conf.simulate and not opt_disable_resume and registry.backup_resume_conf == conf:
+        if not opt_simulate and not opt_disable_resume and registry.backup_resume_conf == conf:
             print "Implicit --resume: Detected a rerun of an aborted backup session"
             print "                   You can disable this with the --disable-resume option"
             print
@@ -300,67 +345,108 @@ If you're feeling adventurous you can force another profile with the
             opt_resume = True
 
     registry.backup_resume_conf = None
-    if not conf.simulate:
+    if not opt_simulate:
         registry.backup_resume_conf = conf
 
-    is_hub_address = not conf.simulate and registry.hbr and registry.hbr.address == conf.address
     backup_id = registry.hbr.backup_id
 
-    trap = UnitedStdTrap(transparent=True)
-    try:
-        b = backup.Backup(conf, registry.profile, credentials, resume=opt_resume)
+    def backup_inprogress(bool):
+        is_hub_address = registry.hbr and registry.hbr.address == conf.address
+        if not opt_simulate and is_hub_address:
+            try:
+                hb.set_backup_inprogress(backup_id, bool)
+            except hb.Error, e:
+                warn("can't update Hub of backup %s: %s" % ("in progress" if bool else "completed", str(e)))
+
+    secret = file(conf.secretfile).readline().strip()
+    target = duplicity.Target(conf.address, credentials, secret)
+
+    def _print(s):
+        print "\n# " + str(s)
+
+    if opt_verbose:
+        _print("export PASSPHRASE=$(cat %s)" % conf.secretfile)
+
+    if raw_upload_path:
+        backup_inprogress(True)
+        uploader = duplicity.Uploader(opt_verbose, 
+                                      conf.volsize, 
+                                      conf.full_backup, 
+                                      conf.s3_parallel_uploads)
+        try:
+            uploader(raw_upload_path, target, force_cleanup=not opt_resume, dry_run=opt_simulate, debug=opt_debug, 
+                     log=(_print if opt_verbose else None))
+
+        finally:
+            backup_inprogress(False)
+
+    else:
+        trap = UnitedStdTrap(transparent=True)
         try:
             hooks.backup.pre()
-            if is_hub_address:
-                hb.set_backup_inprogress(backup_id, True)
+            b = backup.Backup(registry.profile, 
+                              conf.overrides, 
+                              conf.backup_skip_packages, conf.backup_skip_packages, conf.backup_skip_database, 
+                              opt_resume, opt_verbose)
 
-            if opt_debug:
+            backup_inprogress(True)
+            hooks.backup.inspect(b.extras_paths.path)
+
+            if opt_debug or dump_path:
                 trap.close()
                 trap = None
 
-            b.run(opt_debug)
+            if dump_path:
+                b.dump(dump_path)
+            else:
+                uploader = duplicity.Uploader(opt_verbose, 
+                                              conf.volsize, 
+                                              conf.full_backup, 
+                                              conf.s3_parallel_uploads,
+                                              includes=[ b.extras_paths.path ],
+                                              include_filelist=b.extras_paths.fsdelta_olist,
+                                              excludes=[ '**' ])
+
+                uploader('/', target, force_cleanup=not b.resume, dry_run=opt_simulate, debug=opt_debug, 
+                         log=(_print if opt_verbose else None))
+
             hooks.backup.post()
-        except:
-            if not conf.checkpoint_restore:
-                b.cleanup()
 
-            # not cleaning up
-            raise
+        finally:
+            backup_inprogress(False)
+            if trap:
+                sys.stdout.flush()
+                sys.stderr.flush()
 
-    finally:
-        if is_hub_address:
-            hb.set_backup_inprogress(backup_id, False)
+                trap.close()
+                if not opt_simulate:
+                    fh = file(opt_logfile, "a")
 
-        if trap:
-            sys.stdout.flush()
-            sys.stderr.flush()
-
-            trap.close()
-            if not conf.simulate:
-                fh = file(opt_logfile, "a")
-
-                timestamp = "### %s ###" % datetime.datetime.now().ctime()
-                print >> fh
-                print >> fh, "#" * len(timestamp)
-                print >> fh, timestamp
-                print >> fh, "#" * len(timestamp)
-                print >> fh
-
-                fh.write(trap.std.read())
-                if sys.exc_type:
+                    timestamp = "### %s ###" % datetime.datetime.now().ctime()
                     print >> fh
-                    traceback.print_exc(file=fh)
-                fh.close()
+                    print >> fh, "#" * len(timestamp)
+                    print >> fh, timestamp
+                    print >> fh, "#" * len(timestamp)
+                    print >> fh
 
-    if conf.simulate:
-        print "Completed --simulate: Leaving /TKLBAM intact so you can manually inspect it"
-    else:
-        b.cleanup()
+                    fh.write(trap.std.read())
+                    if sys.exc_type:
+                        print >> fh
+                        traceback.print_exc(file=fh)
+                    fh.close()
+
+        if opt_simulate:
+            print "Completed --simulate: Leaving /TKLBAM intact so you can manually inspect it"
+        else:
+            b.cleanup()
 
     registry.backup_resume_conf = None
 
-    if not conf.simulate:
-        hb.updated_backup(conf.address)
+    if not (opt_simulate or dump_path):
+        try:
+            hb.updated_backup(conf.address)
+        except:
+            pass
 
 if __name__=="__main__":
     main()

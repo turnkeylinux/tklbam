@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2010-2012 Liraz Siri <liraz@turnkeylinux.org>
+# Copyright (c) 2010-2013 Liraz Siri <liraz@turnkeylinux.org>
 #
 # This file is part of TKLBAM (TurnKey Linux BAckup and Migration).
 #
@@ -14,11 +14,13 @@ import os
 from os.path import *
 
 import re
-from paths import Paths
+from paths import Paths as _Paths
 
 import shutil
 from string import Template
 from subprocess import Popen, PIPE
+
+from dblimits import DBLimits
 
 class Error(Exception):
     pass
@@ -71,78 +73,47 @@ def mysql(**conf):
     return os.popen(command, "w")
 
 class MyFS:
-    class Limits:
-        def __init__(self, limits):
-            self.default = True
-            self.databases = []
-
-            d = {}
-            for limit in limits:
-                if limit[0] == '-':
-                    limit = limit[1:]
-                    sign = False
-                else:
-                    sign = True
-                    self.default = False
-
-                if '/' in limit:
-                    database, table = limit.split('/')
-                    d[(database, table)] = sign
-                else:
-                    database = limit
-                    d[database] = sign
-
-                self.databases.append(database)
-
-            self.d = d
-
-        def __contains__(self, val):
-            """Tests if <val> is within the defined Database limits
-
-            <val> can be:
-
-                1) a (database, table) tuple
-                2) a database string
-                3) database/table
-
-            """
-            if '/' in val:
-                database, table = val.split('/')
-                val = (database, table)
-
-            if isinstance(val, type(())):
-                database, table = val
-                if (database, table) in self.d:
-                    return self.d[(database, table)]
-
-                if database in self.d:
-                    return self.d[database]
-
-                return self.default
-
-            else:
-                database = val
-                if database in self.databases:
-                    return True
-
-                return self.default
-
-
     class Database:
-        class Paths(Paths):
-            files = [ 'init', 'tables' ]
+        class Paths(_Paths):
+            files = [ 'init', 'tables', 'views' ]
 
     class Table:
-        class Paths(Paths):
-            files = [ 'init', 'rows' ]
+        class Paths(_Paths):
+            files = [ 'init', 'triggers', 'rows' ]
+
+    class View:
+        class Paths(_Paths):
+            files = [ 'pre', 'post' ]
 
 def _match_name(sql):
-    sql = re.sub(r'/\*.*?\*/', "", sql)
-    name = sql.split(None, 3)[2]
-    return re.sub(r'`(.*)`', '\\1', name)
+    m = re.search(r'`(.*?)`', sql)
+    if m:
+        return m.group(1)
+    
+def _parse_statements(fh, delimiter=';'):
+    statement = ""
+    for line in fh.xreadlines():
+        if line.startswith("--"):
+            continue
+        if not line.strip():
+            continue
+        if line.startswith("DELIMITER"):
+            delimiter = line.split()[1]
+            continue
+        statement += line
+        if statement.strip().endswith(delimiter):
+            yield statement.strip()
+            statement = ""
 
 class MyFS_Writer(MyFS):
     class Database(MyFS.Database):
+        class View(MyFS.View):
+            def __init__(self, views_path, name):
+                paths = self.Paths(join(views_path, name))
+                if not exists(paths):
+                    os.makedirs(paths)
+                self.paths = paths
+
         def __init__(self, outdir, name, sql):
             self.paths = self.Paths(join(outdir, name))
             if not exists(self.paths):
@@ -151,6 +122,14 @@ class MyFS_Writer(MyFS):
             print >> file(self.paths.init, "w"), sql
             self.name = name
 
+        def add_view_pre(self, name, sql):
+            view = self.View(self.paths.views, name)
+            print >> file(view.paths.pre, "w"), sql
+
+        def add_view_post(self, name, sql):
+            view = self.View(self.paths.views, name)
+            print >> file(view.paths.post, "w"), sql
+
     class Table(MyFS.Table):
         def __init__(self, database, name, sql):
             self.paths = self.Paths(join(database.paths.tables, name))
@@ -158,32 +137,29 @@ class MyFS_Writer(MyFS):
                 os.makedirs(self.paths)
 
             print >> file(self.paths.init, "w"), sql
+            if exists(self.paths.triggers):
+                os.remove(self.paths.triggers)
 
             self.rows_fh = file(self.paths.rows, "w")
             self.name = name
             self.database = database
 
-        def addrow(self, sql):
+        def add_row(self, sql):
             print >> self.rows_fh, re.sub(r'.*?VALUES \((.*)\);', '\\1', sql)
 
+        def add_trigger(self, sql):
+            print >> file(self.paths.triggers, "a"), sql + "\n"
+
     def __init__(self, outdir, limits=[]):
-        self.limits = self.Limits(limits)
+        self.limits = DBLimits(limits)
         self.outdir = outdir
 
-    @staticmethod
-    def _parse(fh):
-        statement = ""
-        for line in fh.xreadlines():
-            statement += line
-            if statement.strip().endswith(";"):
-                yield statement.strip()
-                statement = ""
-
     def fromfile(self, fh, callback=None):
+        databases = {}
         database = None
         table = None
 
-        for statement in self._parse(fh):
+        for statement in _parse_statements(fh):
             if statement.startswith("CREATE DATABASE"):
                 database_name = _match_name(statement)
 
@@ -191,35 +167,61 @@ class MyFS_Writer(MyFS):
                     database = self.Database(self.outdir, database_name, statement)
                     if callback:
                         callback(database)
+
+                    databases[database.name] = database
                 else:
                     database = None
 
-            elif statement.startswith("CREATE TABLE"):
+            elif statement.startswith("USE "):
+                database_name = _match_name(statement)
+
+                database = databases.get(database_name)
                 if not database:
                     continue
 
+                table = None
+
+            if not database:
+                continue
+
+            m = re.match(r'^/\*!50001 CREATE.* VIEW `(.*?)`', statement, re.DOTALL)
+            if m:
+                view_name = m.group(1)
+                database.add_view_post(view_name, statement)
+
+            elif re.match(r'^/\*!50001 CREATE TABLE', statement):
+                view_name = _match_name(statement)
+                database.add_view_pre(view_name, statement)
+
+            elif statement.startswith("CREATE TABLE"):
                 table_name = _match_name(statement)
+
                 table = self.Table(database, table_name, statement)
                 if (database.name, table_name) in self.limits:
                     if callback:
                         callback(table)
+
+                    table_ignore_inserts = False
                 else:
-                    table = None
+                    table_ignore_inserts = True
 
-            elif statement.startswith("INSERT INTO"):
-                if not database or not table:
-                    continue
+            if not table:
+                continue
 
+            if re.match(r'^/\*!50003 CREATE.* TRIGGER ', statement, re.DOTALL):
+                table.add_trigger(statement)
+
+            elif not table_ignore_inserts and statement.startswith("INSERT INTO"):
                 assert _match_name(statement) == table.name
-                table.addrow(statement)
+                table.add_row(statement)
 
 def mysql2fs(fh, outdir, limits=[], callback=None):
     MyFS_Writer(outdir, limits).fromfile(fh, callback)
 
-def chunkify(elements, sep, maxlen):
+def chunkify(elements, delim, maxlen):
     chunk = ""
     for element in elements:
-        if len(chunk) + len(sep) + len(element) > maxlen:
+        if len(chunk) + len(delim) + len(element) > maxlen:
             if chunk:
                 yield chunk
 
@@ -237,7 +239,7 @@ def chunkify(elements, sep, maxlen):
             if not chunk:
                 chunk = element
             else:
-                chunk += sep + element
+                chunk += delim + element
 
     if chunk:
         yield chunk
@@ -246,6 +248,53 @@ class MyFS_Reader(MyFS):
     MAX_EXTENDED_INSERT = 1000000 - 1024
 
     class Database(MyFS.Database):
+        class View(MyFS.View):
+            TPL_PRE = """\
+DROP TABLE IF EXISTS `$name`;
+/*!50001 DROP VIEW IF EXISTS `$name`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+$sql
+SET character_set_client = @saved_cs_client;
+"""
+
+            TPL_POST = """\
+/*!50001 DROP TABLE IF EXISTS `$name`*/;
+/*!50001 DROP VIEW IF EXISTS `$name`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8 */;
+/*!50001 SET character_set_results     = utf8 */;
+$sql    
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+"""
+            class Error(Exception):
+                pass
+
+            def __init__(self, views_path, name):
+                paths = self.Paths(join(views_path, name))
+                if not isdir(paths):
+                    raise self.Error("not a directory '%s'" % paths)
+                self.paths = paths
+                self.name = name
+
+            def pre(self):
+                if not exists(self.paths.pre):
+                    return
+                sql = file(self.paths.pre).read().strip()
+                return Template(self.TPL_PRE).substitute(name=self.name, sql=sql)
+            pre = property(pre)
+
+            def post(self):
+                if not exists(self.paths.post):
+                    return
+                sql = file(self.paths.post).read().strip()
+                return Template(self.TPL_POST).substitute(name=self.name, sql=sql)
+            post = property(post)
+            
         def __init__(self, myfs, fname):
             self.paths = self.Paths(join(myfs.path, fname))
             self.sql_init = file(self.paths.init).read()
@@ -265,11 +314,24 @@ class MyFS_Reader(MyFS):
                     yield table
         tables = property(tables)
 
+        def views(self):
+            if not exists(self.paths.views):
+                return
+
+            for fname in os.listdir(self.paths.views):
+                try:
+                    view = self.View(self.paths.views, fname)
+                except self.View.Error:
+                    continue
+
+                yield view
+        views = property(views)
+
         def tofile(self, fh, callback=None):
             if callback:
                 callback(self)
 
-            if self.myfs.add_drop_database:
+            if self.myfs.add_drop_database and self.name != 'mysql':
                 print >> fh, "/*!40000 DROP DATABASE IF EXISTS `%s`*/;" % self.name
             print >> fh, self.sql_init,
             print >> fh, "USE `%s`;" % self.name
@@ -279,9 +341,12 @@ class MyFS_Reader(MyFS):
                     callback(table)
                 table.tofile(fh)
 
+            for view in self.views:
+                if view.pre:
+                    print >> fh, "\n" + view.pre
+
     class Table(MyFS.Table):
         TPL_CREATE = """\
-DROP TABLE IF EXISTS `$name`;
 SET @saved_cs_client     = @@character_set_client;
 SET character_set_client = utf8;
 $init
@@ -298,6 +363,25 @@ LOCK TABLES `$name` WRITE;
 UNLOCK TABLES;
 """
 
+        TPL_TRIGGERS_PRE = """\
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8 */ ;
+/*!50003 SET character_set_results = utf8 */ ;
+/*!50003 SET collation_connection  = utf8_general_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'STRICT_TRANS_TABLES,STRICT_ALL_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,TRADITIONAL,NO_AUTO_CREATE_USER' */ ;
+DELIMITER ;;
+"""
+        TPL_TRIGGERS_POST = """\
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+"""
+
         def __init__(self, database, fname):
             self.paths = self.Paths(join(database.paths.tables, fname))
             self.sql_init = file(self.paths.init).read()
@@ -311,51 +395,62 @@ UNLOCK TABLES;
             for line in file(self.paths.rows).xreadlines():
                 yield line.strip()
 
+        def has_rows(self):
+            if exists(self.paths.rows) and os.lstat(self.paths.rows).st_size != 0:
+                return True
+            return False
+
         rows = property(rows)
+
+        def triggers(self):
+            if not exists(self.paths.triggers):
+                return []
+
+            return list(_parse_statements(file(self.paths.triggers), ';;'))
+        triggers = property(triggers)
 
         def tofile(self, fh):
             skip_extended_insert = self.database.myfs.skip_extended_insert
             max_extended_insert = self.database.myfs.max_extended_insert
 
-            tpl = Template(self.TPL_CREATE)
-            print >> fh, tpl.substitute(name=self.name, init=self.sql_init)
+            is_log_table = (self.database.name == "mysql" and self.name in ('general_log', 'slow_log'))
 
-            index = None
+            if not is_log_table:
+                print >> fh, "DROP TABLE IF EXISTS `%s`;" % self.name
 
-            insert_prefix = "INSERT INTO `%s` VALUES " % self.name
-            insert_suffix = ";"
+            print >> fh, Template(self.TPL_CREATE).substitute(init=self.sql_init)
 
-            if skip_extended_insert:
-                for index, row in enumerate(self.rows):
-                    if index == 0:
-                        tpl = Template(self.TPL_INSERT_PRE)
-                        print >> fh, tpl.substitute(name=self.name)
+            if self.has_rows():
+                if not is_log_table:
+                    print >> fh, Template(self.TPL_INSERT_PRE).substitute(name=self.name).strip()
 
-                    print >> fh, insert_prefix + "(%s)" % row + insert_suffix
-                    
-            else:
-                rows = ( "(%s)" % row for row in self.rows )
-                row_chunks = chunkify(rows, ",\n", max_extended_insert - len(insert_prefix + insert_suffix))
+                insert_prefix = "INSERT INTO `%s` VALUES " % self.name
+                if skip_extended_insert:
+                    for  row in self.rows:
+                        print >> fh, insert_prefix + "(%s);" % row
+                        
+                else:
+                    rows = ( "(%s)" % row for row in self.rows )
+                    row_chunks = chunkify(rows, ",\n", max_extended_insert - len(insert_prefix + ";"))
 
-                for index, chunk in enumerate(row_chunks):
-                    if index == 0:
-                        tpl = Template(self.TPL_INSERT_PRE)
-                        print >> fh, tpl.substitute(name=self.name)
+                    index = None
+                    for index, chunk in enumerate(row_chunks):
 
-                    fh.write(insert_prefix + "\n")
-                    fh.write(chunk)
-                    fh.write(insert_suffix)
-                    fh.write("\n")
+                        fh.write(insert_prefix + "\n")
+                        fh.write(chunk + ";")
+                        fh.write("\n")
 
-                if index is not None:
-                    print >> fh, "/* CHUNKS: %d */" % index
+                    if index is not None:
+                        print >> fh, "\n-- CHUNKS: %d\n" % (index + 1)
 
-            if index is not None:
-                if not skip_extended_insert:
-                    print >> fh, ";"
+                if not is_log_table:
+                    print >> fh, Template(self.TPL_INSERT_POST).substitute(name=self.name)
 
-                tpl = Template(self.TPL_INSERT_POST)
-                print >> fh, tpl.substitute(name=self.name)
+            if self.triggers:
+                print >> fh, self.TPL_TRIGGERS_PRE.strip()
+                for trigger in self.triggers:
+                    print >> fh, trigger
+                print >> fh, self.TPL_TRIGGERS_POST
 
     PRE = """\
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
@@ -386,7 +481,7 @@ UNLOCK TABLES;
                  add_drop_database=False,
                  max_extended_insert=None):
         self.path = path
-        self.limits = self.Limits(limits)
+        self.limits = DBLimits(limits)
         self.skip_extended_insert = skip_extended_insert
         self.add_drop_database = add_drop_database
 
@@ -405,6 +500,15 @@ UNLOCK TABLES;
 
         for database in self:
             database.tofile(fh, callback)
+
+        for database in self:
+            views = list(database.views)
+            if not views:
+                continue
+
+            print >> fh, "USE `%s`;" % database.name
+            for view in views:
+                print >> fh, "\n" + view.post
 
         print >> fh, self.POST
 
@@ -447,7 +551,12 @@ def backup(myfs, etc, **kws):
     shutil.copy(PATH_DEBIAN_CNF, etc)
 
 def restore(myfs, etc, **kws):
-    fs2mysql(mysql(), myfs, **kws)
+    if kws.pop('simulate', False):
+        fh = file("/dev/null", "w")
+    else:
+        fh = mysql()
+
+    fs2mysql(fh, myfs, **kws)
 
     shutil.copy(join(etc, basename(PATH_DEBIAN_CNF)), PATH_DEBIAN_CNF)
     os.system("killall -HUP mysqld > /dev/null 2>&1")

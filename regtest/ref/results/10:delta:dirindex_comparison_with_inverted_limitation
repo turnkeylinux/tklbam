@@ -4,9 +4,9 @@ d	testdir/subdir/subsubdir/file3
 o	testdir/file-renamed	999	999
 o	testdir/link	0	0
 o	testdir/new/empty	0	0
-s	testdir/chgrp	999	777	0644
-s	testdir/chmod	999	999	0
-s	testdir/chown	777	999	0644
-s	testdir/emptydir-renamed	999	999	0755
-s	testdir/new	0	0	0755
-s	testdir/subdir/subsubdir	999	999	0750
+s	testdir/chgrp	999	777	0100644
+s	testdir/chmod	999	999	0100000
+s	testdir/chown	777	999	0100644
+s	testdir/emptydir-renamed	999	999	040755
+s	testdir/new	0	0	040755
+s	testdir/subdir/subsubdir	999	999	040750

@@ -1,6 +1,6 @@
 #!/usr/bin/python
 #
-# Copyright (c) 2010-2012 Liraz Siri <liraz@turnkeylinux.org>
+# Copyright (c) 2010-2013 Liraz Siri <liraz@turnkeylinux.org>
 #
 # This file is part of TKLBAM (TurnKey Linux BAckup and Migration).
 #
@@ -14,10 +14,16 @@ Restore a backup
 
 Arguments:
 
-    <hub-backup> := backup-id || unique label pattern
+    <hub-backup> := backup-id || unique label pattern || path/to/backup/extract
 
-Options:
-    --time=TIME                       Time to restore from
+Options / General:
+
+    --raw-download=PATH               Use Duplicity to download raw backup extract
+                                      without performing a system restore
+
+Options / Duplicity:
+
+    --time=TIME                       Time to restore Duplicity backup archive from
 
       TIME := YYYY-MM-DD | YYYY-MM-DDThh:mm:ss | <int>[mhDWMY]
 
@@ -32,15 +38,19 @@ Options:
               2M - 2 months ago
               1Y - 1 year ago
 
-    --limits="LIMIT-1 .. LIMIT-N"     Restore filesystem or database limitations
-
-      LIMIT := -?( /path/to/include/or/exclude | mysql:database[/table] )
-
     --keyfile=KEYFILE                 Path to escrow keyfile.
                                       default: Hub provides this automatically.
 
     --address=TARGET_URL              manual backup target URL (needs --keyfile)
-                                      default: Hub provides this automatically.
+                                      default: S3 storage bucket automatically provided by Hub
+
+Options / System restore:
+
+    --simulate                        Do a dry run simulation of the system restore
+
+    --limits="LIMIT-1 .. LIMIT-N"     Restore filesystem or database limitations
+
+      LIMIT := -?( /path/to/include/or/exclude | mysql:database[/table] )
 
     --skip-files                      Don't restore filesystem
     --skip-database                   Don't restore databases
@@ -58,7 +68,7 @@ Options:
 
     --debug                           Run $$SHELL after Duplicity
 
-Configurable options:
+Options / Configurable (see resolution order below):
 
     --restore-cache-size=SIZE         The maximum size of the download cache
                                       default: $CONF_RESTORE_CACHE_SIZE
@@ -87,9 +97,10 @@ import re
 
 from os.path import *
 from restore import Restore
+import duplicity
 
 from stdtrap import UnitedStdTrap
-from temp import TempFile
+from temp import TempDir
 import executil
 
 import hub
@@ -102,9 +113,9 @@ from registry import registry
 from version import get_turnkey_version, codename
 from utils import is_writeable
 
-import backup
 from conf import Conf
 
+import backup
 import traceback
 
 PATH_LOGFILE = "/var/log/tklbam-restore"
@@ -125,8 +136,8 @@ def do_compatibility_check(backup_turnkey_version, interactive=True):
     if local_codename == backup_codename:
         return
 
-    def fmt(codename):
-        return codename.upper().replace("-", " ")
+    def fmt(s):
+        return s.upper().replace("-", " ")
 
     backup_codename = fmt(backup_codename)
     local_codename = fmt(local_codename)
@@ -216,6 +227,10 @@ def usage(e=None):
     sys.exit(1)
 
 def main():
+    backup_extract_path = None
+    raw_download_path = None
+
+    opt_simulate = False
     opt_force = False
     opt_time = None
     opt_limits = []
@@ -231,10 +246,12 @@ def main():
     interactive = True
 
     opt_debug = False
-
+    
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'h',
-                                       ['limits=', 'address=', 'keyfile=',
+                                       ['raw-download=',
+                                        'simulate',
+                                        'limits=', 'address=', 'keyfile=',
                                         'logfile=',
                                         'restore-cache-size=', 'restore-cache-dir=',
                                         'force',
@@ -250,7 +267,21 @@ def main():
     conf = Conf()
 
     for opt, val in opts:
-        if opt == '--limits':
+        if opt == '--raw-download':
+            raw_download_path = val
+            if exists(raw_download_path):
+                if not isdir(raw_download_path):
+                    fatal("%s=%s is not a directory" % (opt, val))
+
+                if os.listdir(raw_download_path) != []:
+                    fatal("%s=%s is not an empty directory" % (opt, val))
+                
+            else:
+                os.mkdir(raw_download_path)
+
+        elif opt == '--simulate':
+            opt_simulate = True
+        elif opt == '--limits':
             opt_limits += re.split(r'\s+', val)
         elif opt == '--keyfile':
             if not isfile(val):
@@ -303,50 +334,74 @@ def main():
         if len(args) != 1:
             usage("incorrect number of arguments")
 
-        try:
-            hbr = get_backup_record(args[0])
-            credentials = hub.Backups(registry.sub_apikey).get_credentials()
-        except Error, e:
-            fatal(e)
+        arg = args[0]
+
+        if isdir(arg + backup.ExtrasPaths.PATH):
+            backup_extract_path = arg
+        else:
+            try:
+                hbr = get_backup_record(arg)
+                credentials = hub.Backups(registry.sub_apikey).get_credentials()
+            except Error, e:
+                fatal(e)
 
     else:
         if not opt_address:
             usage()
 
-    if opt_address:
+    if not backup_extract_path:
+        if opt_address:
+            if hbr:
+                fatal("a manual --address is incompatible with a <backup-id>")
+
+            if not opt_key:
+                fatal("a manual --address needs a --keyfile")
+
+        address = hbr.address if hbr else opt_address
+
         if hbr:
-            fatal("a manual --address is incompatible with a <backup-id>")
+            if not opt_force and not raw_download_path:
+                do_compatibility_check(hbr.turnkey_version, interactive)
 
-        if not opt_key:
-            fatal("a manual --address needs a --keyfile")
+            if opt_key and \
+               keypacket.fingerprint(hbr.key) != keypacket.fingerprint(opt_key):
 
-    address = hbr.address if hbr else opt_address
+                fatal("invalid escrow key for the selected backup")
 
-    if hbr:
-        if not opt_force:
-            do_compatibility_check(hbr.turnkey_version, interactive)
+        key = opt_key if opt_key else hbr.key
+        secret = decrypt_key(key, interactive)
 
-        if opt_key and \
-           keypacket.fingerprint(hbr.key) != keypacket.fingerprint(opt_key):
+        target = duplicity.Target(address, credentials, secret)
+        downloader = duplicity.Downloader(opt_time, restore_cache_size, restore_cache_dir)
 
-            fatal("invalid escrow key for the selected backup")
+        def get_backup_extract():
+            print "Restoring backup extract from duplicity archive at %s" % (address)
+            downloader(raw_download_path, target)
+            return raw_download_path
 
-    key = opt_key if opt_key else hbr.key
-    secret = decrypt_key(key, interactive)
+        if raw_download_path:
+            get_backup_extract()
+            return
+        else:
+            raw_download_path = TempDir(prefix="tklbam-")
+            os.chmod(raw_download_path, 0700)
 
     trap = UnitedStdTrap(usepty=True, transparent=(False if silent else True))
     log_fh = None
     try:
         try:
             hooks.restore.pre()
-            restore = Restore(address, secret, restore_cache_size, restore_cache_dir,
-                              opt_limits, opt_time, credentials=credentials, rollback=not no_rollback)
 
+            if not backup_extract_path:
+                backup_extract_path = get_backup_extract()
+
+            restore = Restore(backup_extract_path, limits=opt_limits, rollback=not no_rollback, simulate=opt_simulate)
+            hooks.restore.inspect(restore.extras.path)
             if opt_debug:
                 trap.close()
                 trap = None
 
-                os.chdir(restore.backup_archive)
+                os.chdir(backup_extract_path)
                 executil.system(os.environ.get("SHELL", "/bin/bash"))
                 os.chdir('/')
 

@@ -7,7 +7,7 @@ Backup the current system
 -------------------------
 
 :Author: Liraz Siri <liraz@turnkeylinux.org>
-:Date:   2012-08-10
+:Date:   2013-09-05
 :Manual section: 8
 :Manual group: backup
 
@@ -57,9 +57,20 @@ Database overrides
 
 ``<database-override>`` := -?mysql:database[/table]
 
-By default ALL databases are backed up. Adding a positive override
-changes the default behavior so that only the database or table
-specified in the override is included in the backup.
+``<database-override>`` := -?pgsql:database[/table]
+
+By default ALL databases and database tables are backed up. 
+
+Adding a positive override (e.g., mysql:mydatabase) changes the default
+behavior so that only the database or table specified in the override is
+included in the backup.
+
+Negative overrides exclude a database (e.g., -mysql:mydatabase) or table (e.g.,
+-mysql:mydatabase/mytable) from being included in the backup. 
+
+Excluding a table only excludes its data. The schema of an excluded table is
+still backed up, as it takes up a trivial amount of space and other tables or
+views may depend on it.
 
 You can mix positive overrides with negative overrides.
 
@@ -71,17 +82,25 @@ Examples::
     # only include drupal6 database
     mysql:drupal6
 
+    # only include mahara postgres database
+    pgsql:mahara
+
 OPTIONS
 =======
+
+--dump=DIR                Dump a raw backup extract to path.
+                          Tip: tklbam-restore path/to/raw/extract/
+
+--raw-upload=PATH         Use Duplicity to upload raw path contents to --address
+
+--address=TARGET_URL      manual backup target URL.
+                          Default: automatically configured via Hub
 
 --resume                  Resume aborted backup session
 
 --disable-resume          Disable implicit --resume when rerunning an aborted backup
 
---address=TARGET_URL      manual backup target URL.
-                          Default: automatically configured via Hub
-
---simulate, -s            Simulate operation. Don't actually backup.
+--simulate                Simulate operation. Don't actually backup.
                           Useful for inspecting /TKLBAM by hand.
 
 --quiet, -q               Be less verbose
@@ -141,4 +160,4 @@ FILES
 SEE ALSO
 ========
 
-``tklbam`` (8), ``tklbam-faq`` (7)
+``tklbam`` (8), ``tklbam-faq`` (7), ``tklbam-hooks`` (5)

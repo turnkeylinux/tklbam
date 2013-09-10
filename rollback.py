@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2010-2012 Liraz Siri <liraz@turnkeylinux.org>
+# Copyright (c) 2010-2013 Liraz Siri <liraz@turnkeylinux.org>
 #
 # This file is part of TKLBAM (TurnKey Linux BAckup and Migration).
 #
@@ -16,9 +16,11 @@ import stat
 import shutil
 
 from datetime import datetime
-from paths import Paths
+from paths import Paths as _Paths
 
 import mysql
+import pgsql
+
 from changes import Changes
 from dirindex import DirIndex
 from pkgman import Packages
@@ -33,10 +35,10 @@ class Rollback:
     Error = Error
 
     PATH = "/var/backups/tklbam-rollback"
-    class Paths(Paths):
+    class Paths(_Paths):
         files = [ 'etc', 'etc/mysql',
                   'fsdelta', 'dirindex', 'originals',
-                  'newpkgs', 'myfs' ]
+                  'newpkgs', 'myfs', 'pgfs' ]
 
     @classmethod
     def create(cls, path=PATH):
@@ -138,6 +140,9 @@ class Rollback:
             mysql.restore(self.paths.myfs, self.paths.etc.mysql,
                           add_drop_database=True)
 
+        if exists(self.paths.pgfs):
+            pgsql.restore(self.paths.pgfs)
+
     def rollback(self):
         exceptions = 0
         for method in (self.rollback_database, self.rollback_files, self.rollback_new_packages):
@@ -181,3 +186,9 @@ class Rollback:
             mysql.backup(self.paths.myfs, self.paths.etc.mysql)
         except mysql.Error:
             pass
+
+        try:
+            pgsql.backup(self.paths.pgfs)
+        except pgsql.Error:
+            pass
+

@@ -1,0 +1,56 @@
+==================
+v1.3 Release Notes
+==================
+
+* Database support
+
+  - PostgreSQL support (tested on Squeeze and Wheezy)
+  - MySQL support for views and triggers
+
+* Improved backup
+
+  - Added --raw-upload option
+  - Added --dump option (dumps backup extract to directory)
+  - Removed -s shorthand for --simulate
+
+* Improved restore
+
+  - Added --raw-download option
+  - Added --simulate option
+  - Reduced noise in output
+  - Support restoring backup extract
+
+* Hooks
+
+  - Added "inspect" state to hooks mechanism
+  - Added tklbam-hooks documentation
+
+* Updated and expanded (e.g., FAQ)
+
+* Bugfixes
+
+  - backup
+
+    - ignore Unix sockets
+    - didn't catch Hub API exceptions (e.g., unresolvable hostname)
+    - fixed fallback to cached values when Hub is unreachable
+    - register socket into fsdelta as a status path, not an overwrite
+    - chunkify repeats a chunk if the last element is larger than maxlen
+    - backup bugfix: --quiet shouldn't cancel --simulate
+    - backup pre hook should run before backup starts
+
+  - restore
+
+    - fix permissions and ownership for empty directories
+    - apply overlay non-destructively by copying rather than moving files
+    - fixed usage description for --time
+    - mysql doesn't like it when you drop the mysql database
+    - don't move files to rollback if they don't exist in the overlay
+    - fixed tklbam-restore usage regression: --l => --limits
+
+* Development
+
+  - Fixed regtest and made more robust, added README
+  - Major refactorings (code readability and scalability)
+  - removed HTML and manpages from docs/ (these are automatically generated files)
+

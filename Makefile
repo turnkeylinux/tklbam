@@ -24,10 +24,14 @@ dist:
 	tar jcvf $(PATH_DIST).tar.bz2 $(PATH_DIST)
 	rm -rf $(PATH_DIST)
 
+docs:
+	$(MAKE) -C docs
+
 help:
 	@echo '=== Targets:'
 	@echo 'install   [ prefix=path/to/usr ] # default: prefix=$(value prefix)'
 	@echo 'uninstall [ prefix=path/to/usr ]'
+	@echo 'docs'
 	@echo
 	@echo 'clean'
 
@@ -54,7 +58,7 @@ define with-py-executables
 	fi;
 endef
 
-install:
+install: docs
 	@echo
 	@echo \*\* CONFIG: prefix = $(prefix) \*\*
 	@echo 
@@ -79,6 +83,8 @@ uninstall:
 	  rm -f $(PATH_BIN)/$(call subcommand, $$module))
 
 clean:
+	$(MAKE) -C docs clean
+
 	rm -f {,*/}*.pyc {,*/}*.pyo
 
 	@emptydirs=$$(find -type d -empty); \
@@ -86,3 +92,5 @@ clean:
 		echo rmdir $$emptydirs; \
 		rmdir $$emptydirs; \
 	fi
+
+.PHONY: all debug dist docs help install uninstall clean
