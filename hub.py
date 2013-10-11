@@ -163,7 +163,7 @@ class Credentials(AttrDict):
 
 class Backups:
     API_URL = os.getenv('TKLBAM_APIURL', 'https://hub.turnkeylinux.org/api/backup/')
-    Error = APIError
+    Error = Error
 
     def __init__(self, subkey=None):
         if subkey is None:
