@@ -76,7 +76,10 @@ class Duplicity:
 
         if debug:
             import executil
-            executil.system(os.environ.get("SHELL", "/bin/bash"))
+            shell = os.environ.get("SHELL", "/bin/bash")
+            if shell == "/bin/bash":
+                shell += " --norc"
+            executil.system(shell)
 
         child = Popen(self.command)
         del os.environ['PASSPHRASE']
