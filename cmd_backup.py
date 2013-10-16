@@ -63,7 +63,7 @@ Configurable options:
     --skip-database                Don't backup databases
     --skip-packages                Don't backup new packages
 
-    --force-profile=PROFILE_ID     Force a specific backup profile
+    --force-profile=PROFILE_ID     Force backup profile (default: /etc/turnkey_version)
 
 Resolution order for configurable options:
 
@@ -284,10 +284,7 @@ def main():
             print >> sys.stderr, "TurnKey Hub Error: %s" % str(e)
             if not conf.force_profile:
                 # be extra nice to people who aren't using --force-profile
-                print """
-    This probably means that TKLBAM doesn't yet fully support your system.
-    If you're feeling adventurous you can force another profile with the
-    --force-profile option. Sorry about that."""
+                print "\n" + e.__doc__
 
             sys.exit(1)
 

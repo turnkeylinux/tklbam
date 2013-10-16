@@ -14,11 +14,12 @@ Initialization (start here)
 
 Arguments:
 
-    API-KEY    Cut and paste this from your Hub account's user profile.
+    API-KEY                        Cut and paste this from your Hub account's user profile.
 
 Options:
 
-    --force    Force re-initialization with new API-KEY.
+    --force                        Force re-initialization with new API-KEY.
+    --force-profile=PROFILE_ID     Force a specific backup profile (default: /etc/turnkey_version)
 
 """
 
@@ -27,6 +28,7 @@ import hub
 import keypacket
 
 from registry import registry
+from conf import Conf
 
 import os
 import base64
@@ -64,12 +66,14 @@ def usage(e=None):
 
 def main():
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], "h", ["help", "force"])
+        opts, args = getopt.gnu_getopt(sys.argv[1:], "h", ["help", "force", "force-profile="])
     except getopt.GetoptError, e:
         usage(e)
 
     apikey = None
     force = False
+
+    conf = Conf()
 
     for opt, val in opts:
         if opt in ('-h', '--help'):
@@ -77,6 +81,9 @@ def main():
 
         if opt == '--force':
             force = True
+
+        elif opt == '--force-profile':
+            conf.force_profile = val
 
     if args:
         if len(args) != 1:
@@ -113,13 +120,23 @@ def main():
     registry.secret = generate_secret()
     registry.key = keypacket.fmt(registry.secret, "")
 
+    hb = hub.Backups(sub_apikey)
     try:
-        credentials = hub.Backups(sub_apikey).get_credentials()
+        credentials = hb.get_credentials()
         registry.credentials = credentials
 
     except hub.NotSubscribedError, e:
         print >> sys.stderr, "Warning: " + str(e)
         print >> sys.stderr
+
+    try:
+        registry.update_profile(hb, conf.force_profile)
+    except registry.ProfileNotFound, e:
+        print >> sys.stderr, "TurnKey Hub Error: %s" % str(e)
+        if not conf.force_profile:
+            print "\n" + e.__doc__
+
+        sys.exit(1)
 
     print "Linked TKLBAM to your Hub account."
 

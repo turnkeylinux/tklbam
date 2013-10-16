@@ -32,7 +32,10 @@ class _Registry(object):
         pass
 
     class ProfileNotFound(Exception):
-        pass
+        """\
+This probably means that TKLBAM doesn't yet fully support your system.
+If you're feeling adventurous you can force another profile with the
+--force-profile option. Sorry about that."""
 
     DEFAULT_PATH = "/var/lib/tklbam"
 
