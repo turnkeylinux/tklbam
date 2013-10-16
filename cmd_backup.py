@@ -97,7 +97,7 @@ import hooks
 from registry import registry
 from conf import Conf
 
-from version import get_turnkey_version
+from version import Version
 from stdtrap import UnitedStdTrap
 
 from utils import is_writeable
@@ -324,7 +324,7 @@ def main():
 
         if not registry.hbr:
             registry.hbr = hb.new_backup_record(registry.key,
-                                                get_turnkey_version(),
+                                                str(Version.from_system()),
                                                 get_server_id())
 
         conf.address = registry.hbr.address

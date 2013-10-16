@@ -110,7 +110,7 @@ import hooks
 
 from registry import registry
 
-from version import get_turnkey_version, codename
+from version import Version
 from utils import is_writeable
 
 from conf import Conf
@@ -130,8 +130,8 @@ class ExitCode:
 
 def do_compatibility_check(backup_turnkey_version, interactive=True):
 
-    backup_codename = codename(backup_turnkey_version)
-    local_codename = codename(get_turnkey_version())
+    backup_codename = Version.from_string(backup_turnkey_version).codename
+    local_codename = Version.from_system().codename
 
     if local_codename == backup_codename:
         return

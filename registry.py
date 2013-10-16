@@ -12,6 +12,7 @@
 #
 
 import os
+import re
 from os.path import exists
 from paths import Paths
 import simplejson
@@ -22,7 +23,7 @@ import shutil
 from utils import AttrDict
 from hub import Credentials
 
-from version import get_turnkey_version
+from version import Version
 
 class UNDEFINED:
     pass
@@ -142,7 +143,7 @@ If you're feeling adventurous you can force another profile with the
             timestamp = os.stat(self.path.profile.stamp).st_mtime
             profile_id = self._file_str(self.path.profile.profile_id)
             if profile_id is None:
-                profile_id = get_turnkey_version()
+                profile_id = str(Version.from_system())
             return Profile(self.path.profile, profile_id, timestamp)
         else:
             profile_archive = val
@@ -175,7 +176,7 @@ If you're feeling adventurous you can force another profile with the
 
     backup_resume_conf = property(backup_resume_conf, backup_resume_conf)
 
-    def update_profile(self, hub_backups, profile_id=None):
+    def _update_profile(self, hub_backups, profile_id=None):
         """Get a new profile if we don't have a profile in the registry or the Hub
         has a newer profile for this appliance. If we can't contact the Hub raise
         an error if we don't already have profile."""
@@ -184,7 +185,7 @@ If you're feeling adventurous you can force another profile with the
             if self.profile:
                 profile_id = self.profile.profile_id
             else:
-                profile_id = get_turnkey_version()
+                profile_id = str(Version.from_system())
 
         if self.profile and self.profile.profile_id == profile_id:
             profile_timestamp = self.profile.timestamp
@@ -205,6 +206,34 @@ If you're feeling adventurous you can force another profile with the
                 raise
 
             raise self.CachedProfile("using cached profile because of a Hub error: " + desc)
+
+    def update_profile(self, hub_backups, profile_id=None):
+        try:
+            # look for exact match first
+            self._update_profile(hub_backups, profile_id)
+        except self.ProfileNotFound, first_exception:
+            completed_profile_id = _complete_profile_id(profile_id)
+            try:
+                self._update_profile(hub_backups, completed_profile_id)
+            except:
+                raise first_exception
+
+        print "Downloaded %s profile" % self.profile.profile_id
+
+def _complete_profile_id(partial):
+    if not re.match(r'^turnkey-', partial):
+        partial = "turnkey-" + partial
+
+    partial = Version.from_string(partial)
+    system = Version.from_system()
+
+    if partial.arch is None:
+        partial.arch = system.arch
+
+    if partial.release is None or system.release.startswith(partial.release):
+        partial.release = system.release
+
+    return str(partial)
 
 class Profile(str):
     def __new__(cls, path, profile_id, timestamp):

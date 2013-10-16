@@ -11,24 +11,51 @@
 import re
 import executil
 
+from utils import AttrDict
+
 class Error(Exception):
     pass
 
-def get_turnkey_version():
-    try:
-        return file("/etc/turnkey_version").readline().strip()
-    except:
-        pass
+class Version(AttrDict):
+    def __init__(self, codename, release=None, arch=None):
+        AttrDict.__init__(self)
+        self.codename = codename
+        self.release = release
+        self.arch = arch
 
-    try:
-        return executil.getoutput("turnkey-version")
-    except executil.ExecError:
-        return None
+    def __str__(self):
+        return "turnkey-%s-%s-%s" % (self.codename, self.release, self.arch)
 
-def codename(version):
-    m = re.match(r'turnkey-(.*?)-([\d\.]+|beta)', version)
-    if not m:
-        raise Error("can't parse codename from '%s'" % version)
+    @classmethod
+    def from_system(cls):
+        try:
+            system_version = file("/etc/turnkey_version").readline().strip()
+        except:
+            try:
+                system_version = executil.getoutput("turnkey-version")
+            except executil.ExecError:
+                return None
 
-    codename, release = m.groups()
-    return codename
+        return cls.from_string(system_version)
+
+    @classmethod
+    def from_string(cls, version):
+        if not version.startswith('turnkey-'):
+            raise Error("not a turnkey version '%s'" % version)
+
+        version = re.sub(r'^turnkey-', '', version)
+        
+        m = re.match(r'(.*?)-((?:[\d\.]+|beta).*)-(amd64|i386|x86)$', version)
+        if m:
+            name, release, arch = m.groups()
+            return cls(name, release, arch)
+
+        m = re.match(r'(.*?)-((?:[\d\.]+|beta).*?)-?$', version)
+        if m:
+            name, release = m.groups()
+            return cls(name, release)
+
+        m = re.match(r'(.*?)-?$', version)
+        if m:
+            name = m.group(1)
+            return cls(name)
