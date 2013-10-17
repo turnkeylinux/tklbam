@@ -26,6 +26,12 @@ class Version(AttrDict):
     def __str__(self):
         return "turnkey-%s-%s-%s" % (self.codename, self.release, self.arch)
 
+    def is_complete(self):
+        if self.codename and self.release and self.arch:
+            return True
+
+        return False
+
     @classmethod
     def from_system(cls):
         try:
