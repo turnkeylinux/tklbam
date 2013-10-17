@@ -76,6 +76,8 @@ Options / Configurable (see resolution order below):
     --restore-cache-dir=PATH          The path to the download cache directory
                                       default: $CONF_RESTORE_CACHE_DIR
 
+    --force-profile=PROFILE_ID        Force backup profile (default: /etc/turnkey_version)
+
 Resolution order for configurable options:
 
   1) command line (highest precedence)
@@ -208,6 +210,9 @@ def decrypt_key(key, interactive=True):
 
             print >> sys.stderr, "Incorrect passphrase, try again"
 
+def warn(e):
+    print >> sys.stderr, "warning: " + str(e)
+
 def fatal(e):
     print >> sys.stderr, "error: " + str(e)
     sys.exit(1)
@@ -251,7 +256,7 @@ def main():
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'h',
                                        ['raw-download=',
                                         'simulate',
-                                        'limits=', 'address=', 'keyfile=',
+                                        'limits=', 'address=', 'keyfile=', 'force-profile=',
                                         'logfile=',
                                         'restore-cache-size=', 'restore-cache-dir=',
                                         'force',
@@ -324,6 +329,9 @@ def main():
         elif opt == '--debug':
             opt_debug = True
 
+        elif opt == '--force-profile':
+            conf.force_profile = val
+
     restore_cache_size = conf.restore_cache_size
     restore_cache_dir = conf.restore_cache_dir
 
@@ -385,6 +393,18 @@ def main():
         else:
             raw_download_path = TempDir(prefix="tklbam-")
             os.chmod(raw_download_path, 0700)
+
+    try:
+        registry.update_profile(conf.force_profile)
+    except registry.CachedProfile, e:
+        warn(e)
+    except registry.ProfileNotFound, e:
+        print >> sys.stderr, "TurnKey Hub Error: %s" % str(e)
+        if not conf.force_profile:
+            # be extra nice to people who aren't using --force-profile
+            print "\n" + e.__doc__
+
+        sys.exit(1)
 
     trap = UnitedStdTrap(usepty=True, transparent=(False if silent else True))
     log_fh = None
