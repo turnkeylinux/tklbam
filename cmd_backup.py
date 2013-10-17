@@ -277,7 +277,7 @@ def main():
 
     if not raw_upload_path:
         try:
-            registry.update_profile(hb, conf.force_profile)
+            registry.update_profile(conf.force_profile)
         except registry.CachedProfile, e:
             warn(e)
         except registry.ProfileNotFound, e:

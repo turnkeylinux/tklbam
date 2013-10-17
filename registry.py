@@ -21,7 +21,7 @@ from datetime import datetime
 
 import shutil
 from utils import AttrDict
-from hub import Credentials
+import hub
 
 from version import Version
 
@@ -111,7 +111,7 @@ If you're feeling adventurous you can force another profile with the
 
         retval = self._file_dict(self.path.credentials, val)
         if retval:
-            return Credentials(retval)
+            return hub.Credentials(retval)
 
     credentials = property(credentials, credentials)
 
@@ -176,11 +176,12 @@ If you're feeling adventurous you can force another profile with the
 
     backup_resume_conf = property(backup_resume_conf, backup_resume_conf)
 
-    def _update_profile(self, hub_backups, profile_id=None):
+    def _update_profile(self, profile_id=None):
         """Get a new profile if we don't have a profile in the registry or the Hub
         has a newer profile for this appliance. If we can't contact the Hub raise
         an error if we don't already have profile."""
 
+        hub_backups = hub.Backups(self.sub_apikey)
         if not profile_id:
             if self.profile:
                 profile_id = self.profile.profile_id
@@ -207,14 +208,14 @@ If you're feeling adventurous you can force another profile with the
 
             raise self.CachedProfile("using cached profile because of a Hub error: " + desc)
 
-    def update_profile(self, hub_backups, profile_id=None):
+    def update_profile(self, profile_id=None):
         try:
             # look for exact match first
-            self._update_profile(hub_backups, profile_id)
+            self._update_profile(profile_id)
         except self.ProfileNotFound, first_exception:
             completed_profile_id = _complete_profile_id(profile_id)
             try:
-                self._update_profile(hub_backups, completed_profile_id)
+                self._update_profile(completed_profile_id)
             except:
                 raise first_exception
 

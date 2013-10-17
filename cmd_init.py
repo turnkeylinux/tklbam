@@ -72,6 +72,7 @@ def main():
 
     apikey = None
     force = False
+    force_profile = False
 
     conf = Conf()
 
@@ -83,6 +84,7 @@ def main():
             force = True
 
         elif opt == '--force-profile':
+            force_profile = True
             conf.force_profile = val
 
     if args:
@@ -91,54 +93,51 @@ def main():
 
         apikey = args[0]
 
-    if not force and registry.sub_apikey:
+    if force or not registry.sub_apikey:
+        if not apikey:
+            print "Copy paste the API-KEY from your Hub account's user profile"
+            print
+
+            while True:
+                apikey = raw_input("API-KEY: ").strip()
+                if apikey:
+                    break
+
+        if not is_valid_apikey(apikey):
+            fatal("'%s' is an invalid API-KEY" % apikey)
+
+        try:
+            sub_apikey = hub.Backups.get_sub_apikey(apikey)
+        except Exception, e:
+            fatal(e)
+
+        registry.sub_apikey = sub_apikey
+        registry.secret = generate_secret()
+        registry.key = keypacket.fmt(registry.secret, "")
+
+        hb = hub.Backups(sub_apikey)
+        try:
+            credentials = hb.get_credentials()
+            registry.credentials = credentials
+
+        except hub.NotSubscribedError, e:
+            print >> sys.stderr, "Warning: " + str(e)
+            print >> sys.stderr
+
+        print "Linked TKLBAM to your Hub account."
+
+    elif (not force_profile and registry.profile):
         fatal("already initialized")
 
-    if not apikey:
-        print "Copy paste the API-KEY from your Hub account's user profile"
-        print
+    if force_profile or not registry.profile:
+        try:
+            registry.update_profile(conf.force_profile)
+        except registry.ProfileNotFound, e:
+            print >> sys.stderr, "TurnKey Hub Error: %s" % str(e)
+            if not conf.force_profile:
+                print "\n" + e.__doc__
 
-        while True:
-            apikey = raw_input("API-KEY: ").strip()
-            if apikey:
-                break
-
-    if not is_valid_apikey(apikey):
-        fatal("'%s' is an invalid API-KEY" % apikey)
-
-    try:
-        sub_apikey = hub.Backups.get_sub_apikey(apikey)
-    except Exception, e:
-        fatal(e)
-
-    if force:
-        if os.path.exists(registry.path):
-            shutil.rmtree(registry.path)
-            os.mkdir(registry.path)
-
-    registry.sub_apikey = sub_apikey
-    registry.secret = generate_secret()
-    registry.key = keypacket.fmt(registry.secret, "")
-
-    hb = hub.Backups(sub_apikey)
-    try:
-        credentials = hb.get_credentials()
-        registry.credentials = credentials
-
-    except hub.NotSubscribedError, e:
-        print >> sys.stderr, "Warning: " + str(e)
-        print >> sys.stderr
-
-    try:
-        registry.update_profile(hb, conf.force_profile)
-    except registry.ProfileNotFound, e:
-        print >> sys.stderr, "TurnKey Hub Error: %s" % str(e)
-        if not conf.force_profile:
-            print "\n" + e.__doc__
-
-        sys.exit(1)
-
-    print "Linked TKLBAM to your Hub account."
+            sys.exit(1)
 
 if __name__=="__main__":
     main()
