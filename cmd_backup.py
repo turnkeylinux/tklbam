@@ -345,13 +345,11 @@ def main():
     if not opt_simulate:
         registry.backup_resume_conf = conf
 
-    backup_id = registry.hbr.backup_id
-
     def backup_inprogress(bool):
         is_hub_address = registry.hbr and registry.hbr.address == conf.address
         if not opt_simulate and is_hub_address:
             try:
-                hb.set_backup_inprogress(backup_id, bool)
+                hb.set_backup_inprogress(registry.hbr.backup_id, bool)
             except hb.Error, e:
                 warn("can't update Hub of backup %s: %s" % ("in progress" if bool else "completed", str(e)))
 
