@@ -552,11 +552,13 @@ def backup(myfs, etc, **kws):
 
 def restore(myfs, etc, **kws):
     if kws.pop('simulate', False):
-        fh = file("/dev/null", "w")
+        simulate = True
     else:
-        fh = mysql()
+        simulate = False
 
+    fh = file("/dev/null", "w") if simulate else mysql()
     fs2mysql(fh, myfs, **kws)
 
-    shutil.copy(join(etc, basename(PATH_DEBIAN_CNF)), PATH_DEBIAN_CNF)
-    os.system("killall -HUP mysqld > /dev/null 2>&1")
+    if not simulate:
+        shutil.copy(join(etc, basename(PATH_DEBIAN_CNF)), PATH_DEBIAN_CNF)
+        os.system("killall -HUP mysqld > /dev/null 2>&1")
