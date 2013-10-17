@@ -198,7 +198,7 @@ class Backups:
         attrs = {'turnkey_version': profile_id} # quick hack until we fix the Hub API
 
         response = self._api('GET', 'archive/timestamp/', attrs)
-        archive_timestamp = float(response['archive_timestamp'])
+        archive_timestamp = int(response['archive_timestamp'])
 
         if profile_timestamp and profile_timestamp >= archive_timestamp:
             return None

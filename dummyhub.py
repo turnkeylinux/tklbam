@@ -296,7 +296,7 @@ class Backups:
         if not archive:
             raise Error(404, 'BackupArchive.NotFound', 'Backup profile archive not found: ' + profile_id)
 
-        archive_timestamp = os.stat(archive).st_mtime
+        archive_timestamp = int(os.stat(archive).st_mtime)
         if profile_timestamp and profile_timestamp >= archive_timestamp:
             return None
 

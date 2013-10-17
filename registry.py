@@ -140,7 +140,7 @@ If you're feeling adventurous you can force another profile with the
             if not exists(self.path.profile.stamp):
                 return None
 
-            timestamp = os.stat(self.path.profile.stamp).st_mtime
+            timestamp = int(os.stat(self.path.profile.stamp).st_mtime)
             profile_id = self._file_str(self.path.profile.profile_id)
             if profile_id is None:
                 profile_id = str(Version.from_system())
@@ -198,6 +198,8 @@ If you're feeling adventurous you can force another profile with the
             new_profile = hub_backups.get_new_profile(profile_id, profile_timestamp)
             if new_profile:
                 self.profile = new_profile
+                print "Downloaded %s profile" % self.profile.profile_id
+
         except hub_backups.Error, e:
             errno, errname, desc = e.args
             if errname == "BackupArchive.NotFound":
@@ -218,8 +220,6 @@ If you're feeling adventurous you can force another profile with the
                 self._update_profile(completed_profile_id)
             except:
                 raise first_exception
-
-        print "Downloaded %s profile" % self.profile.profile_id
 
 def _complete_profile_id(partial):
     if not re.match(r'^turnkey-', partial):
