@@ -21,6 +21,7 @@ from string import Template
 from subprocess import Popen, PIPE
 
 from dblimits import DBLimits
+import executil
 
 class Error(Exception):
     pass
@@ -562,3 +563,41 @@ def restore(myfs, etc, **kws):
     if not simulate:
         shutil.copy(join(etc, basename(PATH_DEBIAN_CNF)), PATH_DEBIAN_CNF)
         os.system("killall -HUP mysqld > /dev/null 2>&1")
+
+    
+class MysqlService:
+    INIT_SCRIPT = "/etc/init.d/mysql"
+
+    @classmethod
+    def _init_script(cls, arg):
+        executil.getoutput(cls.INIT_SCRIPT, arg)
+
+    @classmethod
+    def start(cls):
+        cls._init_script("start")
+
+    @classmethod
+    def stop(cls):
+        cls._init_script("stop")
+
+    @classmethod
+    def reload(cls):
+        cls._init_script("reload")
+
+    @classmethod
+    def is_running(cls):
+        try:
+            cls._init_script("status")
+            return True
+
+        except executil.ExecError:
+            return False
+
+    @classmethod
+    def is_accessible(cls):
+        try:
+            executil.getoutput_popen("mysql --defaults-file=/etc/mysql/debian.cnf", "select 1")
+            return True
+
+        except executil.ExecError:
+            return False
