@@ -545,17 +545,29 @@ def backup(myfs, etc, **kws):
         <etc>       Directory where we save required MySQL etc configuration files (e.g., debian.cnf)
         """
 
-    mysqldump_fh = mysqldump()
+    if not MysqlService.is_running():
+        raise Error("MySQL service not running")
 
-    if not exists(myfs):
-        os.mkdir(myfs)
+    mna = None
+    if not MysqlService.is_accessible():
+        mna = MysqlNoAuth()
 
-    mysql2fs(mysqldump_fh, myfs, **kws)
+    try:
+        mysqldump_fh = mysqldump()
 
-    if not exists(etc):
-        os.mkdir(etc)
+        if not exists(myfs):
+            os.mkdir(myfs)
 
-    shutil.copy(PATH_DEBIAN_CNF, etc)
+        mysql2fs(mysqldump_fh, myfs, **kws)
+
+        if not exists(etc):
+            os.mkdir(etc)
+
+        shutil.copy(PATH_DEBIAN_CNF, etc)
+
+    finally:
+        if mna:
+            mna.stop()
 
 def restore(myfs, etc, **kws):
     if kws.pop('simulate', False):
@@ -563,13 +575,27 @@ def restore(myfs, etc, **kws):
     else:
         simulate = False
 
-    fh = file("/dev/null", "w") if simulate else mysql()
-    fs2mysql(fh, myfs, **kws)
+    mna = None
+    if simulate:
+        fh = file("/dev/null")
+    else:
+        if not MysqlService.is_running():
+            raise Error("MySQL service not running")
+            
+        if not MysqlService.is_accessible():
+            mna = MysqlNoAuth()
+
+        fh = mysql()
+
+    try:
+        fs2mysql(fh, myfs, **kws)
+    finally:
+        if mna:
+            mna.stop()
 
     if not simulate:
         shutil.copy(join(etc, basename(PATH_DEBIAN_CNF)), PATH_DEBIAN_CNF)
-        os.system("killall -HUP mysqld > /dev/null 2>&1")
-
+        MysqlService.reload()
     
 class MysqlService:
     INIT_SCRIPT = "/etc/init.d/mysql"
@@ -652,7 +678,7 @@ class MysqlService:
         except executil.ExecError:
             return False
 
-class MysqlRootAuth:
+class MysqlNoAuth:
     PATH_VARRUN = '/var/run/mysqld'
     COMMAND = "mysqld_safe --skip-grant-tables --skip-networking"
 
