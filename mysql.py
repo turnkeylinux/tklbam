@@ -11,8 +11,10 @@
 import sys
 
 import os
-import signal
 from os.path import *
+
+import signal
+import time
 
 import re
 from paths import Paths as _Paths
@@ -573,34 +575,62 @@ class MysqlService:
     class Error(Exception):
         pass
 
+    @staticmethod
+    def _pid_exists(pid):
+        try:
+            os.kill(pid, 0)
+            return True
+        except:
+            return False
+
     @classmethod
     def get_pid(cls):
-        """If not running returns None, if running returns pid"""
-        try:
-            executil.getoutput('mysqladmin -s ping')
-            return int(file(cls.PID_FILE).read().strip())
+        """Returns pid in pidfile if process is running. Otherwise returns None"""
+        if not exists(cls.PID_FILE):
+            return
 
-        except executil.ExecError:
-            return None
+        pid = int(file(cls.PID_FILE).read().strip())
+        if cls._pid_exists(pid):
+            return pid
 
     @classmethod
     def is_running(cls):
-        if cls.get_pid():
+        try:
+            executil.getoutput('mysqladmin -s ping')
             return True
-        else:
+        except executil.ExecError:
             return False
 
     @classmethod
     def start(cls):
-        executil.getoutput(cls.INIT_SCRIPT, "start")
+        if cls.is_running():
+            return
+
+        retries = 2
+        for i in range(retries):
+            try:
+                executil.getoutput(cls.INIT_SCRIPT, "start")
+                return
+            except executil.ExecError, e:
+                pass
+
+        raise e
 
     @classmethod
     def stop(cls):
+        if not cls.is_running():
+            return
+
         pid = cls.get_pid()
         if not pid:
             return
 
         os.kill(pid, signal.SIGTERM)
+        while True:
+            if not cls._pid_exists(pid):
+                break
+
+            time.sleep(1)
 
     @classmethod
     def reload(cls):
