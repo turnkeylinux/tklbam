@@ -11,6 +11,7 @@
 import sys
 
 import os
+import signal
 from os.path import *
 
 import re
@@ -567,31 +568,47 @@ def restore(myfs, etc, **kws):
     
 class MysqlService:
     INIT_SCRIPT = "/etc/init.d/mysql"
+    PID_FILE = '/var/run/mysqld/mysqld.pid'
+
+    class Error(Exception):
+        pass
 
     @classmethod
-    def _init_script(cls, arg):
-        executil.getoutput(cls.INIT_SCRIPT, arg)
+    def get_pid(cls):
+        """If not running returns None, if running returns pid"""
+        try:
+            executil.getoutput('mysqladmin -s ping')
+            return int(file(cls.PID_FILE).read().strip())
 
-    @classmethod
-    def start(cls):
-        cls._init_script("start")
-
-    @classmethod
-    def stop(cls):
-        cls._init_script("stop")
-
-    @classmethod
-    def reload(cls):
-        cls._init_script("reload")
+        except executil.ExecError:
+            return None
 
     @classmethod
     def is_running(cls):
-        try:
-            cls._init_script("status")
+        if cls.get_pid():
             return True
-
-        except executil.ExecError:
+        else:
             return False
+
+    @classmethod
+    def start(cls):
+        executil.getoutput(cls.INIT_SCRIPT, "start")
+
+    @classmethod
+    def stop(cls):
+        pid = cls.get_pid()
+        if not pid:
+            return
+
+        os.kill(pid, signal.SIGTERM)
+
+    @classmethod
+    def reload(cls):
+        pid = cls.get_pid()
+        if not pid:
+            raise cls.Error("can't reload, mysql not running")
+
+        os.kill(pid, signal.SIGHUP)
 
     @classmethod
     def is_accessible(cls):
@@ -601,3 +618,4 @@ class MysqlService:
 
         except executil.ExecError:
             return False
+
