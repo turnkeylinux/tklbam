@@ -26,6 +26,9 @@ from subprocess import Popen, PIPE
 from dblimits import DBLimits
 import executil
 
+import stat
+from command import Command
+
 class Error(Exception):
     pass
 
@@ -649,3 +652,60 @@ class MysqlService:
         except executil.ExecError:
             return False
 
+class MysqlRootAuth:
+    PATH_VARRUN = '/var/run/mysqld'
+    COMMAND = "mysqld_safe --skip-grant-tables --skip-networking"
+
+    def __init__(self):
+        self.stopped = False
+
+        self.command = None
+        self.was_running = None
+
+        if MysqlService.is_running():
+            MysqlService.stop()
+            was_running = True
+        else:
+            was_running = False
+
+        self.orig_varrun_mode = stat.S_IMODE(os.stat(self.PATH_VARRUN).st_mode)
+        os.chmod(self.PATH_VARRUN, 0750)
+
+        command = Command(self.COMMAND)
+
+        def cb():
+            if MysqlService.is_running():
+                continue_waiting = False
+            else:
+                continue_waiting = True
+
+            return continue_waiting
+
+        command.wait(timeout=10, callback=cb)
+        if not command.running or not MysqlService.is_running():
+            command.terminate()
+            if was_running:
+                MysqlService.start()
+
+            raise Error(("%s failed to start\n" % self.COMMAND) + command.output)
+
+        self.command = command
+        self.was_running = was_running
+
+    def stop(self):
+        if self.stopped:
+            return
+
+        self.stopped = True
+        if self.command:
+            os.kill(self.command.pid, signal.SIGINT)
+            self.command.wait()
+            self.command = None
+            
+        os.chmod(self.PATH_VARRUN, self.orig_varrun_mode)
+
+        if self.was_running:
+            MysqlService.start()
+
+    def __del__(self):
+        self.stop()
