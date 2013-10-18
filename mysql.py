@@ -589,6 +589,7 @@ def restore(myfs, etc, **kws):
 
     try:
         fs2mysql(fh, myfs, **kws)
+        fh.close()
     finally:
         if mna:
             mna.stop()
