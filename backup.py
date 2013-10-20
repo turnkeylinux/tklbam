@@ -210,12 +210,8 @@ class Backup:
         self.extras_paths = extras_paths
 
     def dump(self, path):
-
         def r(p):
             return join(path, p.lstrip('/'))
 
         if exists(self.extras_paths.fsdelta_olist):
             utils.apply_overlay('/', path, self.extras_paths.fsdelta_olist)
-
-    def cleanup(self):
-        _rmdir(self.extras_paths.path)

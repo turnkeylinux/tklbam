@@ -85,6 +85,8 @@ import getopt
 
 import time
 import datetime
+import shutil
+
 from string import Template
 
 from pidlock import PidLock
@@ -101,6 +103,7 @@ from version import Version
 from stdtrap import UnitedStdTrap
 
 from utils import is_writeable
+
 import traceback
 
 PATH_LOGFILE = "/var/log/tklbam-backup"
@@ -432,10 +435,10 @@ def main():
                     fh.close()
 
         if opt_simulate:
-            print "Completed --simulate: Leaving /TKLBAM intact so you can manually inspect it"
+            print "Completed --simulate: Leaving %s intact so you can manually inspect it" % b.extras_paths.path
         else:
             if not dump_path:
-                b.cleanup()
+                shutil.rmtree(b.extras_paths.path)
 
     registry.backup_resume_conf = None
 
