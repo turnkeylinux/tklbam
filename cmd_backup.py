@@ -381,7 +381,7 @@ def main():
             hooks.backup.pre()
             b = backup.Backup(registry.profile, 
                               conf.overrides, 
-                              conf.backup_skip_packages, conf.backup_skip_packages, conf.backup_skip_database, 
+                              conf.backup_skip_files, conf.backup_skip_packages, conf.backup_skip_database, 
                               opt_resume, opt_verbose)
 
             backup_inprogress(True)
