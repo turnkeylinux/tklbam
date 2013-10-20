@@ -116,6 +116,7 @@ class Backup:
     @classmethod
     def _create_extras(cls, extras, profile, conf):
         os.mkdir(extras.path)
+        os.chmod(extras.path, 0700)
 
         etc = str(extras.etc)
         os.mkdir(etc)
