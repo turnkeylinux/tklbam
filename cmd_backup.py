@@ -182,7 +182,6 @@ def main():
                 os.mkdir(dump_path)
 
             opt_disable_resume = True
-            opt_verbose = False
 
         elif opt == '--raw-upload':
             if not isdir(val):
@@ -359,7 +358,7 @@ def main():
     def _print(s):
         print "\n# " + str(s)
 
-    if opt_verbose:
+    if opt_verbose and not dump_path:
         _print("export PASSPHRASE=$(cat %s)" % conf.secretfile)
 
     if raw_upload_path:
@@ -382,7 +381,7 @@ def main():
             b = backup.Backup(registry.profile, 
                               conf.overrides, 
                               conf.backup_skip_files, conf.backup_skip_packages, conf.backup_skip_database, 
-                              opt_resume, opt_verbose)
+                              opt_resume, opt_verbose, dump_path if dump_path else "/")
 
             backup_inprogress(True)
             hooks.backup.inspect(b.extras_paths.path)
@@ -435,7 +434,8 @@ def main():
         if opt_simulate:
             print "Completed --simulate: Leaving /TKLBAM intact so you can manually inspect it"
         else:
-            b.cleanup()
+            if not dump_path:
+                b.cleanup()
 
     registry.backup_resume_conf = None
 

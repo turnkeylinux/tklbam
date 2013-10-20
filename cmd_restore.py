@@ -344,7 +344,7 @@ def main():
 
         arg = args[0]
 
-        if isdir(arg + backup.ExtrasPaths.PATH):
+        if isdir(join(arg, backup.ExtrasPaths.PATH)):
             backup_extract_path = arg
         else:
             try:

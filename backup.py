@@ -31,15 +31,15 @@ class ProfilePaths(Paths):
     files = [ 'dirindex', 'dirindex.conf', 'packages' ]
 
 class ExtrasPaths(Paths):
-    PATH = "/TKLBAM"
-    def __init__(self, path=None):
-        if path is None:
-            path = self.PATH
+    PATH = "TKLBAM"
+    def __init__(self, backup_root=None):
+        if backup_root is None:
+            backup_root = '/'
 
-        Paths.__init__(self, path)
+        Paths.__init__(self, join(backup_root, self.PATH))
 
-    def __new__(cls, path=None):
-        return str.__new__(cls, path)
+    def __new__(cls, root_path=None):
+        return str.__new__(cls, root_path)
 
     files = [ 'backup-conf', 'fsdelta', 'fsdelta-olist', 'newpkgs', 'pgfs', 'myfs', 'etc', 'etc/mysql' ]
 
@@ -143,7 +143,7 @@ class Backup:
                 pass
 
     def __init__(self, profile, overrides, 
-                 skip_files=False, skip_packages=False, skip_database=False, resume=False, verbose=True):
+                 skip_files=False, skip_packages=False, skip_database=False, resume=False, verbose=True, extras_root="/"):
 
         log = print_if(verbose)
 
@@ -151,7 +151,7 @@ class Backup:
             raise self.Error("can't backup without a profile")
 
         profile_paths = ProfilePaths(profile.path)
-        extras_paths = ExtrasPaths()
+        extras_paths = ExtrasPaths(extras_root)
 
         # decide whether we can allow resume=True
         # /TKLBAM has to exist and the backup configuration has to match
@@ -214,7 +214,6 @@ class Backup:
         def r(p):
             return join(path, p.lstrip('/'))
 
-        shutil.copytree(self.extras_paths.path, r(self.extras_paths.path))
         if exists(self.extras_paths.fsdelta_olist):
             utils.apply_overlay('/', path, self.extras_paths.fsdelta_olist)
 

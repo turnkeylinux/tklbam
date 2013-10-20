@@ -46,16 +46,15 @@ class Restore:
         return title + "\n" + c * len(title) + "\n"
 
     def __init__(self, backup_extract_path, limits=[], rollback=True, simulate=False):
-        extras_path = backup_extract_path + backup.ExtrasPaths.PATH
-        if not isdir(extras_path):
-            raise self.Error("illegal backup_extract_path: can't find '%s'" % extras_path)
+        self.extras = backup.ExtrasPaths(backup_extract_path)
+        if not isdir(self.extras.path):
+            raise self.Error("illegal backup_extract_path: can't find '%s'" % self.extras.path)
 
         if simulate:
             rollback = False
 
         self.simulate = simulate
         self.rollback = Rollback.create() if rollback else None
-        self.extras = backup.ExtrasPaths(extras_path)
         self.limits = conf.Limits(limits)
         self.backup_extract_path = backup_extract_path
 
