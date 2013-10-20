@@ -215,7 +215,8 @@ class Backup:
             return join(path, p.lstrip('/'))
 
         shutil.copytree(self.extras_paths.path, r(self.extras_paths.path))
-        utils.apply_overlay('/', path, self.extras_paths.fsdelta_olist)
+        if exists(self.extras_paths.fsdelta_olist):
+            utils.apply_overlay('/', path, self.extras_paths.fsdelta_olist)
 
     def cleanup(self):
         _rmdir(self.extras_paths.path)

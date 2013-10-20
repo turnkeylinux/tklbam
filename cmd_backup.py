@@ -399,7 +399,9 @@ def main():
                                               conf.full_backup, 
                                               conf.s3_parallel_uploads,
                                               includes=[ b.extras_paths.path ],
-                                              include_filelist=b.extras_paths.fsdelta_olist,
+                                              include_filelist=b.extras_paths.fsdelta_olist 
+                                                               if exists(b.extras_paths.fsdelta_olist) 
+                                                               else None,
                                               excludes=[ '**' ])
 
                 uploader('/', target, force_cleanup=not b.resume, dry_run=opt_simulate, debug=opt_debug, 
