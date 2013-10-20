@@ -189,7 +189,7 @@ class Restore:
 
         fsdelta_olist = self._get_fsdelta_olist(extras.fsdelta_olist, limits)
         if fsdelta_olist:
-            print "OVERLAY:\n"
+            print "FILES OVERLAY:\n"
             print "\n".join(fsdelta_olist)
 
             if not simulate:
