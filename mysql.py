@@ -577,7 +577,7 @@ def restore(myfs, etc, **kws):
 
     mna = None
     if simulate:
-        fh = file("/dev/null")
+        mysql_fh = file("/dev/null", "w")
     else:
         if not MysqlService.is_running():
             raise Error("MySQL service not running")
@@ -585,11 +585,11 @@ def restore(myfs, etc, **kws):
         if not MysqlService.is_accessible():
             mna = MysqlNoAuth()
 
-        fh = mysql()
+        mysql_fh = mysql()
 
     try:
-        fs2mysql(fh, myfs, **kws)
-        fh.close()
+        fs2mysql(mysql_fh, myfs, **kws)
+        mysql_fh.close()
     finally:
         if mna:
             mna.stop()
