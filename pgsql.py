@@ -143,3 +143,15 @@ def restore(path, limits=[], callback=None):
         fs2pgsql(path, limits, callback=callback)
     except Exception, e:
         raise Error("pgsql restore failed: " + str(e))
+
+class PgsqlService:
+    INIT_SCRIPT = "/etc/init.d/postgresql"
+
+    @classmethod
+    def is_running(cls):
+        try:
+            getoutput(cls.INIT_SCRIPT, "status")
+            return True
+        except:
+            return False
+

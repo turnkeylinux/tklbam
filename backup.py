@@ -189,13 +189,14 @@ class Backup:
                     self._log("\n" + _title("Serializing MySQL database to " + extras.myfs, '-'))
                     mysql.backup(extras.myfs, extras.etc.mysql,
                                  limits=conf.overrides.mydb, callback=mysql.cb_print()) if self.verbose else None
-                    self._log()
 
             except mysql.Error:
                 pass
 
             try:
-                pgsql.backup(extras.pgfs, conf.overrides.pgdb)
+                if pgsql.PgsqlService.is_running():
+                    self._log("\n" + _title("Serializing PgSQL databases to " + extras.pgfs, '-'))
+                    pgsql.backup(extras.pgfs, conf.overrides.pgdb, callback=pgsql.cb_print() if self.verbose else None)
             except pgsql.Error:
                 pass
 
