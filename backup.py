@@ -237,7 +237,7 @@ class Backup:
         # create or re-use /TKLBAM
         if not exists(extras_paths.path):
 
-            self._log(_title("Creating " + extras_paths.path))
+            self._log(_title("Creating %s (contains backup metadata and database dumps)" % extras_paths.path))
             self._log("  mkdir -p " + extras_paths.path)
 
             try:
