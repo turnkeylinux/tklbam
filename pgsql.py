@@ -140,6 +140,6 @@ def backup(outdir, limits=[], callback=None):
 
 def restore(path, limits=[], callback=None):
     try:
-        fs2pgsql(path, limits, callback=None)
+        fs2pgsql(path, limits, callback=callback)
     except Exception, e:
         raise Error("pgsql restore failed: " + str(e))

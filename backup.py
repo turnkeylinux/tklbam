@@ -10,10 +10,13 @@
 #
 
 import os
-from os.path import exists, join
+from os.path import exists, join, isdir
+
+import stat
+import pwd
+import grp
 
 import shutil
-import utils
 import simplejson
 
 from paths import Paths
@@ -25,7 +28,7 @@ from pkgman import Packages
 import mysql
 import pgsql
 
-from utils import AttrDict
+from utils import AttrDict, _title, apply_overlay
 
 class ProfilePaths(Paths):
     files = [ 'dirindex', 'dirindex.conf', 'packages' ]
@@ -57,11 +60,6 @@ def _fpaths(dpath):
 def _filter_deleted(files):
     return [ f for f in files if exists(f) ]
 
-def print_if(conditional):
-    def printer(s):
-        if conditional:
-            print s
-    return printer
 
 class BackupConf(AttrDict):
     def __init__(self, profile_id, overrides, skip_files, skip_packages, skip_database):
@@ -84,57 +82,114 @@ class BackupConf(AttrDict):
     def tofile(self, path):
         simplejson.dump(dict(self), file(path, "w"))
 
+def _username(uid):
+    try:
+        return pwd.getpwuid(uid).pw_name
+    except:
+        return str(uid)
+
+def _groupname(gid):
+    try:
+        return grp.getgrgid(gid).gr_name
+    except:
+        return str(gid)
+
 class Backup:
     class Error(Exception):
         pass
 
-    @staticmethod
-    def _write_new_packages(dest, base_packages):
+    def _write_new_packages(self, dest, base_packages):
         base_packages = Packages.fromfile(base_packages)
         current_packages = Packages()
 
-        fh = file(dest, "w")
         new_packages = list(current_packages - base_packages)
         new_packages.sort()
+
+        if new_packages:
+            self._log("# Save list of new packages\n")
+            self._log("  cat > %s << EOF " % dest)
+            self._log(" ".join(new_packages))
+            self._log("  EOF\n")
+
+        fh = file(dest, "w")
         for package in new_packages:
             print >> fh, package
+
         fh.close()
 
-    @staticmethod
-    def _write_whatchanged(dest, dest_olist, dirindex, dirindex_conf,
+    def _write_whatchanged(self, dest, dest_olist, dirindex, dirindex_conf,
                            overrides=[]):
         paths = read_paths(file(dirindex_conf))
         paths += overrides
 
         changes = whatchanged(dirindex, paths)
         changes.sort(lambda a,b: cmp(a.path, b.path))
-        olist = [ change.path for change in changes if change.OP == 'o' ]
 
         changes.tofile(dest)
+        olist = [ change.path for change in changes if change.OP == 'o' ]
         file(dest_olist, "w").writelines((path + "\n" for path in olist))
 
-    @classmethod
-    def _create_extras(cls, extras, profile, conf):
+        if self.verbose:
+            self._log("# Save list of filesystem changes to %s:\n" % dest)
+
+            actions = list(changes.deleted(optimized=False)) + list(changes.statfixes(optimized=False))
+            actions.sort(lambda a,b: cmp(a.args[0], b.args[0]))
+
+            umask = os.umask(0)
+            os.umask(umask)
+
+            for action in actions:
+                if action.func is os.chmod:
+                    path, mode = action.args
+                    default_mode = (0777 if isdir(path) else 0666) ^ umask
+                    if default_mode != stat.S_IMODE(mode):
+                        self._log("  " + str(action))
+                elif action.func is os.lchown:
+                    path, uid, gid = action.args
+                    if uid != 0 or gid != 0:
+                        self._log("  chown %s:%s %s" % (_username(uid), _groupname(gid), path))
+                else:
+                    self._log("  " + str(action))
+
+            self._log("\n# Save list of new files to %s:\n" % dest_olist)
+            for path in olist:
+                self._log("  " + path)
+
+    def _create_extras(self, extras, profile, conf):
         os.mkdir(extras.path)
         os.chmod(extras.path, 0700)
 
         etc = str(extras.etc)
-        os.mkdir(etc)
-        shutil.copy("/etc/passwd", etc)
-        shutil.copy("/etc/group", etc)
 
-        if not conf.skip_files:
-            cls._write_whatchanged(extras.fsdelta, extras.fsdelta_olist,
-                                   profile.dirindex, profile.dirindex_conf,
-                                   conf.overrides.fs)
+        os.mkdir(etc)
+        self._log("  mkdir " + etc)
+
+        shutil.copy("/etc/passwd", etc)
+        self._log("  cp /etc/passwd " + etc)
+
+        shutil.copy("/etc/group", etc)
+        self._log("  cp /etc/group " + etc)
+
+        if not conf.skip_packages or not conf.skip_files:
+            self._log("\n" + _title("Comparing current system state to the base state in the backup profile", '-'))
 
         if not conf.skip_packages:
-            cls._write_new_packages(extras.newpkgs, profile.packages)
+            self._write_new_packages(extras.newpkgs, profile.packages)
+
+        if not conf.skip_files:
+            self._write_whatchanged(extras.fsdelta, extras.fsdelta_olist,
+                                    profile.dirindex, profile.dirindex_conf,
+                                    conf.overrides.fs)
 
         if not conf.skip_database:
+
             try:
-                mysql.backup(extras.myfs, extras.etc.mysql,
-                             limits=conf.overrides.mydb)
+                if mysql.MysqlService.is_running():
+                    self._log("\n" + _title("Serializing MySQL database to " + extras.myfs, '-'))
+                    mysql.backup(extras.myfs, extras.etc.mysql,
+                                 limits=conf.overrides.mydb, callback=mysql.cb_print()) if self.verbose else None
+                    self._log()
+
             except mysql.Error:
                 pass
 
@@ -143,10 +198,14 @@ class Backup:
             except pgsql.Error:
                 pass
 
+    def _log(self, s=""):
+        if self.verbose:
+            print s
+
     def __init__(self, profile, overrides, 
                  skip_files=False, skip_packages=False, skip_database=False, resume=False, verbose=True, extras_root="/"):
 
-        log = print_if(verbose)
+        self.verbose = verbose
 
         if not profile:
             raise self.Error("can't backup without a profile")
@@ -170,13 +229,15 @@ class Backup:
         if not resume:
             _rmdir(extras_paths.path)
         else:
-            log("ATTEMPTING TO RESUME ABORTED BACKUP SESSION")
+            self._log("ATTEMPTING TO RESUME ABORTED BACKUP SESSION")
 
         self.resume = resume
 
         # create or re-use /TKLBAM
         if not exists(extras_paths.path):
-            log("CREATING " + extras_paths.path)
+
+            self._log(_title("Creating " + extras_paths.path))
+            self._log("  mkdir -p " + extras_paths.path)
 
             try:
                 self._create_extras(extras_paths, profile_paths, backup_conf)
@@ -206,7 +267,7 @@ class Backup:
             else:
                 size_fmt = "%.2f KB" % (float(size) / 1024)
 
-            log("FULL UNCOMPRESSED FOOTPRINT: %s in %d files" % (size_fmt, len(fpaths)))
+            self._log("\nUNCOMPRESSED BACKUP SIZE: %s in %d files" % (size_fmt, len(fpaths)))
 
         self.extras_paths = extras_paths
 
@@ -215,4 +276,4 @@ class Backup:
             return join(path, p.lstrip('/'))
 
         if exists(self.extras_paths.fsdelta_olist):
-            utils.apply_overlay('/', path, self.extras_paths.fsdelta_olist)
+            apply_overlay('/', path, self.extras_paths.fsdelta_olist)

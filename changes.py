@@ -177,20 +177,21 @@ class Changes(list):
     def tofile(self, f):
         file(f, "w").writelines((str(change) + "\n" for change in self))
 
-    def deleted(self):
+    def deleted(self, optimized=True):
         for change in self:
             if change.OP != 'd':
                 continue
 
-            if not lexists(change.path):
-                continue
+            if optimized:
+                if not lexists(change.path):
+                    continue
 
-            if not islink(change.path) and isdir(change.path):
-                continue
+                if not islink(change.path) and isdir(change.path):
+                    continue
 
             yield self.Action(os.remove, change.path)
 
-    def statfixes(self, uidmap={}, gidmap={}):
+    def statfixes(self, uidmap={}, gidmap={}, optimized=True):
         class TransparentMap(dict):
             def __getitem__(self, key):
                 if key in self:
@@ -201,14 +202,16 @@ class Changes(list):
         gidmap = TransparentMap(gidmap)
 
         for change in self:
-            if not lexists(change.path):
+
+            if not optimized or not lexists(change.path):
                 # backwards compat: old backups only stored IMODE in fsdelta, so we assume S_ISDIR
                 if change.OP == 's' and (stat.S_IMODE(change.mode) == change.mode or stat.S_ISDIR(change.mode)):
                     yield self.Action(mkdir, change.path)
                     yield self.Action(os.lchown, change.path, uidmap[change.uid], gidmap[change.gid])
                     yield self.Action(os.chmod, change.path, stat.S_IMODE(change.mode))
 
-                continue
+                if optimized:
+                    continue
 
             if change.OP == 'd':
                 continue
@@ -220,14 +223,17 @@ class Changes(list):
 
             st = os.lstat(change.path)
             if change.OP in ('s', 'o'):
-                if st.st_uid != uidmap[change.uid] or \
-                   st.st_gid != gidmap[change.gid]:
+                if not optimized or \
+                   (st.st_uid != uidmap[change.uid] or \
+                    st.st_gid != gidmap[change.gid]):
+
                     yield self.Action(os.lchown, change.path,
                                         uidmap[change.uid], gidmap[change.gid])
 
             if change.OP == 's':
-                if not islink(change.path) and \
-                   stat.S_IMODE(st.st_mode) != stat.S_IMODE(change.mode):
+                if not optimized or \
+                    (not islink(change.path) and \
+                     stat.S_IMODE(st.st_mode) != stat.S_IMODE(change.mode)):
                     yield self.Action(os.chmod, change.path, stat.S_IMODE(change.mode))
 
 def whatchanged(di_path, paths):

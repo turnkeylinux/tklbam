@@ -193,6 +193,8 @@ class Uploader(AttrDict):
             if not dry_run:
                 cleanup_command.run(target.secret, target.credentials)
 
+            log("\n")
+
         opts += [('volsize', self.volsize),
                  ('full-if-older-than', self.full_if_older_than),
                  ('gpg-options', '--cipher-algo=aes')]
@@ -221,5 +223,6 @@ class Uploader(AttrDict):
 
         backup_command = Duplicity(opts, *args)
 
-        log(backup_command)
+        log(str(backup_command))
         backup_command.run(target.secret, target.credentials, debug=debug)
+        log("\n")

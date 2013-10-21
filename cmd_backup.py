@@ -102,7 +102,7 @@ from conf import Conf
 from version import Version
 from stdtrap import UnitedStdTrap
 
-from utils import is_writeable
+from utils import is_writeable, _title
 
 import traceback
 
@@ -359,13 +359,16 @@ def main():
     target = duplicity.Target(conf.address, credentials, secret)
 
     def _print(s):
-        print "\n# " + str(s)
-
-    if opt_verbose and not dump_path:
-        _print("export PASSPHRASE=$(cat %s)" % conf.secretfile)
+        if opt_verbose:
+            if s == "\n":
+                print
+            else:
+                print "# " + str(s)
 
     if raw_upload_path:
         backup_inprogress(True)
+
+        _print("export PASSPHRASE=$(cat %s)" % conf.secretfile)
         uploader = duplicity.Uploader(opt_verbose, 
                                       conf.volsize, 
                                       conf.full_backup, 
@@ -396,6 +399,10 @@ def main():
             if dump_path:
                 b.dump(dump_path)
             else:
+                if opt_verbose:
+                    print "\n" + _title("Executing Duplicity")
+                    _print("export PASSPHRASE=$(cat %s)" % conf.secretfile)
+
                 uploader = duplicity.Uploader(opt_verbose, 
                                               conf.volsize, 
                                               conf.full_backup, 

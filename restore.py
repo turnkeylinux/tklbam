@@ -19,7 +19,7 @@ from pathmap import PathMap
 from pkgman import Installer
 from rollback import Rollback
 
-import utils
+from utils import _title, apply_overlay
 
 import backup
 import conf
@@ -40,10 +40,6 @@ class Restore:
     Error = Error
 
     PACKAGES_BLACKLIST = ['linux-*', 'vmware-tools*']
-
-    @staticmethod
-    def _title(title, c='='):
-        return title + "\n" + c * len(title) + "\n"
 
     def __init__(self, backup_extract_path, limits=[], rollback=True, simulate=False):
         self.extras = backup.ExtrasPaths(backup_extract_path)
@@ -67,7 +63,7 @@ class Restore:
 
         if exists(self.extras.myfs):
 
-            print "\n" + self._title("Restoring MySQL databases")
+            print "\n" + _title("Restoring MySQL databases")
 
             try:
                 mysql.restore(self.extras.myfs, self.extras.etc.mysql,
@@ -78,7 +74,7 @@ class Restore:
 
         if exists(self.extras.pgfs):
         
-            print "\n" + self._title("Restoring PgSQL databases")
+            print "\n" + _title("Restoring PgSQL databases")
 
             if self.simulate:
                 print "CAN't SIMULATE PGSQL RESTORE, SKIPPING"
@@ -96,10 +92,10 @@ class Restore:
         if not exists(newpkgs_file):
             return
 
-        print "\n" + self._title("Restoring new packages")
+        print "\n" + _title("Restoring new packages")
 
         # apt-get update, otherwise installer may skip everything
-        print self._title("apt-get update", '-')
+        print _title("apt-get update", '-')
         if not self.simulate:
             system("apt-get update")
 
@@ -108,7 +104,7 @@ class Restore:
 
         installer = Installer(packages, self.PACKAGES_BLACKLIST)
 
-        print "\n" + self._title("apt-get install", '-')
+        print "\n" + _title("apt-get install", '-')
 
         if installer.skipping:
             print "SKIPPING: " + " ".join(installer.skipping) + "\n"
@@ -154,7 +150,7 @@ class Restore:
             print >> tmp, fpath.lstrip('/')
         tmp.close()
 
-        utils.apply_overlay(src, dst, tmp.path)
+        apply_overlay(src, dst, tmp.path)
 
     def files(self):
         extras = self.extras
@@ -166,7 +162,7 @@ class Restore:
         rollback = self.rollback
         limits = self.limits.fs
 
-        print "\n" + self._title("Restoring filesystem")
+        print "\n" + _title("Restoring filesystem")
 
         passwd, group, uidmap, gidmap = self._userdb_merge(extras.etc, "/etc")
 

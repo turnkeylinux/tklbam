@@ -69,3 +69,7 @@ def apply_overlay(src, dst, olist_path):
                        (olist_path, executil.mkarg(dst)))
 
     os.chdir(orig_cwd)
+
+def _title(title, c='='):
+    return title + "\n" + c * len(title) + "\n"
+
