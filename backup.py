@@ -160,9 +160,10 @@ class Backup:
         os.chmod(extras.path, 0700)
 
         etc = str(extras.etc)
-
         os.mkdir(etc)
         self._log("  mkdir " + etc)
+
+        self._log("\n# needed to automatically detect and fix file ownership issues\n")
 
         shutil.copy("/etc/passwd", etc)
         self._log("  cp /etc/passwd " + etc)
