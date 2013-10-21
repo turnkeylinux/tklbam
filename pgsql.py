@@ -73,7 +73,7 @@ def restoredb(dbdump, dbname, tlimits=[]):
         for (table, sign) in tlimits:
             if sign:
                 command += " --table=" + table
-        command += " | " + su("psql")
+        command += " | " + su("cd $HOME; psql")
         system(command)
         
     finally:
