@@ -79,7 +79,9 @@ class Duplicity:
             shell = os.environ.get("SHELL", "/bin/bash")
             if shell == "/bin/bash":
                 shell += " --norc"
+
             executil.system(shell)
+            
 
         child = Popen(self.command)
         del os.environ['PASSPHRASE']
@@ -224,5 +226,15 @@ class Uploader(AttrDict):
         backup_command = Duplicity(opts, *args)
 
         log(str(backup_command))
+        if debug:
+            print """
+  The --debug option has dropped you into an interactive shell in which you can
+  explore the state of the system just before the above duplicity command is
+  run, and/or execute it manually.
+
+  For Duplicity usage info, options and storage backends, run "duplicity --help".
+  To exit from the shell and continue the backup run "exit 0".
+  To exit from the shell and abort the backup run "exit 1".
+"""
         backup_command.run(target.secret, target.credentials, debug=debug)
         log("\n")
