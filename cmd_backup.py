@@ -381,7 +381,7 @@ def main():
             backup_inprogress(False)
 
     else:
-        trap = UnitedStdTrap(transparent=True)
+        trap = UnitedStdTrap(usepty=True, transparent=True)
         try:
             hooks.backup.pre()
             b = backup.Backup(registry.profile, 
