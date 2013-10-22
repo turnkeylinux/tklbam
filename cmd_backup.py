@@ -381,7 +381,23 @@ def main():
             backup_inprogress(False)
 
     else:
-        trap = UnitedStdTrap(usepty=True, transparent=True)
+        if not (opt_simulate or opt_debug or dump_path):
+            log_fh = file(opt_logfile, "a")
+
+            timestamp = "### %s ###" % datetime.datetime.now().ctime()
+            print >> log_fh
+            print >> log_fh, "#" * len(timestamp)
+            print >> log_fh, timestamp
+            print >> log_fh, "#" * len(timestamp)
+            print >> log_fh
+        
+            log_fh.flush()
+
+            trap = UnitedStdTrap(usepty=True, transparent=True, tee=log_fh)
+
+        else:
+            trap = None
+
         try:
             hooks.backup.pre()
             b = backup.Backup(registry.profile, 
@@ -391,10 +407,6 @@ def main():
 
             backup_inprogress(True)
             hooks.backup.inspect(b.extras_paths.path)
-
-            if opt_debug or dump_path:
-                trap.close()
-                trap = None
 
             if dump_path:
                 b.dump(dump_path)
@@ -425,21 +437,12 @@ def main():
                 sys.stderr.flush()
 
                 trap.close()
-                if not opt_simulate:
-                    fh = file(opt_logfile, "a")
 
-                    timestamp = "### %s ###" % datetime.datetime.now().ctime()
-                    print >> fh
-                    print >> fh, "#" * len(timestamp)
-                    print >> fh, timestamp
-                    print >> fh, "#" * len(timestamp)
-                    print >> fh
+                if sys.exc_type:
+                    print >> log_fh
+                    traceback.print_exc(file=log_fh)
 
-                    fh.write(trap.std.read())
-                    if sys.exc_type:
-                        print >> fh
-                        traceback.print_exc(file=fh)
-                    fh.close()
+                log_fh.close()
 
         if opt_simulate:
             print "Completed --simulate: Leaving %s intact so you can manually inspect it" % b.extras_paths.path
