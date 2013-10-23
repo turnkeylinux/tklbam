@@ -31,8 +31,8 @@ Options:
 
     --simulate                     Do a dry run simulation of the backup.
 
-    -q --quiet                     Be less verbose
-    --logfile=PATH                 Path of file to log to
+    -q --quiet                     Be less verbose (only print summary backup statistics)
+    --logfile=PATH                 Path of file to log verbosely to
                                    default: $LOGFILE
 
     --debug                        Run $$SHELL before Duplicity
@@ -83,6 +83,7 @@ from os.path import *
 import sys
 import getopt
 
+import re
 import time
 import shutil
 
@@ -358,11 +359,10 @@ def main():
     target = duplicity.Target(conf.address, credentials, secret)
 
     def _print(s):
-        if opt_verbose:
-            if s == "\n":
-                print
-            else:
-                print "# " + str(s)
+        if s == "\n":
+            print
+        else:
+            print "# " + str(s)
 
     if raw_upload_path:
         backup_inprogress(True)
@@ -388,7 +388,7 @@ def main():
         
             log_fh.flush()
 
-            trap = UnitedStdTrap(usepty=True, transparent=True, tee=log_fh)
+            trap = UnitedStdTrap(usepty=True, transparent=opt_verbose, tee=log_fh)
 
         else:
             trap = None
@@ -398,7 +398,7 @@ def main():
             b = backup.Backup(registry.profile, 
                               conf.overrides, 
                               conf.backup_skip_files, conf.backup_skip_packages, conf.backup_skip_database, 
-                              opt_resume, opt_verbose, dump_path if dump_path else "/")
+                              opt_resume, True, dump_path if dump_path else "/")
 
             backup_inprogress(True)
             hooks.backup.inspect(b.extras_paths.path)
@@ -406,11 +406,10 @@ def main():
             if dump_path:
                 b.dump(dump_path)
             else:
-                if opt_verbose:
-                    print "\n" + fmt_title("Executing Duplicity to create or update encrypted, incremental backup archives")
-                    _print("export PASSPHRASE=$(cat %s)" % conf.secretfile)
+                print "\n" + fmt_title("Executing Duplicity to create or update encrypted, incremental backup archives")
+                _print("export PASSPHRASE=$(cat %s)" % conf.secretfile)
 
-                uploader = duplicity.Uploader(opt_verbose, 
+                uploader = duplicity.Uploader(True,
                                               conf.volsize, 
                                               conf.full_backup, 
                                               conf.s3_parallel_uploads,
@@ -421,7 +420,7 @@ def main():
                                               excludes=[ '**' ])
 
                 uploader('/', target, force_cleanup=not b.resume, dry_run=opt_simulate, debug=opt_debug, 
-                         log=(_print if opt_verbose else None))
+                         log=_print)
 
             hooks.backup.post()
 
@@ -446,6 +445,14 @@ def main():
         else:
             if not dump_path:
                 shutil.rmtree(b.extras_paths.path)
+
+    if not opt_verbose and trap:
+        # print only the summary
+        output = trap.std.read()
+        m = re.search(r'(^---+\[ Backup Statistics \]---+.*)', output, re.M | re.S)
+        if m:
+            stats = m.group(1)
+            print stats.strip()
 
     registry.backup_resume_conf = None
 
