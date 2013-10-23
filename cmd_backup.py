@@ -347,60 +347,55 @@ def main():
     if not opt_simulate:
         registry.backup_resume_conf = conf
 
+    secret = file(conf.secretfile).readline().strip()
+    target = duplicity.Target(conf.address, credentials, secret)
+
+    if not (opt_simulate or opt_debug or dump_path):
+        log_fh = file(opt_logfile, "a")
+
+        print >> log_fh
+        print >> log_fh, "\n" + fmt_timestamp()
+    
+        log_fh.flush()
+
+        trap = UnitedStdTrap(usepty=True, transparent=opt_verbose, tee=log_fh)
+
+    else:
+        trap = None
+
     def backup_inprogress(bool):
         is_hub_address = registry.hbr and registry.hbr.address == conf.address
-        if not opt_simulate and is_hub_address:
+        if is_hub_address and not (dump_path or opt_simulate):
             try:
                 hb.set_backup_inprogress(registry.hbr.backup_id, bool)
             except hb.Error, e:
                 warn("can't update Hub of backup %s: %s" % ("in progress" if bool else "completed", str(e)))
 
-    secret = file(conf.secretfile).readline().strip()
-    target = duplicity.Target(conf.address, credentials, secret)
-
-    def _print(s):
-        if s == "\n":
-            print
-        else:
-            print "# " + str(s)
-
-    if raw_upload_path:
+    try:
         backup_inprogress(True)
 
-        _print("export PASSPHRASE=$(cat %s)" % conf.secretfile)
-        uploader = duplicity.Uploader(opt_verbose, 
-                                      conf.volsize, 
-                                      conf.full_backup, 
-                                      conf.s3_parallel_uploads)
-        try:
+        def _print(s):
+            if s == "\n":
+                print
+            else:
+                print "# " + str(s)
+
+        if raw_upload_path:
+            _print("export PASSPHRASE=$(cat %s)" % conf.secretfile)
+            uploader = duplicity.Uploader(True,
+                                          conf.volsize, 
+                                          conf.full_backup, 
+                                          conf.s3_parallel_uploads)
             uploader(raw_upload_path, target, force_cleanup=not opt_resume, dry_run=opt_simulate, debug=opt_debug, 
-                     log=(_print if opt_verbose else None))
-
-        finally:
-            backup_inprogress(False)
-
-    else:
-        if not (opt_simulate or opt_debug or dump_path):
-            log_fh = file(opt_logfile, "a")
-
-            print >> log_fh
-            print >> log_fh, "\n" + fmt_timestamp()
-        
-            log_fh.flush()
-
-            trap = UnitedStdTrap(usepty=True, transparent=opt_verbose, tee=log_fh)
+                     log=_print)
 
         else:
-            trap = None
-
-        try:
             hooks.backup.pre()
             b = backup.Backup(registry.profile, 
                               conf.overrides, 
                               conf.backup_skip_files, conf.backup_skip_packages, conf.backup_skip_database, 
                               opt_resume, True, dump_path if dump_path else "/")
 
-            backup_inprogress(True)
             hooks.backup.inspect(b.extras_paths.path)
 
             if dump_path:
@@ -424,27 +419,27 @@ def main():
 
             hooks.backup.post()
 
-        except:
-            if trap:
-                print >> log_fh
-                traceback.print_exc(file=log_fh)
+            if opt_simulate:
+                print "Completed --simulate: Leaving %s intact so you can manually inspect it" % b.extras_paths.path
+            else:
+                if not dump_path:
+                    shutil.rmtree(b.extras_paths.path)
 
-            raise
+    except:
+        if trap:
+            print >> log_fh
+            traceback.print_exc(file=log_fh)
 
-        finally:
-            backup_inprogress(False)
-            if trap:
-                sys.stdout.flush()
-                sys.stderr.flush()
+        raise
 
-                trap.close()
-                log_fh.close()
+    finally:
+        backup_inprogress(False)
+        if trap:
+            sys.stdout.flush()
+            sys.stderr.flush()
 
-        if opt_simulate:
-            print "Completed --simulate: Leaving %s intact so you can manually inspect it" % b.extras_paths.path
-        else:
-            if not dump_path:
-                shutil.rmtree(b.extras_paths.path)
+            trap.close()
+            log_fh.close()
 
     if not opt_verbose and trap:
         # print only the summary
