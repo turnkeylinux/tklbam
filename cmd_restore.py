@@ -443,17 +443,19 @@ def main():
         print
         hooks.restore.post()
 
+    except:
+        if trap:
+            print >> log_fh
+            traceback.print_exc(file=log_fh)
+
+        raise
+
     finally:
         if trap:
             sys.stdout.flush()
             sys.stderr.flush()
 
             trap.close()
-
-            if sys.exc_type:
-                print >> log_fh
-                traceback.print_exc(file=log_fh)
-
             log_fh.close()
 
     print "We're done. You may want to reboot now to reload all service configurations."

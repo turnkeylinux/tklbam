@@ -425,6 +425,13 @@ def main():
 
             hooks.backup.post()
 
+        except:
+            if trap:
+                print >> log_fh
+                traceback.print_exc(file=log_fh)
+
+            raise
+
         finally:
             backup_inprogress(False)
             if trap:
@@ -432,11 +439,6 @@ def main():
                 sys.stderr.flush()
 
                 trap.close()
-
-                if sys.exc_type:
-                    print >> log_fh
-                    traceback.print_exc(file=log_fh)
-
                 log_fh.close()
 
         if opt_simulate:
