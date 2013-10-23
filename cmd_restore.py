@@ -237,16 +237,18 @@ def fatal(e):
     sys.exit(1)
 
 def usage(e=None):
-    if e:
-        print >> sys.stderr, "error: " + str(e)
+    from paged import stdout
 
-    print >> sys.stderr, "Syntax: %s [ -options ] [ <hub-backup> ]" % sys.argv[0]
+    if e:
+        print >> stdout, "error: " + str(e)
+
+    print >> stdout, "Syntax: %s [ -options ] [ <hub-backup> ]" % sys.argv[0]
 
     tpl = Template(__doc__.strip())
     conf = Conf()
-    print >> sys.stderr, tpl.substitute(CONF_PATH=conf.paths.conf,
-                                        CONF_RESTORE_CACHE_SIZE=conf.restore_cache_size,
-                                        CONF_RESTORE_CACHE_DIR=conf.restore_cache_dir)
+    print >> stdout, tpl.substitute(CONF_PATH=conf.paths.conf,
+                                    CONF_RESTORE_CACHE_SIZE=conf.restore_cache_size,
+                                    CONF_RESTORE_CACHE_DIR=conf.restore_cache_dir)
 
     sys.exit(1)
 
@@ -274,6 +276,7 @@ def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'h',
                                        ['raw-download=',
+                                        'help',
                                         'simulate',
                                         'limits=', 'address=', 'keyfile=', 'force-profile=',
                                         'logfile=',
@@ -291,7 +294,10 @@ def main():
     conf = Conf()
 
     for opt, val in opts:
-        if opt == '--raw-download':
+        if opt in ('-h', '--help'):
+            usage()
+
+        elif opt == '--raw-download':
             raw_download_path = val
             if exists(raw_download_path):
                 if not isdir(raw_download_path):
@@ -340,9 +346,6 @@ def main():
 
         elif opt == '--noninteractive':
             interactive = False
-
-        elif opt == '-h':
-            usage()
 
         elif opt == '--restore-cache-size':
             conf.restore_cache_size = val

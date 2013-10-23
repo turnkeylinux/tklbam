@@ -128,18 +128,20 @@ import traceback
 PATH_LOGFILE = "/var/log/tklbam-backup"
 
 def usage(e=None):
-    if e:
-        print >> sys.stderr, "error: " + str(e)
+    from paged import stdout
 
-    print >> sys.stderr, "Syntax: %s [ -options ] [ override ... ]" % sys.argv[0]
+    if e:
+        print >> stdout, "error: " + str(e)
+
+    print >> stdout, "Syntax: %s [ -options ] [ override ... ]" % sys.argv[0]
     tpl = Template(__doc__.strip())
     conf = Conf()
-    print >> sys.stderr, tpl.substitute(CONF_PATH=conf.paths.conf,
-                                        CONF_OVERRIDES=conf.paths.overrides,
-                                        CONF_VOLSIZE=conf.volsize,
-                                        CONF_FULL_BACKUP=conf.full_backup,
-                                        CONF_S3_PARALLEL_UPLOADS=conf.s3_parallel_uploads,
-                                        LOGFILE=PATH_LOGFILE)
+    print >> stdout, tpl.substitute(CONF_PATH=conf.paths.conf,
+                                    CONF_OVERRIDES=conf.paths.overrides,
+                                    CONF_VOLSIZE=conf.volsize,
+                                    CONF_FULL_BACKUP=conf.full_backup,
+                                    CONF_S3_PARALLEL_UPLOADS=conf.s3_parallel_uploads,
+                                    LOGFILE=PATH_LOGFILE)
     sys.exit(1)
 
 def warn(e):
