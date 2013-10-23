@@ -456,7 +456,7 @@ def main():
 
             log_fh.close()
 
-    print "We're done. You may want to reboot now to restart all services."
+    print "We're done. You may want to reboot now to reload all service configurations."
 
 if __name__=="__main__":
     main()
