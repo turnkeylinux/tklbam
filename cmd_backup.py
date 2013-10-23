@@ -84,7 +84,6 @@ import sys
 import getopt
 
 import time
-import datetime
 import shutil
 
 from string import Template
@@ -102,7 +101,7 @@ from conf import Conf
 from version import Version
 from stdtrap import UnitedStdTrap
 
-from utils import is_writeable, _title
+from utils import is_writeable, _title, timestamp
 
 import traceback
 
@@ -384,12 +383,8 @@ def main():
         if not (opt_simulate or opt_debug or dump_path):
             log_fh = file(opt_logfile, "a")
 
-            timestamp = "### %s ###" % datetime.datetime.now().ctime()
             print >> log_fh
-            print >> log_fh, "#" * len(timestamp)
-            print >> log_fh, timestamp
-            print >> log_fh, "#" * len(timestamp)
-            print >> log_fh
+            print >> log_fh, "\n" + timestamp()
         
             log_fh.flush()
 

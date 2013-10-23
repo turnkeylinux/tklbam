@@ -14,6 +14,9 @@ from os.path import *
 import executil
 import shutil
 import stat
+import datetime
+
+from StringIO import StringIO
 
 def remove_any(path):
     """Remove a path whether it is a file or a directory.
@@ -73,3 +76,14 @@ def apply_overlay(src, dst, olist_path):
 def _title(title, c='='):
     return title + "\n" + c * len(title) + "\n"
 
+
+def timestamp():
+
+    fh = StringIO()
+
+    s = "### %s ###" % datetime.datetime.now().ctime()
+    print >> fh, "#" * len(s)
+    print >> fh, s
+    print >> fh, "#" * len(s)
+
+    return fh.getvalue()
