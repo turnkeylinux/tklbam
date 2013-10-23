@@ -66,7 +66,7 @@ Options / System restore:
     --noninteractive                  Disable interactive user prompts
     --force                           Disable sanity checking
 
-    --debug                           Run $$SHELL after Duplicity
+    --debug                           Run interactive shell before Duplicity and before system restore
 
 Options / Configurable (see resolution order below):
 
@@ -113,7 +113,7 @@ import hooks
 from registry import registry
 
 from version import Version
-from utils import is_writeable, fmt_timestamp
+from utils import is_writeable, fmt_timestamp, fmt_title
 
 from conf import Conf
 
@@ -382,9 +382,12 @@ def main():
         target = duplicity.Target(address, credentials, secret)
         downloader = duplicity.Downloader(opt_time, restore_cache_size, restore_cache_dir)
 
+        def _print(s):
+            print s
+
         def get_backup_extract():
-            print "Restoring backup extract from duplicity archive at %s" % (address)
-            downloader(raw_download_path, target)
+            print fmt_title("Restoring backup extract from Duplicity archive at " + address)
+            downloader(raw_download_path, target, log=_print if not silent else None, debug=opt_debug)
             return raw_download_path
 
         if raw_download_path:
@@ -424,9 +427,20 @@ def main():
         if not backup_extract_path:
             backup_extract_path = get_backup_extract()
 
+        if not silent:
+            print fmt_title("Restoring system from backup extract at " + backup_extract_path)
+
         restore = Restore(backup_extract_path, limits=opt_limits, rollback=not no_rollback, simulate=opt_simulate)
         hooks.restore.inspect(restore.extras.path)
         if opt_debug:
+            print """\
+  The --debug option has (again) dropped you into an interactive shell so that
+  you can explore the state of the system just before restore. The current
+  working directory contains the backup extract.
+
+  To exit from the shell and continue the restore run "exit 0".
+  To exit from the shell and abort the restore run "exit 1".
+"""
             os.chdir(backup_extract_path)
             executil.system(os.environ.get("SHELL", "/bin/bash"))
             os.chdir('/')
@@ -458,7 +472,8 @@ def main():
             trap.close()
             log_fh.close()
 
-    print "We're done. You may want to reboot now to reload all service configurations."
+    if not silent:
+        print "We're done. You may want to reboot now to reload all service configurations."
 
 if __name__=="__main__":
     main()

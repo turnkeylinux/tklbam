@@ -75,6 +75,16 @@ class Duplicity:
         os.environ['PASSPHRASE'] = passphrase
 
         if debug:
+            print """
+  The --debug option has dropped you into an interactive shell in which you can
+  explore the state of the system just before the above duplicity command is
+  run, and/or execute it manually.
+
+  For Duplicity usage info, options and storage backends, run "duplicity --help".
+  To exit from the shell and continue running duplicity "exit 0".
+  To exit from the shell and abort this session "exit 1".
+"""
+
             import executil
             shell = os.environ.get("SHELL", "/bin/bash")
             if shell == "/bin/bash":
@@ -127,12 +137,17 @@ class Downloader(AttrDict):
         self.cache_size = cache_size
         self.cache_dir = cache_dir
 
-    def __call__(self, download_path, target):
+    def __call__(self, download_path, target, debug=False, log=None):
+        if log is None:
+            log = lambda s: None
+
         if self.time:
             opts = [("restore-time", self.time)]
         else:
             opts = []
 
+        log("### started squid background process: downloaded backup archives cached in " + self.cache_dir + "\n")
+            
         squid = Squid(self.cache_size, self.cache_dir)
         squid.start()
 
@@ -140,7 +155,11 @@ class Downloader(AttrDict):
         os.environ['http_proxy'] = squid.address
 
         _raise_rlimit(resource.RLIMIT_NOFILE, RLIMIT_NOFILE_MAX)
-        Duplicity(opts, '--s3-unencrypted-connection', target.address, download_path).run(target.secret, target.credentials)
+        command = Duplicity(opts, '--s3-unencrypted-connection', target.address, download_path)
+
+        log("# " + str(command))
+
+        command.run(target.secret, target.credentials, debug=debug)
 
         if orig_env:
             os.environ['http_proxy'] = orig_env
@@ -149,6 +168,7 @@ class Downloader(AttrDict):
 
         sys.stdout.flush()
 
+        log("\n### stopping squid: download complete\n")
         squid.stop()
 
 class Uploader(AttrDict):
@@ -226,15 +246,5 @@ class Uploader(AttrDict):
         backup_command = Duplicity(opts, *args)
 
         log(str(backup_command))
-        if debug:
-            print """
-  The --debug option has dropped you into an interactive shell in which you can
-  explore the state of the system just before the above duplicity command is
-  run, and/or execute it manually.
-
-  For Duplicity usage info, options and storage backends, run "duplicity --help".
-  To exit from the shell and continue the backup run "exit 0".
-  To exit from the shell and abort the backup run "exit 1".
-"""
         backup_command.run(target.secret, target.credentials, debug=debug)
         log("\n")
