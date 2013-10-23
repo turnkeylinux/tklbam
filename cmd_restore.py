@@ -113,7 +113,7 @@ import hooks
 from registry import registry
 
 from version import Version
-from utils import is_writeable
+from utils import is_writeable, fmt_timestamp
 
 from conf import Conf
 
@@ -406,53 +406,55 @@ def main():
 
         sys.exit(1)
 
-    trap = UnitedStdTrap(usepty=True, transparent=(False if silent else True))
-    log_fh = None
+    if not (opt_simulate or opt_debug):
+        log_fh = file(opt_logfile, "a")
+
+        print >> log_fh
+        print >> log_fh, "\n" + fmt_timestamp()
+    
+        log_fh.flush()
+
+        trap = UnitedStdTrap(usepty=True, transparent=(False if silent else True), tee=log_fh)
+    else:
+        trap = None
+
     try:
-        try:
-            hooks.restore.pre()
+        hooks.restore.pre()
 
-            if not backup_extract_path:
-                backup_extract_path = get_backup_extract()
+        if not backup_extract_path:
+            backup_extract_path = get_backup_extract()
 
-            restore = Restore(backup_extract_path, limits=opt_limits, rollback=not no_rollback, simulate=opt_simulate)
-            hooks.restore.inspect(restore.extras.path)
-            if opt_debug:
-                trap.close()
-                trap = None
+        restore = Restore(backup_extract_path, limits=opt_limits, rollback=not no_rollback, simulate=opt_simulate)
+        hooks.restore.inspect(restore.extras.path)
+        if opt_debug:
+            os.chdir(backup_extract_path)
+            executil.system(os.environ.get("SHELL", "/bin/bash"))
+            os.chdir('/')
 
-                os.chdir(backup_extract_path)
-                executil.system(os.environ.get("SHELL", "/bin/bash"))
-                os.chdir('/')
+        if not skip_packages:
+            restore.packages()
 
-            if not skip_packages:
-                restore.packages()
+        if not skip_files:
+            restore.files()
 
-            if not skip_files:
-                restore.files()
+        if not skip_database:
+            restore.database()
 
-            if not skip_database:
-                restore.database()
-
-            print
-            hooks.restore.post()
-
-        finally:
-            if trap:
-                trap.close()
-                log_fh = file(opt_logfile, "w")
-                log_fh.write(trap.std.read())
-    except:
-        if sys.exc_type and log_fh:
-            print >> log_fh
-            traceback.print_exc(file=log_fh)
-
-        raise
+        print
+        hooks.restore.post()
 
     finally:
-        if log_fh:
-            log_fh.close()
+        if trap:
+            sys.stdout.flush()
+            sys.stderr.flush()
 
+            trap.close()
+
+            if sys.exc_type:
+                print >> log_fh
+                traceback.print_exc(file=log_fh)
+
+            log_fh.close()
 
     print "We're done. You may want to reboot now to restart all services."
 
