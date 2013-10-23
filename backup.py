@@ -28,7 +28,7 @@ from pkgman import Packages
 import mysql
 import pgsql
 
-from utils import AttrDict, _title, apply_overlay
+from utils import AttrDict, fmt_title, apply_overlay
 
 class ProfilePaths(Paths):
     files = [ 'dirindex', 'dirindex.conf', 'packages' ]
@@ -172,7 +172,7 @@ class Backup:
         self._log("  cp /etc/group " + etc)
 
         if not conf.skip_packages or not conf.skip_files:
-            self._log("\n" + _title("Comparing current system state to the base state in the backup profile", '-'))
+            self._log("\n" + fmt_title("Comparing current system state to the base state in the backup profile", '-'))
 
         if not conf.skip_packages:
             self._write_new_packages(extras.newpkgs, profile.packages)
@@ -186,7 +186,7 @@ class Backup:
 
             try:
                 if mysql.MysqlService.is_running():
-                    self._log("\n" + _title("Serializing MySQL database to " + extras.myfs, '-'))
+                    self._log("\n" + fmt_title("Serializing MySQL database to " + extras.myfs, '-'))
                     mysql.backup(extras.myfs, extras.etc.mysql,
                                  limits=conf.overrides.mydb, callback=mysql.cb_print()) if self.verbose else None
 
@@ -195,7 +195,7 @@ class Backup:
 
             try:
                 if pgsql.PgsqlService.is_running():
-                    self._log("\n" + _title("Serializing PgSQL databases to " + extras.pgfs, '-'))
+                    self._log("\n" + fmt_title("Serializing PgSQL databases to " + extras.pgfs, '-'))
                     pgsql.backup(extras.pgfs, conf.overrides.pgdb, callback=pgsql.cb_print() if self.verbose else None)
             except pgsql.Error:
                 pass
@@ -238,7 +238,7 @@ class Backup:
         # create or re-use /TKLBAM
         if not exists(extras_paths.path):
 
-            self._log(_title("Creating %s (contains backup metadata and database dumps)" % extras_paths.path))
+            self._log(fmt_title("Creating %s (contains backup metadata and database dumps)" % extras_paths.path))
             self._log("  mkdir -p " + extras_paths.path)
 
             try:

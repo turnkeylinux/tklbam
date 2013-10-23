@@ -73,11 +73,10 @@ def apply_overlay(src, dst, olist_path):
 
     os.chdir(orig_cwd)
 
-def _title(title, c='='):
+def fmt_title(title, c='='):
     return title + "\n" + c * len(title) + "\n"
 
-
-def timestamp():
+def fmt_timestamp():
 
     fh = StringIO()
 

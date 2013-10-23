@@ -101,7 +101,7 @@ from conf import Conf
 from version import Version
 from stdtrap import UnitedStdTrap
 
-from utils import is_writeable, _title, timestamp
+from utils import is_writeable, fmt_title, fmt_timestamp
 
 import traceback
 
@@ -384,7 +384,7 @@ def main():
             log_fh = file(opt_logfile, "a")
 
             print >> log_fh
-            print >> log_fh, "\n" + timestamp()
+            print >> log_fh, "\n" + fmt_timestamp()
         
             log_fh.flush()
 
@@ -407,7 +407,7 @@ def main():
                 b.dump(dump_path)
             else:
                 if opt_verbose:
-                    print "\n" + _title("Executing Duplicity")
+                    print "\n" + fmt_title("Executing Duplicity")
                     _print("export PASSPHRASE=$(cat %s)" % conf.secretfile)
 
                 uploader = duplicity.Uploader(opt_verbose, 

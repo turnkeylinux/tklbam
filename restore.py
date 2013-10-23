@@ -19,7 +19,7 @@ from pathmap import PathMap
 from pkgman import Installer
 from rollback import Rollback
 
-from utils import _title, apply_overlay
+from utils import fmt_title, apply_overlay
 
 import backup
 import conf
@@ -63,7 +63,7 @@ class Restore:
 
         if exists(self.extras.myfs):
 
-            print "\n" + _title("Restoring MySQL databases")
+            print "\n" + fmt_title("Restoring MySQL databases")
 
             try:
                 mysql.restore(self.extras.myfs, self.extras.etc.mysql,
@@ -74,7 +74,7 @@ class Restore:
 
         if exists(self.extras.pgfs):
         
-            print "\n" + _title("Restoring PgSQL databases")
+            print "\n" + fmt_title("Restoring PgSQL databases")
 
             if self.simulate:
                 print "CAN't SIMULATE PGSQL RESTORE, SKIPPING"
@@ -92,10 +92,10 @@ class Restore:
         if not exists(newpkgs_file):
             return
 
-        print "\n" + _title("Restoring new packages")
+        print "\n" + fmt_title("Restoring new packages")
 
         # apt-get update, otherwise installer may skip everything
-        print _title("apt-get update", '-')
+        print fmt_title("apt-get update", '-')
         if not self.simulate:
             system("apt-get update")
 
@@ -104,7 +104,7 @@ class Restore:
 
         installer = Installer(packages, self.PACKAGES_BLACKLIST)
 
-        print "\n" + _title("apt-get install", '-')
+        print "\n" + fmt_title("apt-get install", '-')
 
         if installer.skipping:
             print "SKIPPING: " + " ".join(installer.skipping) + "\n"
@@ -162,7 +162,7 @@ class Restore:
         rollback = self.rollback
         limits = self.limits.fs
 
-        print "\n" + _title("Restoring filesystem")
+        print "\n" + fmt_title("Restoring filesystem")
 
         passwd, group, uidmap, gidmap = self._userdb_merge(extras.etc, "/etc")
 
