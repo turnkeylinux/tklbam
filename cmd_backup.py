@@ -381,6 +381,8 @@ def main():
                 print "# " + str(s)
 
         if raw_upload_path:
+            print fmt_title("Executing Duplicity to backup %s to %s" % (raw_upload_path, target.address))
+            
             _print("export PASSPHRASE=$(cat %s)" % conf.secretfile)
             uploader = duplicity.Uploader(True,
                                           conf.volsize, 
@@ -401,7 +403,7 @@ def main():
             if dump_path:
                 b.dump(dump_path)
             else:
-                print "\n" + fmt_title("Executing Duplicity to create or update encrypted, incremental backup archives")
+                print "\n" + fmt_title("Executing Duplicity to backup system changes to encrypted, incremental archives")
                 _print("export PASSPHRASE=$(cat %s)" % conf.secretfile)
 
                 uploader = duplicity.Uploader(True,
