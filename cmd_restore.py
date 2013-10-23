@@ -312,6 +312,11 @@ def main():
                 fatal("keyfile %s does not exist or is not a file" % `val`)
 
             opt_key = file(val).read()
+            try:
+                keypacket.fingerprint(opt_key)
+            except keypacket.Error:
+                fatal("'%s' is not a valid keyfile created with tklbam-escrow" % val)
+
         elif opt == '--address':
             opt_address = val
         elif opt == '--time':
