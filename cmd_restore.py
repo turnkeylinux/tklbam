@@ -44,6 +44,25 @@ Options / Duplicity:
     --address=TARGET_URL              manual backup target URL (needs --keyfile)
                                       default: S3 storage bucket automatically provided by Hub
 
+      Supported storage backends and their URL formats:
+
+          file:///some_dir
+          ftp://user[:password]@other.host[:port]/some_dir
+          ftps://user[:password]@other.host[:port]/some_dir
+          hsi://user[:password]@other.host[:port]/some_dir
+          imap://user[:password]@other.host[:port]/some_dir
+          rsync://user[:password]@other.host[:port]::/module/some_dir
+          rsync://user[:password]@other.host[:port]/relative_path
+          rsync://user[:password]@other.host[:port]//absolute_path
+          s3://other.host/bucket_name[/prefix]
+          s3+http://bucket_name[/prefix]
+          scp://user[:password]@other.host[:port]/some_dir
+          ssh://user[:password]@other.host[:port]/some_dir
+          tahoe://alias/directory
+          webdav://user[:password]@other.host/some_dir
+          webdavs://user[:password]@other.host/some_dir
+          gdocs://user[:password]@other.host/some_dir
+                                      
 Options / System restore:
 
     --simulate                        Do a dry run simulation of the system restore
