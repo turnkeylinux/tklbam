@@ -407,7 +407,7 @@ def main():
                 b.dump(dump_path)
             else:
                 if opt_verbose:
-                    print "\n" + fmt_title("Executing Duplicity")
+                    print "\n" + fmt_title("Executing Duplicity to create or update encrypted, incremental backup archives")
                     _print("export PASSPHRASE=$(cat %s)" % conf.secretfile)
 
                 uploader = duplicity.Uploader(opt_verbose, 
