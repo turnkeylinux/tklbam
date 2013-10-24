@@ -69,7 +69,7 @@ class Restore:
 
         if exists(self.extras.myfs):
 
-            print fmt_title("DATABASES - unserializing MySQL databases from " + self.extras.myfs)
+            print fmt_title("DATABASE - unserializing MySQL databases from " + self.extras.myfs)
 
             try:
                 mysql.restore(self.extras.myfs, self.extras.etc.mysql,
