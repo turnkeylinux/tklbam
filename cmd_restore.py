@@ -107,6 +107,20 @@ Configuration file format ($CONF_PATH):
 
   <option-name> <value>
 
+Examples:
+
+    # restore Hub backup id 1
+    tklbam-restore 1
+
+    # restore Hub backup id 1 in two steps, first the download, then the application
+    tklbam-restore --raw-download=/tmp/mybackup 1 
+    tklbam-restore /tmp/mybackup
+
+    # restore from Duplicity archives at manual backup address
+    tklbam-restore --keyfile=mybackup.escrow --address=file:///mnt/backups/mybackup 
+
+    # simulate restoring of Hub backup id 1. Exclude /root path and mysql customers db
+    tklbam-restore --simulate --limits="-/root -mysql:customers" 1
 """
 
 import os
@@ -242,7 +256,8 @@ def usage(e=None):
     if e:
         print >> stdout, "error: " + str(e)
 
-    print >> stdout, "Syntax: %s [ -options ] [ <hub-backup> ]" % sys.argv[0]
+    print >> stdout, "Usage: %s [ -options ] <hub-backup>" % sys.argv[0]
+    print >> stdout, "Usage: %s [ -options ] --address=<address> --keyfile=path/to/key.escrow" % sys.argv[0]
 
     tpl = Template(__doc__.strip())
     conf = Conf()
