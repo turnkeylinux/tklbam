@@ -134,6 +134,9 @@ class Conf(AttrDict):
                 else:
                     raise self.Error("bad bool value '%s'" % val)
 
+            if val:
+                os.environ['TKLBAM_' + name.upper()] = 'yes'
+
         AttrDict.__setitem__(self, name, val)
 
     def __init__(self, path=None):
