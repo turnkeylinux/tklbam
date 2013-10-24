@@ -374,6 +374,13 @@ def main():
         elif opt == '--force-profile':
             conf.force_profile = val
 
+    for opt, val in opts:
+        for skip_opt in ('files', 'packages', 'database'):
+            if opt != '--skip-' + skip_opt:
+                continue
+
+            os.environ['TKLBAM_RESTORE_SKIP_' + skip_opt.upper()] = 'yes'
+
     restore_cache_size = conf.restore_cache_size
     restore_cache_dir = conf.restore_cache_dir
 
