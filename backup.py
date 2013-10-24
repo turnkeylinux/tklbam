@@ -13,8 +13,6 @@ import os
 from os.path import exists, join, isdir
 
 import stat
-import pwd
-import grp
 
 import shutil
 import simplejson
@@ -82,18 +80,6 @@ class BackupConf(AttrDict):
     def tofile(self, path):
         simplejson.dump(dict(self), file(path, "w"))
 
-def _username(uid):
-    try:
-        return pwd.getpwuid(uid).pw_name
-    except:
-        return str(uid)
-
-def _groupname(gid):
-    try:
-        return grp.getgrgid(gid).gr_name
-    except:
-        return str(gid)
-
 class Backup:
     class Error(Exception):
         pass
@@ -142,14 +128,14 @@ class Backup:
                 if action.func is os.chmod:
                     path, mode = action.args
                     default_mode = (0777 if isdir(path) else 0666) ^ umask
-                    if default_mode != stat.S_IMODE(mode):
-                        self._log("  " + str(action))
+                    if default_mode == stat.S_IMODE(mode):
+                        continue
                 elif action.func is os.lchown:
                     path, uid, gid = action.args
-                    if uid != 0 or gid != 0:
-                        self._log("  chown %s:%s %s" % (_username(uid), _groupname(gid), path))
-                else:
-                    self._log("  " + str(action))
+                    if uid == 0 and gid == 0:
+                        continue
+
+                self._log("  " + str(action))
 
             self._log("\nSave list of new files to %s:\n" % dest_olist)
             for path in olist:

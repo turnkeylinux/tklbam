@@ -20,8 +20,23 @@ from pathmap import PathMap
 import stat
 import errno
 
+import pwd
+import grp
+
 class Error(Exception):
     pass
+
+def fmt_uid(uid):
+    try:
+        return pwd.getpwuid(uid).pw_name
+    except:
+        return str(uid)
+
+def fmt_gid(gid):
+    try:
+        return grp.getgrgid(gid).gr_name
+    except:
+        return str(gid)
 
 class Change:
     """
@@ -144,7 +159,7 @@ class Changes(list):
 
             if func is os.lchown:
                 path, uid, gid = args
-                return "chown -h %d:%d %s" % (uid, gid, path)
+                return "chown -h %s:%s %s" % (fmt_uid(uid), fmt_gid(gid), path)
             elif func is os.chmod:
                 path, mode = args
                 return "chmod %s %s" % (oct(mode), path)
