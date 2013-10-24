@@ -38,8 +38,8 @@ Options / Duplicity:
               2M - 2 months ago
               1Y - 1 year ago
 
-    --keyfile=KEYFILE                 Path to escrow keyfile.
-                                      default: Hub provides this automatically.
+    --keyfile=KEYFILE                 Path to tklbam-escrow created keyfile
+                                      default: automatically retrieved from the Hub
 
     --address=TARGET_URL              manual backup target URL (needs --keyfile)
                                       default: S3 storage bucket automatically provided by Hub
