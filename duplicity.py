@@ -146,7 +146,7 @@ class Downloader(AttrDict):
         else:
             opts = []
 
-        log("### started squid background process: downloaded backup archives cached in " + self.cache_dir + "\n")
+        log("### started squid: caching downloaded backup archives to " + self.cache_dir + "\n")
             
         squid = Squid(self.cache_size, self.cache_dir)
         squid.start()
@@ -168,7 +168,7 @@ class Downloader(AttrDict):
 
         sys.stdout.flush()
 
-        log("\n### stopping squid: download complete\n")
+        log("\n### stopping squid: download complete so caching no longer required\n")
         squid.stop()
 
 class Uploader(AttrDict):
