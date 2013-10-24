@@ -30,7 +30,7 @@ def usage(e=None):
     if e:
         print >> sys.stderr, "error: " + str(e)
 
-    print >> sys.stderr, "Syntax: %s" % sys.argv[0]
+    print >> sys.stderr, "Usage: %s" % sys.argv[0]
     print >> sys.stderr, __doc__.strip()
     sys.exit(1)
 

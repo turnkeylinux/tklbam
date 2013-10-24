@@ -47,7 +47,7 @@ class CliWrapper:
         if e:
             print >> sys.stderr, "error: " + str(e)
 
-        print >> sys.stderr, "Syntax: %s <command> [arguments]" % sys.argv[0]
+        print >> sys.stderr, "Usage: %s <command> [arguments]" % sys.argv[0]
         print >> sys.stderr, cls.DESCRIPTION.strip()
 
         print >> sys.stderr, "\nCommands: \n"

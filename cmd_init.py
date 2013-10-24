@@ -60,7 +60,7 @@ def usage(e=None):
     if e:
         print >> sys.stderr, "error: " + str(e)
 
-    print >> sys.stderr, "Syntax: %s [ API-KEY ]" % sys.argv[0]
+    print >> sys.stderr, "Usage: %s [ API-KEY ]" % sys.argv[0]
     print >> sys.stderr, __doc__.strip()
     sys.exit(1)
 

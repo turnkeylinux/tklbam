@@ -133,7 +133,7 @@ def usage(e=None):
     if e:
         print >> stdout, "error: " + str(e)
 
-    print >> stdout, "Syntax: %s [ -options ] [ override ... ]" % sys.argv[0]
+    print >> stdout, "Usage: %s [ -options ] [ override ... ]" % sys.argv[0]
     tpl = Template(__doc__.strip())
     conf = Conf()
     print >> stdout, tpl.substitute(CONF_PATH=conf.paths.conf,

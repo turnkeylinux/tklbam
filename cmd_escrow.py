@@ -32,7 +32,7 @@ def usage(e=None):
     if e:
         print >> sys.stderr, "error: " + str(e)
 
-    print >> sys.stderr, "Syntax: %s [-options] KEYFILE" % sys.argv[0]
+    print >> sys.stderr, "Usage: %s [-options] KEYFILE" % sys.argv[0]
     print >> sys.stderr, __doc__
     sys.exit(1)
 
