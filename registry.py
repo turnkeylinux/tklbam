@@ -14,7 +14,7 @@
 import os
 import re
 from os.path import exists
-from paths import Paths
+from paths import Paths as _Paths
 import simplejson
 
 from datetime import datetime
@@ -24,6 +24,8 @@ from utils import AttrDict
 import hub
 
 from version import Version
+
+import conf
 
 class UNDEFINED:
     pass
@@ -40,7 +42,7 @@ If you're feeling adventurous you can force another profile with the
 
     DEFAULT_PATH = "/var/lib/tklbam"
 
-    class Paths(Paths):
+    class Paths(_Paths):
         files = ['backup-resume', 'sub_apikey', 'secret', 'key', 'credentials', 'hbr', 
                  'profile', 'profile/stamp', 'profile/profile_id']
 
@@ -244,11 +246,10 @@ class Profile(str):
         return str.__new__(cls, path)
 
     def __init__(self, path, profile_id, timestamp):
+        str.__init__(self)
         self.path = path
         self.timestamp = timestamp
         self.profile_id = profile_id
-
-import conf
 
 class BackupSessionConf(AttrDict):
     def __init__(self, d={}):
@@ -256,3 +257,19 @@ class BackupSessionConf(AttrDict):
         self.overrides = conf.Limits(self.overrides)
 
 registry = _Registry()
+
+def update_profile(force_profile=None):
+    import sys
+    global registry
+    try:
+        registry.update_profile(force_profile)
+    except registry.CachedProfile, e:
+        print >> sys.stderr, "warning: " + str(e)
+    except registry.ProfileNotFound, e:
+        print >> sys.stderr, "TurnKey Hub Error: %s" % str(e)
+        if not force_profile:
+            # be extra nice to people who aren't using --force-profile
+            print "\n" + e.__doc__
+
+        sys.exit(1)
+    os.environ['TKLBAM_PROFILE_ID'] = registry.profile.profile_id

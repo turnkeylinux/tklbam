@@ -20,12 +20,14 @@ from changes import Changes
 from pathmap import PathMap
 from rollback import Rollback
 
-from utils import fmt_title, apply_overlay
+from utils import AttrDict, fmt_title, apply_overlay
 
 import backup
 import conf
 import mysql
 import pgsql
+
+import simplejson
 
 from temp import TempFile
 
@@ -49,6 +51,9 @@ class Restore:
 
         if simulate:
             rollback = False
+
+        self.conf = AttrDict(simplejson.loads(file(self.extras.backup_conf).read())) \
+                    if exists(self.extras.backup_conf) else None
 
         self.simulate = simulate
         self.rollback = Rollback.create() if rollback else None

@@ -115,7 +115,7 @@ import backup
 import duplicity
 
 import hooks
-from registry import registry
+from registry import registry, update_profile
 from conf import Conf
 
 from version import Version
@@ -299,17 +299,7 @@ def main():
     hb = hub.Backups(registry.sub_apikey)
 
     if not raw_upload_path:
-        try:
-            registry.update_profile(conf.force_profile)
-        except registry.CachedProfile, e:
-            warn(e)
-        except registry.ProfileNotFound, e:
-            print >> sys.stderr, "TurnKey Hub Error: %s" % str(e)
-            if not conf.force_profile:
-                # be extra nice to people who aren't using --force-profile
-                print "\n" + e.__doc__
-
-            sys.exit(1)
+        update_profile(conf.force_profile)
 
     credentials = None
     if not conf.address and not dump_path:

@@ -2,9 +2,42 @@ import os
 from os.path import *
 
 import executil
+from registry import registry
 
 class HookError(Exception):
     pass
+
+def _is_signed(fpath, keyring):
+    fpath_sig = fpath + ".sig"
+    if not exists(fpath_sig):
+        return False
+
+    try:
+        executil.getoutput("gpg --keyring=%s --verify" % keyring, fpath_sig)
+        return True
+    except:
+        return False
+
+def _run_hooks(path, args, keyring=None):
+    if not isdir(path):
+        return
+
+    for fname in os.listdir(path):
+        fpath = join(path, fname)
+        if not os.access(fpath, os.X_OK):
+            continue
+
+        if fpath.endswith(".sig"):
+            continue
+
+        if keyring and not _is_signed(fpath, keyring):
+            continue
+
+        try:
+            executil.system(fpath, *args)
+        except executil.ExecError, e:
+            raise HookError("`%s %s` non-zero exitcode (%d)" % \
+                            (fpath, " ".join(args), e.exitcode))
 
 class Hooks:
     """
@@ -25,25 +58,18 @@ class Hooks:
         post hook
 
     """
-    path = os.environ.get("TKLBAM_HOOKS", "/etc/tklbam/hooks.d")
+    BASENAME = "hooks.d"
+    LOCAL_HOOKS = os.environ.get("TKLBAM_HOOKS", "/etc/tklbam/" + BASENAME)
+
+    PROFILE_KEYRING = "/etc/apt/trusted.gpg.d/turnkey.gpg"
 
     def __init__(self, name):
         self.name = name
 
     def _run(self, state):
-        if not isdir(self.path):
-            return
 
-        for fname in os.listdir(self.path):
-            fpath = join(self.path, fname)
-            if not os.access(fpath, os.X_OK):
-                continue
-
-            try:
-                executil.system(fpath, self.name, state)
-            except executil.ExecError, e:
-                raise HookError("`%s %s %s` non-zero exitcode (%d)" % \
-                                (fpath, self.name, state, e.exitcode))
+        _run_hooks(self.LOCAL_HOOKS, (self.name, state))
+        _run_hooks(join(registry.profile, self.BASENAME), (self.name, state), keyring=self.PROFILE_KEYRING)
 
     def pre(self):
         self._run("pre")

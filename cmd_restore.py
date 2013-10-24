@@ -143,7 +143,7 @@ import keypacket
 import passphrase
 import hooks
 
-from registry import registry
+from registry import registry, update_profile
 
 from version import Version
 from utils import is_writeable, fmt_timestamp, fmt_title
@@ -444,17 +444,7 @@ def main():
             raw_download_path = TempDir(prefix="tklbam-")
             os.chmod(raw_download_path, 0700)
 
-    try:
-        registry.update_profile(conf.force_profile)
-    except registry.CachedProfile, e:
-        warn(e)
-    except registry.ProfileNotFound, e:
-        print >> sys.stderr, "TurnKey Hub Error: %s" % str(e)
-        if not conf.force_profile:
-            # be extra nice to people who aren't using --force-profile
-            print "\n" + e.__doc__
-
-        sys.exit(1)
+    update_profile(conf.force_profile)
 
     if not (opt_simulate or opt_debug):
         log_fh = file(opt_logfile, "a")
@@ -478,7 +468,11 @@ def main():
             print fmt_title("Restoring system from backup extract at " + backup_extract_path)
 
         restore = Restore(backup_extract_path, limits=opt_limits, rollback=not no_rollback, simulate=opt_simulate)
+
+        if restore.conf:
+            os.environ['TKLBAM_RESTORE_PROFILE_ID'] = restore.conf.profile_id
         hooks.restore.inspect(restore.extras.path)
+
         if opt_debug:
             print """\
   The --debug option has (again) dropped you into an interactive shell so that
