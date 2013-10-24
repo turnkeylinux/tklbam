@@ -428,7 +428,7 @@ def main():
             print s
 
         def get_backup_extract():
-            print fmt_title("Restoring backup extract from Duplicity archive at " + address)
+            print fmt_title("Executing Duplicity to download %s to %s " % (address, raw_download_path))
             downloader(raw_download_path, target, log=_print if not silent else None, debug=opt_debug)
             return raw_download_path
 

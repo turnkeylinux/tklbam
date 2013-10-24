@@ -14,9 +14,10 @@ import os
 from os.path import *
 
 import userdb
+import pkgman
+
 from changes import Changes
 from pathmap import PathMap
-from pkgman import Installer
 from rollback import Rollback
 
 from utils import fmt_title, apply_overlay
@@ -92,28 +93,45 @@ class Restore:
         if not exists(newpkgs_file):
             return
 
-        print "\n" + fmt_title("Restoring new packages")
-
-        # apt-get update, otherwise installer may skip everything
-        print fmt_title("apt-get update", '-')
-        if not self.simulate:
-            system("apt-get update")
-
         packages = file(newpkgs_file).read().strip()
         packages = [] if not packages else packages.split('\n')
 
-        installer = Installer(packages, self.PACKAGES_BLACKLIST)
-
-        print "\n" + fmt_title("apt-get install", '-')
-
-        if installer.skipping:
-            print "SKIPPING: " + " ".join(installer.skipping) + "\n"
-
-        if not installer.command:
-            print "NO NEW INSTALLABLE PACKAGES"
+        if not packages:
             return
 
-        print installer.command
+        print fmt_title("Restoring %d new packages listed in %s" % (len(packages), newpkgs_file), '-')
+
+        already_installed = set(pkgman.installed()) & set(packages)
+        if len(already_installed) == len(packages):
+            print "ALL NEW PACKAGES ALREADY INSTALLED"
+            return
+
+        if already_installed:
+            print "NEW PACKAGES NOT ALREADY INSTALLED: %d\n" % (len(packages) - len(already_installed))
+
+        # apt-get update, otherwise installer may skip everything
+        print fmt_title("Update list of available packages", "'")
+
+        print "# apt-get update"
+        system("apt-get update")
+
+        installer = pkgman.Installer(packages, self.PACKAGES_BLACKLIST)
+
+        t = "Installing new packages"
+        if self.simulate:
+            t += " (actions simulated)"
+
+        print "\n" + fmt_title(t, "'")
+
+        if installer.skipping:
+            print "SKIPPING UNINSTALLABLE PACKAGES: " + " ".join(installer.skipping) + "\n"
+
+        if not installer.command:
+            print "NO NEW PACKAGES TO INSTALL"
+            return
+
+        print "# " + installer.command
+
         if not self.simulate:
             exitcode = installer()
             if exitcode != 0:
