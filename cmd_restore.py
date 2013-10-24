@@ -41,7 +41,7 @@ Options / Duplicity:
     --keyfile=KEYFILE                 Path to tklbam-escrow created keyfile
                                       default: automatically retrieved from the Hub
 
-    --address=TARGET_URL              manual backup target URL (needs --keyfile)
+    --address=TARGET_URL              custom backup target URL (needs --keyfile)
                                       default: S3 storage bucket automatically provided by Hub
 
       Supported storage backends and their URL formats:
@@ -116,7 +116,7 @@ Examples:
     tklbam-restore --raw-download=/tmp/mybackup 1 
     tklbam-restore /tmp/mybackup
 
-    # restore from Duplicity archives at manual backup address
+    # restore from Duplicity archives at custom backup address
     tklbam-restore --keyfile=mybackup.escrow --address=file:///mnt/backups/mybackup 
 
     # simulate restoring of Hub backup id 1. Exclude /root path and mysql customers db

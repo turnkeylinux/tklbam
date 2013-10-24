@@ -23,7 +23,7 @@ Options:
 
     --raw-upload=PATH              Use Duplicity to upload raw path contents to --address
 
-    --address=TARGET_URL           manual backup target URL
+    --address=TARGET_URL           custom backup target URL
                                    default: S3 storage bucket automatically configured via Hub
 
       Supported storage backends and their URL formats:
