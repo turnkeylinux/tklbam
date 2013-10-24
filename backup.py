@@ -106,7 +106,7 @@ class Backup:
         new_packages.sort()
 
         if new_packages:
-            self._log("# Save list of new packages\n")
+            self._log("Save list of new packages:\n")
             self._log("  cat > %s << EOF " % dest)
             self._log(" ".join(new_packages))
             self._log("  EOF\n")
@@ -130,7 +130,7 @@ class Backup:
         file(dest_olist, "w").writelines((path + "\n" for path in olist))
 
         if self.verbose:
-            self._log("# Save list of filesystem changes to %s:\n" % dest)
+            self._log("Save list of filesystem changes to %s:\n" % dest)
 
             actions = list(changes.deleted(optimized=False)) + list(changes.statfixes(optimized=False))
             actions.sort(lambda a,b: cmp(a.args[0], b.args[0]))
@@ -151,7 +151,7 @@ class Backup:
                 else:
                     self._log("  " + str(action))
 
-            self._log("\n# Save list of new files to %s:\n" % dest_olist)
+            self._log("\nSave list of new files to %s:\n" % dest_olist)
             for path in olist:
                 self._log("  " + path)
 
@@ -163,7 +163,7 @@ class Backup:
         os.mkdir(etc)
         self._log("  mkdir " + etc)
 
-        self._log("\n# needed to automatically detect and fix file ownership issues\n")
+        self._log("\n// needed to automatically detect and fix file ownership issues\n")
 
         shutil.copy("/etc/passwd", etc)
         self._log("  cp /etc/passwd " + etc)
