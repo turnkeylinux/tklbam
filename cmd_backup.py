@@ -265,6 +265,11 @@ def main():
         elif opt in ('-h', '--help'):
             usage()
 
+    if dump_path:
+        for opt, val in opts:
+            if opt[2:] in ('simulate', 'raw-upload', 'volsize', 's3-parallel-uploads', 'full-backup', 'address', 'resume', 'disable-resume', 'raw-upload'):
+                fatal("%s incompatible with --dump=%s" % (opt, dump_path))
+
     conf.overrides += args
 
     if opt_resume:
@@ -281,11 +286,6 @@ def main():
     if opt_simulate and registry.backup_resume_conf and not opt_disable_resume:
         fatal("--simulate will destroy your aborted backup session. To force use --disable-resume")
 
-    if opt_simulate and dump_path:
-        fatal("--simulate and --dump are incompatible")
-
-    if raw_upload_path and dump_path:
-        fatal("--raw-upload and --dump are incompatible")
 
     lock = PidLock("/var/run/tklbam-backup.pid", nonblock=True)
     try:

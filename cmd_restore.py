@@ -399,7 +399,12 @@ def main():
         if not opt_address:
             usage()
 
-    if not backup_extract_path:
+    if backup_extract_path:
+        for opt, val in opts:
+            if opt[2:] in ('time', 'keyfile', 'address', 'restore-cache-size', 'restore-cache-dir'):
+                fatal("%s is incompatible with restoring from path %s" % (opt, backup_extract_path))
+
+    else:
         if opt_address:
             if hbr:
                 fatal("a manual --address is incompatible with a <backup-id>")
