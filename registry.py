@@ -217,19 +217,20 @@ If you're feeling adventurous you can force another profile with the
             # look for exact match first
             self._update_profile(profile_id)
         except self.ProfileNotFound, first_exception:
+            if not re.match(r'^turnkey-', profile_id):
+                profile_id = "turnkey-" + profile_id
+
             if profile_id and not Version.from_string(profile_id).is_complete():
                 completed_profile_id = _complete_profile_id(profile_id)
                 try:
                     self._update_profile(completed_profile_id)
+                    return
                 except:
                     pass
 
             raise first_exception
 
 def _complete_profile_id(partial):
-    if not re.match(r'^turnkey-', partial):
-        partial = "turnkey-" + partial
-
     partial = Version.from_string(partial)
     system = Version.from_system()
 
