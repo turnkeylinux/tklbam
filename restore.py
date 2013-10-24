@@ -64,7 +64,7 @@ class Restore:
 
         if exists(self.extras.myfs):
 
-            print fmt_title("Unserializing MySQL databases from " + self.extras.myfs)
+            print fmt_title("DATABASES - unserializing MySQL databases from " + self.extras.myfs)
 
             try:
                 mysql.restore(self.extras.myfs, self.extras.etc.mysql,
@@ -75,7 +75,7 @@ class Restore:
 
         if exists(self.extras.pgfs):
         
-            print "\n" + fmt_title("Unserializing PgSQL databases from " + self.extras.pgfs)
+            print "\n" + fmt_title("DATABASE - Unserializing PgSQL databases from " + self.extras.pgfs)
 
             if self.simulate:
                 print "CAN'T SIMULATE PGSQL RESTORE, SKIPPING"
