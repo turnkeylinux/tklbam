@@ -12,6 +12,8 @@
 """
 Initialization (start here)
 
+Links TKLBAM to your Hub account and downloads a backup profile.
+
 Arguments:
 
     API-KEY                        Cut and paste this from your Hub account's user profile.
