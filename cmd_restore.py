@@ -472,6 +472,8 @@ def main():
         if not backup_extract_path:
             backup_extract_path = get_backup_extract()
 
+        os.environ['TKLBAM_BACKUP_EXTRACT_PATH'] = backup_extract_path
+
         if not silent:
             print fmt_title("Restoring system from backup extract at " + backup_extract_path)
 
