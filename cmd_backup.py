@@ -82,7 +82,8 @@ Configurable options:
     --skip-database                Don't backup databases
     --skip-packages                Don't backup new packages
 
-    --force-profile=PROFILE_ID     Force backup profile (default: /etc/turnkey_version)
+    --force-profile=PROFILE_ID     Force backup profile (e.g., "core")
+                                   default: cat /etc/turnkey_version
 
 Resolution order for configurable options:
 

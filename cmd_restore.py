@@ -95,7 +95,8 @@ Options / Configurable (see resolution order below):
     --restore-cache-dir=PATH          The path to the download cache directory
                                       default: $CONF_RESTORE_CACHE_DIR
 
-    --force-profile=PROFILE_ID        Force backup profile (default: /etc/turnkey_version)
+    --force-profile=PROFILE_ID        Force backup profile (e.g., "core")
+                                      default: cat /etc/turnkey_version
 
 Resolution order for configurable options:
 

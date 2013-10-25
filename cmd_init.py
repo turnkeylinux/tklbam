@@ -19,7 +19,8 @@ Arguments:
 Options:
 
     --force                        Force re-initialization with new API-KEY.
-    --force-profile=PROFILE_ID     Force a specific backup profile (default: /etc/turnkey_version)
+    --force-profile=PROFILE_ID     Force a specific backup profile (e.g., "core")
+                                   default: cat /etc/turnkey_version
 
 """
 
