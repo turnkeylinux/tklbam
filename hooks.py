@@ -69,7 +69,8 @@ class Hooks:
     def _run(self, state):
 
         _run_hooks(self.LOCAL_HOOKS, (self.name, state))
-        _run_hooks(join(registry.profile, self.BASENAME), (self.name, state), keyring=self.PROFILE_KEYRING)
+        if registry.profile:
+            _run_hooks(join(registry.profile, self.BASENAME), (self.name, state), keyring=self.PROFILE_KEYRING)
 
     def pre(self):
         self._run("pre")

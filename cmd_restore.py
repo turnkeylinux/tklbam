@@ -452,7 +452,10 @@ def main():
             raw_download_path = TempDir(prefix="tklbam-")
             os.chmod(raw_download_path, 0700)
 
-    update_profile(conf.force_profile)
+    try:
+        update_profile(conf.force_profile)
+    except:
+        pass
 
     if not (opt_simulate or opt_debug):
         log_fh = file(opt_logfile, "a")
