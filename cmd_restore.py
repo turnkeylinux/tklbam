@@ -144,7 +144,7 @@ import keypacket
 import passphrase
 import hooks
 
-from registry import registry, update_profile
+from registry import registry, update_profile, hub_backups
 
 from version import Version
 from utils import is_writeable, fmt_timestamp, fmt_title
@@ -200,7 +200,7 @@ def do_compatibility_check(backup_turnkey_version, interactive=True):
         fatal("You didn't answer 'yes'. Aborting!")
 
 def get_backup_record(arg):
-    hb = hub.Backups(registry.sub_apikey)
+    hb = hub_backups()
     if re.match(r'^\d+$', arg):
         backup_id = arg
 

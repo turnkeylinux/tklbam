@@ -135,7 +135,7 @@ import backup
 import duplicity
 
 import hooks
-from registry import registry, update_profile
+from registry import registry, update_profile, hub_backups
 from conf import Conf
 
 from version import Version
@@ -316,14 +316,7 @@ def main():
     if conf.s3_parallel_uploads > 1 and conf.s3_parallel_uploads > (conf.volsize / 5):
         warn("s3-parallel-uploads > volsize / 5 (minimum upload chunk is 5MB)")
 
-    try:
-        hb = hub.Backups(registry.sub_apikey)
-    except hub.Backups.NotInitialized:
-        command = "tklbam-init"
-        if registry.path != registry.DEFAULT_PATH:
-            command = "%s=%s %s" % (registry.ENV_VARNAME, registry.path, command)
-
-        fatal('You need to run "%s" first' % command)
+    hb = hub_backups()
 
     if not raw_upload_path:
         update_profile(conf.force_profile)

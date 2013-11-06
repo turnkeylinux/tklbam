@@ -282,3 +282,19 @@ def update_profile(force_profile=None):
 
         sys.exit(1)
     os.environ['TKLBAM_PROFILE_ID'] = registry.profile.profile_id
+
+def hub_backups():
+    import sys
+    global registry
+
+    try:
+        hb = hub.Backups(registry.sub_apikey)
+    except hub.Backups.NotInitialized:
+        command = "tklbam-init"
+        if registry.path != registry.DEFAULT_PATH:
+            command = "%s=%s %s" % (registry.ENV_VARNAME, registry.path, command)
+
+        print >> sys.stderr, 'error: you need to run "%s" first' % command
+        sys.exit(1)
+
+    return hb

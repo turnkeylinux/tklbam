@@ -22,7 +22,7 @@ import getopt
 
 import hub
 import keypacket
-from registry import registry
+from registry import registry, hub_backups
 from passphrase import *
 
 def usage(e=None):
@@ -47,7 +47,7 @@ def main():
         if opt == '--random':
             opt_random = True
 
-    hb = hub.Backups(registry.sub_apikey)
+    hb = hub_backups()
 
     if opt_random:
         passphrase = random_passphrase()

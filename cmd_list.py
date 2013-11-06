@@ -40,7 +40,7 @@ import string
 import hub
 import keypacket
 
-from registry import registry
+from registry import registry, hub_backups
 
 def usage(e=None):
     if e:
@@ -101,7 +101,7 @@ def main():
     else:
         format = None
 
-    hb = hub.Backups(registry.sub_apikey)
+    hb = hub_backups()
     hbrs = hb.list_backups()
 
     if format:
