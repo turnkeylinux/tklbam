@@ -37,15 +37,14 @@ class _Registry(object):
     class ProfileNotFound(Exception):
         """\
 Without a profile TKLBAM can't auto-configure the backup process for your
-system. Sorry about that!
-
-What you can still do:
+system. Sorry about that! However even without a profile you can still:
 
 - Restore existing backups
 - Backup raw directories with the --raw-upload option
-- Create an empty profile with the --empty-profile option
-- Force another profile (e.g., --force-profile=core). You'll probably have to
-  tweak /etc/tklbam/overrides. Also, make sure you test the restore.  
+
+Also, you can work around this problem by using the --force-profile=empty
+option to create an empty profile or specify a profile id for the another
+system (e.g., --force-profile=core).
 """
 
     DEFAULT_PATH = "/var/lib/tklbam"
@@ -291,6 +290,17 @@ def update_profile(profile_id=None, strict=True):
 
     if profile_id == registry.EMPTY_PROFILE:
         registry.profile = None
+        print """\
+
+Creating an empty profile, which means:
+
+- We only backup files as included or excluded in the override paths specified
+  on the command line or configured in /etc/tklbam/overrides
+
+- We can't detect which files have changed since installation so we will
+  indiscriminately backup all files in the included directories. 
+"""
+
 
     if not strict:
         try:
@@ -314,9 +324,6 @@ def update_profile(profile_id=None, strict=True):
 
             sys.exit(1)
     os.environ['TKLBAM_PROFILE_ID'] = registry.profile.profile_id
-
-def create_empty_profile():
-    update_profile(registry.EMPTY_PROFILE)
 
 def hub_backups():
     import sys

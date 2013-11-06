@@ -26,11 +26,14 @@ Options:
 
     --force                        Force re-initialization with new API-KEY.
 
-    --force-profile=PROFILE_ID     Force a specific backup profile (e.g., "core")
-                                   default: cat /etc/turnkey_version
+    --force-profile=PROFILE_ID     Force a specific backup profile 
+                                   (e.g., "core", "turnkey-core-13.0-wheezy-amd64")
 
-    --empty-profile                Use an empty backup profile. Backup configurations
-                                   will only be taken from /etc/tklbam.
+                                   Default: cat /etc/turnkey_version
+
+                                   Special value: "empty": creates an empty
+                                   backup profile. Backup configurations will
+                                   only be taken from /etc/tklbam.
    
 Security warning:
 
@@ -96,14 +99,13 @@ def usage(e=None):
 
 def main():
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], "h", ["help", "force", "force-profile=", "empty-profile" ])
+        opts, args = getopt.gnu_getopt(sys.argv[1:], "h", ["help", "force", "force-profile="])
     except getopt.GetoptError, e:
         usage(e)
 
     apikey = None
     force = False
     force_profile = False
-    empty_profile = False
 
     conf = Conf()
 
@@ -113,9 +115,6 @@ def main():
 
         elif opt == '--force':
             force = True
-
-        elif opt == '--empty-profile':
-            empty_profile = True
 
         elif opt == '--force-profile':
             force_profile = True
@@ -170,23 +169,10 @@ Generated backup encryption key:
             print "Linked TKLBAM to your Hub account but there's a problem:"
             print
 
-    elif (not force_profile and not empty_profile and registry.registry.profile):
+    elif not force_profile and registry.registry.profile:
         fatal("already initialized")
 
-    if empty_profile:
-        registry.create_empty_profile()
-        print """\
-
-Created an empty profile:
-
-- We only backup files as included or excluded in the override paths specified
-  on the command line or configured in /etc/tklbam/overrides
-
-- We can't detect which files have changed since installation so we will
-  indiscriminately backup all files in the included directories. 
-"""
-
-    elif force_profile or not registry.registry.profile:
+    if force_profile or not registry.registry.profile:
         registry.update_profile(conf.force_profile)
 
 if __name__=="__main__":
