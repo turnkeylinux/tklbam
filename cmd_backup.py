@@ -496,5 +496,8 @@ def main():
         except:
             pass
 
+    if not opt_simulate:
+        print "\nTIP: test your backups with a trial restore BEFORE something bad happens."
+
 if __name__=="__main__":
     main()
