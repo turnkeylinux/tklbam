@@ -336,7 +336,7 @@ def main():
             # asking for get_credentials() might fail if the hub is down.
             # But If we already have the credentials we can survive that.
 
-            if isinstance(e, hub.NotSubscribedError):
+            if isinstance(e, hub.NotSubscribed):
                 fatal(e)
 
             if not registry.credentials:

@@ -13,7 +13,7 @@ from datetime import datetime
 from utils import AttrDict
 
 from hub import Credentials, ProfileArchive
-from hub import Error, NotSubscribedError, InvalidBackupError
+from hub import Error, NotSubscribed, InvalidBackupError
 
 class APIKey:
     def __init__(self, apikey):
@@ -277,7 +277,7 @@ class Backups:
 
     def get_credentials(self):
         if not self.user.credentials:
-            raise NotSubscribedError()
+            raise NotSubscribed()
 
         return self.user.credentials
 
@@ -296,7 +296,7 @@ class Backups:
         """
 
         if not self.user.credentials:
-            raise NotSubscribedError()
+            raise NotSubscribed()
 
         archive = dummydb.get_profile(profile_id)
         if not archive:

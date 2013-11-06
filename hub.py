@@ -100,7 +100,7 @@ class APIError(Error, _API.Error):
     def __init__(self, code, name, description):
         _API.Error.__init__(self, code, name, description)
 
-class NotSubscribedError(Error):
+class NotSubscribed(Error):
     DESC = """\
 Backups are not yet enabled for your TurnKey Hub account. Log
 into the Hub and go to the "Backups" section for instructions."""
@@ -121,7 +121,7 @@ class API(_API):
 
             if e.name in ("BackupAccount.NotSubscribed",
                          "BackupAccount.NotFound"): 
-                raise NotSubscribedError()
+                raise NotSubscribed()
 
             raise APIError(e.code, e.name, e.description)
 

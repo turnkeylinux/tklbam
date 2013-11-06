@@ -203,7 +203,7 @@ If you're feeling adventurous you can force another profile with the
                 self.profile = new_profile
                 print "Downloaded %s profile" % self.profile.profile_id
 
-        except hub.NotSubscribedError:
+        except hub.NotSubscribed:
             raise
 
         except hub_backups.Error, e:
@@ -268,7 +268,7 @@ def update_profile(force_profile=None):
     global registry
     try:
         registry.update_profile(force_profile)
-    except hub.NotSubscribedError, e:
+    except hub.NotSubscribed, e:
         print >> sys.stderr, str(e)
         sys.exit(1)
         

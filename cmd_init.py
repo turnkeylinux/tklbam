@@ -134,7 +134,7 @@ def main():
             registry.registry.credentials = credentials
             print "Linked TKLBAM to your Hub account."
 
-        except hub.NotSubscribedError, e:
+        except hub.NotSubscribed, e:
             print "Linked TKLBAM to your Hub account but there's a problem:"
             print
 
