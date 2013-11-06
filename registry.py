@@ -41,6 +41,7 @@ If you're feeling adventurous you can force another profile with the
 --force-profile option. Sorry about that."""
 
     DEFAULT_PATH = "/var/lib/tklbam"
+    ENV_VARNAME = "TKLBAM_REGISTRY"
 
     class Paths(_Paths):
         files = ['backup-resume', 'sub_apikey', 'secret', 'key', 'credentials', 'hbr', 
@@ -48,7 +49,7 @@ If you're feeling adventurous you can force another profile with the
 
     def __init__(self, path=None):
         if path is None:
-            path = os.environ.get('TKLBAM_REGISTRY', self.DEFAULT_PATH)
+            path = os.environ.get(self.ENV_VARNAME, self.DEFAULT_PATH)
 
         if not exists(path):
             os.makedirs(path)

@@ -95,6 +95,25 @@ Configuration file format ($CONF_PATH):
 
   <option-name> <value>
 
+Examples: 
+
+    # Just another system-level backup
+    tklbam-backup
+
+    # Same result as above but in two steps: first dump to a directory, then upload it
+    tklbam-backup --dump=/tmp/mybackup
+    tklbam-backup --raw-upload=/tmp/mybackup
+
+    # Backup Duplicity archives to a custom address on the local filesystem
+    tklbam-backup --address=file:///mnt/backups/mybackup
+    tklbam-escrow save-this-its-needed-to-restore-mybackup.txt
+
+    # Simulate a backup that excludes /root path and mysql customers db
+    tklbam-backup --simulate -- -/root -mysql:customers
+
+    # Backup the database to a separate backup with a unique backup id
+    TKLBAM_REGISTRY=/var/lib/tklbam.db tklbam-backup --skip-files --skip-package
+
 """
 
 import os
@@ -297,7 +316,14 @@ def main():
     if conf.s3_parallel_uploads > 1 and conf.s3_parallel_uploads > (conf.volsize / 5):
         warn("s3-parallel-uploads > volsize / 5 (minimum upload chunk is 5MB)")
 
-    hb = hub.Backups(registry.sub_apikey)
+    try:
+        hb = hub.Backups(registry.sub_apikey)
+    except hub.Backups.NotInitialized:
+        command = "tklbam-init"
+        if registry.path != registry.DEFAULT_PATH:
+            command = "%s=%s %s" % (registry.ENV_VARNAME, registry.path, command)
+
+        fatal('You need to run "%s" first' % command)
 
     if not raw_upload_path:
         update_profile(conf.force_profile)

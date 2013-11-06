@@ -110,17 +110,17 @@ Configuration file format ($CONF_PATH):
 
 Examples:
 
-    # restore Hub backup id 1
+    # Restore Hub backup id 1
     tklbam-restore 1
 
-    # restore Hub backup id 1 in two steps, first the download, then the application
+    # Same result as above but in two steps, first download the extract, then apply it
     tklbam-restore --raw-download=/tmp/mybackup 1 
     tklbam-restore /tmp/mybackup
 
-    # restore from Duplicity archives at custom backup address
+    # Restore from Duplicity archives at a custom backup address on the local filesystem
     tklbam-restore --keyfile=mybackup.escrow --address=file:///mnt/backups/mybackup 
 
-    # simulate restoring of Hub backup id 1. Exclude /root path and mysql customers db
+    # Simulate restoring Hub backup id 1 while excluding /root path and mysql customers db
     tklbam-restore --simulate --limits="-/root -mysql:customers" 1
 """
 

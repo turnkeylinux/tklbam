@@ -164,10 +164,12 @@ class Credentials(AttrDict):
 class Backups:
     API_URL = os.getenv('TKLBAM_APIURL', 'https://hub.turnkeylinux.org/api/backup/')
     Error = Error
+    class NotInitialized(Error):
+        pass
 
     def __init__(self, subkey=None):
         if subkey is None:
-            raise Error("no APIKEY - tklbam not initialized")
+            raise self.NotInitialized("no APIKEY - tklbam not initialized")
 
         self.subkey = subkey
         self.api = API()

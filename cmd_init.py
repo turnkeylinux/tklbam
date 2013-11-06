@@ -24,6 +24,17 @@ Options:
     --force-profile=PROFILE_ID     Force a specific backup profile (e.g., "core")
                                    default: cat /etc/turnkey_version
 
+Examples:
+
+    # initialize TKLBAM
+    tklbam-init
+
+    # initialize TKLBAM with the core profile
+    tklbam-init --force-profile=core
+
+    # initialize TKLBAM with a non-default registry path
+    TKLBAM_REGISTRY=/var/lib/tklbam2 tklbam-init
+
 """
 
 import sys

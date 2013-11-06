@@ -243,6 +243,9 @@ class Backups:
     # operations remain.
 
     Error = Error
+    class NotInitialized(Error):
+        pass
+
     SUBKEY_NS = "tklbam"
 
     @classmethod
@@ -258,7 +261,7 @@ class Backups:
 
     def __init__(self, subkey):
         if subkey is None:
-            raise Error("no APIKEY - tklbam not initialized")
+            raise self.NotInitialized("no APIKEY - tklbam not initialized")
 
         subkey = APIKey(subkey)
 
