@@ -69,7 +69,7 @@ Options / System restore:
 
     --limits="LIMIT-1 .. LIMIT-N"     Restore filesystem or database limitations
 
-      LIMIT := -?( /path/to/include/or/exclude | mysql:database[/table] )
+      LIMIT := -?( /path/to/include/or/exclude | mysql:database[/table] | pgsql:database[/table] )
 
     --skip-files                      Don't restore filesystem
     --skip-database                   Don't restore databases
@@ -110,15 +110,23 @@ Examples:
     # Restore Hub backup id 1
     tklbam-restore 1
 
-    # Same result as above but in two steps, first download the extract, then apply it
-    tklbam-restore --raw-download=/tmp/mybackup 1 
+    # Same result as above but in two steps: first download the extract, then apply it
+    tklbam-restore 1 --raw-download=/tmp/mybackup
     tklbam-restore /tmp/mybackup
 
-    # Restore from Duplicity archives at a custom backup address on the local filesystem
-    tklbam-restore --keyfile=mybackup.escrow --address=file:///mnt/backups/mybackup 
+    # Restore backup created with tklbam-backup --raw-upload=/srv
+    tklbam-restore 2 --raw-download=/srv
 
-    # Simulate restoring Hub backup id 1 while excluding /root path and mysql customers db
-    tklbam-restore --simulate --limits="-/root -mysql:customers" 1
+    # Restore from Duplicity archives at a custom backup address on the local filesystem
+    tklbam-restore --address=file:///mnt/backups/mybackup --keyfile=mybackup.escrow 
+
+    # Simulate restoring Hub backup id 1 while excluding changes to the /root path,
+    # mysql 'customers' DB, and the 'emails' table in the 'webapps' DB
+    tklbam-restore 1 --simulate --limits="-/root -mysql:customers -mysql:webapp/emails"
+
+    # Simulate restoring only the /root files in Hub backup id 1
+    tklbam-restore 1 --simulate --skip-database --skip-packages --limits="/root"
+
 """
 
 import os

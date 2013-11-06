@@ -93,8 +93,26 @@ OPTIONS
 
 --raw-upload=PATH         Use Duplicity to upload raw path contents to --address
 
---address=TARGET_URL      manual backup target URL.
-                          Default: automatically configured via Hub
+--address=TARGET_URL      custom backup target URL. Default: S3 storage bucket automatically configured via Hub
+
+      Supported storage backends and their URL formats::
+
+          file:///some_dir
+          rsync://user[:password]@other.host[:port]//absolute_path
+          rsync://user[:password]@other.host[:port]/relative_path
+          rsync://user[:password]@other.host[:port]::/module/some_dir
+          s3://other.host/bucket_name[/prefix]
+          s3+http://bucket_name[/prefix]
+          ftp://user[:password]@other.host[:port]/some_dir
+          ftps://user[:password]@other.host[:port]/some_dir
+          hsi://user[:password]@other.host[:port]/some_dir
+          imap://user[:password]@other.host[:port]/some_dir
+          scp://user[:password]@other.host[:port]/some_dir
+          ssh://user[:password]@other.host[:port]/some_dir
+          tahoe://alias/directory
+          webdav://user[:password]@other.host/some_dir
+          webdavs://user[:password]@other.host/some_dir
+          gdocs://user[:password]@other.host/some_dir
 
 --resume                  Resume aborted backup session
 
@@ -138,7 +156,7 @@ Configurable options
 --skip-database          Don't backup databases
 --skip-packages          Don't backup new packages
 
---force-profile=PROFILE_ID     Force a specific backup profile
+--force-profile=PROFILE_ID     Force backup profile (e.g., "core")
 
 Resolution order for configurable options:
 
@@ -150,12 +168,45 @@ Resolution order for configurable options:
 
 3) built-in default (lowest precedence)
 
+USAGE EXAMPLES
+==============
+
+::
+
+    # Full system-level backup
+    tklbam-backup
+
+    # Same result as above but in two steps: first dump to a directory, then upload it
+    tklbam-backup --dump=/tmp/mybackup
+    tklbam-backup --raw-upload=/tmp/mybackup
+
+    # Backup Duplicity archives to a custom address on the local filesystem
+    tklbam-backup --address=file:///mnt/backups/mybackup
+    tklbam-escrow this-keyfile-needed-to-restore-mybackup.escrow
+
+    # Simulate a backup that excludes the mysql customers DB and the 'emails' table in the webapp DB
+    # Tip: usually you'd want to configure excludes in /etc/tklbam/overrides
+    tklbam-backup --simulate -- -/srv -mysql:customers -mysql:webapp/emails
+
+    # Create separate backups with unique backup ids containing the previously excluded items
+    # Tip: use tklbam-status after tklbam-backup to determine the Hub backup ID
+    export TKLBAM_REGISTRY=/var/lib/tklbam.customers-and-webapp-emails
+    tklbam-backup --skip-files --skip-packages -- mysql:customers mysql:webapp/emails
+
+    export TKLBAM_REGISTRY=/var/lib/tklbam.raw-srv
+    tklbam-backup --raw-upload=/srv
+
+
 FILES
 =====
 
 :Configuration files: /etc/tklbam/overrides, /etc/tklbam/conf, /etc/tklbam/hooks.d
 
-:Local cache of profile: /var/lib/tklbam/profile
+:Local cache of profile: $TKLBAM_REGISTRY/profile
+
+By default TKLBAM_REGISTRY=/var/lib/tklbam
+
+
 
 SEE ALSO
 ========

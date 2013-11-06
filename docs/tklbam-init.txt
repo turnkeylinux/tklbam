@@ -2,12 +2,12 @@
 tklbam-init
 ===========
 
---------------------------------------------
-Initialization (links TKLBAM to Hub account)
---------------------------------------------
+-------------------------------------------------------------------------
+Initialization: links TKLBAM to Hub account and downloads backup profile)
+-------------------------------------------------------------------------
 
 :Author: Liraz Siri <liraz@turnkeylinux.org>
-:Date:   2010-09-01
+:Date:   2013-11-05
 :Manual section: 8
 :Manual group: backup
 
@@ -23,6 +23,29 @@ ARGUMENTS
 
 If you do not provide the API-KEY as a command line argument you will be
 prompted for it interactively.
+
+SECURITY WARNING
+================
+
+Providing your Hub account's APIKEY as a command line argument is potentially less secure
+than allowing tklbam-init to prompt you for it interactively:
+
+* The APIKEY may briefly show up in the process list
+* The shell may save the APIKEY to its history file (e.g., ~/.bash_history)
+
+USAGE EXAMPLES
+==============
+
+::
+
+    # initialize TKLBAM
+    tklbam-init
+
+    # initialize TKLBAM with the core profile
+    tklbam-init --force-profile=core
+
+    # initialize TKLBAM with a non-default registry path
+    TKLBAM_REGISTRY=/var/lib/tklbam2 tklbam-init
 
 OPTIONS
 =======

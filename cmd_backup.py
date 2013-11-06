@@ -13,7 +13,7 @@
 Backup the current system
 
 Arguments:
-    <override> := -?( /path/to/include/or/exclude | mysql:database[/table] )
+    <override> := -?( /path/to/include/or/exclude | mysql:database[/table] | pgsql:database[/table] )
 
     Default overrides read from $CONF_OVERRIDES
 
@@ -97,7 +97,7 @@ Configuration file format ($CONF_PATH):
 
 Examples: 
 
-    # Just another system-level backup
+    # Full system-level backup
     tklbam-backup
 
     # Same result as above but in two steps: first dump to a directory, then upload it
@@ -106,13 +106,19 @@ Examples:
 
     # Backup Duplicity archives to a custom address on the local filesystem
     tklbam-backup --address=file:///mnt/backups/mybackup
-    tklbam-escrow save-this-its-needed-to-restore-mybackup.txt
+    tklbam-escrow this-keyfile-needed-to-restore-mybackup.escrow
 
-    # Simulate a backup that excludes /root path and mysql customers db
-    tklbam-backup --simulate -- -/root -mysql:customers
+    # Simulate a backup that excludes the mysql customers DB and the 'emails' table in the webapp DB
+    # Tip: usually you'd want to configure excludes in /etc/tklbam/overrides
+    tklbam-backup --simulate -- -/srv -mysql:customers -mysql:webapp/emails
 
-    # Backup the database to a separate backup with a unique backup id
-    TKLBAM_REGISTRY=/var/lib/tklbam.db tklbam-backup --skip-files --skip-package
+    # Create separate backups with unique backup ids containing the previously excluded items
+    # Tip: use tklbam-status after tklbam-backup to determine the Hub backup ID
+    export TKLBAM_REGISTRY=/var/lib/tklbam.customers-and-webapp-emails
+    tklbam-backup --skip-files --skip-packages -- mysql:customers mysql:webapp/emails
+
+    export TKLBAM_REGISTRY=/var/lib/tklbam.raw-srv
+    tklbam-backup --raw-upload=/srv
 
 """
 

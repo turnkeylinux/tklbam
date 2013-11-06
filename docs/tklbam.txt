@@ -16,6 +16,14 @@ SYNOPSIS
 
 tklbam <command> [arguments]
 
+ENVIRONMENT VARIABLES
+=====================
+
+:TKLBAM_CONF: Path to TKLBAM configurations dir (default: /etc/tklbam)
+
+:TKLBAM_REGISTRY: Path to TKLBAM registry (default: /var/lib/tklbam)
+
+
 DESCRIPTION
 ===========
 

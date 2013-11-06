@@ -24,6 +24,15 @@ Options:
     --force-profile=PROFILE_ID     Force a specific backup profile (e.g., "core")
                                    default: cat /etc/turnkey_version
 
+Security warning:
+
+    Providing your Hub account's APIKEY as a command line argument is
+    potentially less secure than allowing tklbam-init to prompt you for it
+    interactively:
+
+    * The APIKEY may briefly show up in the process list
+    * The shell may save the APIKEY to its history file (e.g., ~/.bash_history)
+
 Examples:
 
     # initialize TKLBAM

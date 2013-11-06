@@ -50,14 +50,33 @@ Duplicity related options
           2M - 2 months ago
           1Y - 1 year ago
 
---keyfile=KEYFILE                 Path to escrow keyfile.
+--keyfile=KEYFILE                 Path to tklbam-escrow created keyfile
                                   
-                                  Default: Hub provides this automatically.
+                                  Default: automatically retrieved from the Hub
 
---address=TARGET_URL              manual backup target URL (needs --keyfile).
-                                  
-                                  Default: Hub provides this automatically.
+--address=TARGET_URL              Custom backup target URL (needs --keyfile)
 
+                                  Default: S3 storage bucket automatically provided by Hub
+
+      Supported storage backends and their URL formats::
+
+          file:///some_dir
+          rsync://user[:password]@other.host[:port]//absolute_path
+          rsync://user[:password]@other.host[:port]/relative_path
+          rsync://user[:password]@other.host[:port]::/module/some_dir
+          s3://other.host/bucket_name[/prefix]
+          s3+http://bucket_name[/prefix]
+          ftp://user[:password]@other.host[:port]/some_dir
+          ftps://user[:password]@other.host[:port]/some_dir
+          hsi://user[:password]@other.host[:port]/some_dir
+          imap://user[:password]@other.host[:port]/some_dir
+          scp://user[:password]@other.host[:port]/some_dir
+          ssh://user[:password]@other.host[:port]/some_dir
+          tahoe://alias/directory
+          webdav://user[:password]@other.host/some_dir
+          webdavs://user[:password]@other.host/some_dir
+          gdocs://user[:password]@other.host/some_dir
+                                      
 System restore options
 ----------------------
 
@@ -110,12 +129,37 @@ Resolution order for configurable options:
 
 3) built-in default (lowest precedence)
 
+USAGE EXAMPLES
+==============
+
+::
+
+    # Restore Hub backup id 1
+    tklbam-restore 1
+
+    # Same result as above but in two steps: first download the extract, then apply it
+    tklbam-restore 1 --raw-download=/tmp/mybackup
+    tklbam-restore /tmp/mybackup
+
+    # Restore backup created with tklbam-backup --raw-upload=/srv
+    tklbam-restore 2 --raw-download=/srv
+
+    # Restore from Duplicity archives at a custom backup address on the local filesystem
+    tklbam-restore --address=file:///mnt/backups/mybackup --keyfile=mybackup.escrow 
+
+    # Simulate restoring Hub backup id 1 while excluding changes to the /root path,
+    # mysql 'customers' DB, and the 'emails' table in the 'webapps' DB
+    tklbam-restore 1 --simulate --limits="-/root -mysql:customers -mysql:webapp/emails"
+
+    # Simulate restoring only the /root files in Hub backup id 1
+    tklbam-restore 1 --simulate --skip-database --skip-packages --limits="/root"
+
 FILES
 =====
 
 :Configuration files: /etc/tklbam/conf, /etc/tklbam/hooks.d
 
-:Restore cache: /var/cache/tklbam/restore
+:Restore cache: /var/cache/tklbam/restore (by default, see --restore-cache-dir=PATH option)
 
 SEE ALSO
 ========
