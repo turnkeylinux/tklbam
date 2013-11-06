@@ -36,9 +36,16 @@ class _Registry(object):
 
     class ProfileNotFound(Exception):
         """\
-This probably means that TKLBAM doesn't yet fully support your system.
-If you're feeling adventurous you can force another profile with the
---force-profile option. Sorry about that."""
+Without a profile TKLBAM can't auto-configure the backup process for your
+system. Sorry about that!
+
+What you can still do:
+
+- Restore existing backups
+- Backup raw directories with the --raw-upload option
+- Force another profile (e.g., --force-profile=core). You'll probably have to
+  tweak /etc/tklbam/overrides. Also, make sure you test the restore.  
+"""
 
     DEFAULT_PATH = "/var/lib/tklbam"
     ENV_VARNAME = "TKLBAM_REGISTRY"
@@ -264,24 +271,30 @@ class BackupSessionConf(AttrDict):
 
 registry = _Registry()
 
-def update_profile(force_profile=None):
+def update_profile(force_profile=None, strict=True):
     import sys
     global registry
-    try:
-        registry.update_profile(force_profile)
-    except hub.NotSubscribed, e:
-        print >> sys.stderr, str(e)
-        sys.exit(1)
-        
-    except registry.CachedProfile, e:
-        print >> sys.stderr, "warning: " + str(e)
-    except registry.ProfileNotFound, e:
-        print >> sys.stderr, "TurnKey Hub Error: %s" % str(e)
-        if not force_profile:
-            # be extra nice to people who aren't using --force-profile
-            print "\n" + e.__doc__
+    if not strict:
+        try:
+            registry.update_profile(force_profile)
+        except:
+            return
+    else:
+        try:
+            registry.update_profile(force_profile)
+        except hub.NotSubscribed, e:
+            print >> sys.stderr, str(e)
+            sys.exit(1)
+            
+        except registry.CachedProfile, e:
+            print >> sys.stderr, "warning: " + str(e)
+        except registry.ProfileNotFound, e:
+            print >> sys.stderr, "TurnKey Hub Error: %s" % str(e)
+            if not force_profile:
+                # be extra nice to people who aren't using --force-profile
+                print "\n" + e.__doc__
 
-        sys.exit(1)
+            sys.exit(1)
     os.environ['TKLBAM_PROFILE_ID'] = registry.profile.profile_id
 
 def hub_backups():
