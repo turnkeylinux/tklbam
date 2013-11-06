@@ -175,6 +175,16 @@ Generated backup encryption key:
 
     if empty_profile:
         registry.create_empty_profile()
+        print """\
+
+Created an empty profile:
+
+- We only backup files as included or excluded in the override paths specified
+  on the command line or configured in /etc/tklbam/overrides
+
+- We can't detect which files have changed since installation so we will
+  indiscriminately backup all files in the included directories. 
+"""
 
     elif force_profile or not registry.registry.profile:
         registry.update_profile(conf.force_profile)

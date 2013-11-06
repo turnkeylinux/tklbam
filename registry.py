@@ -43,6 +43,7 @@ What you can still do:
 
 - Restore existing backups
 - Backup raw directories with the --raw-upload option
+- Create an empty profile with the --empty-profile option
 - Force another profile (e.g., --force-profile=core). You'll probably have to
   tweak /etc/tklbam/overrides. Also, make sure you test the restore.  
 """
@@ -50,7 +51,7 @@ What you can still do:
     DEFAULT_PATH = "/var/lib/tklbam"
     ENV_VARNAME = "TKLBAM_REGISTRY"
 
-    EMPTY_PROFILE = "__EMPTY__"
+    EMPTY_PROFILE = "empty"
 
     class Paths(_Paths):
         files = ['backup-resume', 'sub_apikey', 'secret', 'key', 'credentials', 'hbr', 
@@ -288,6 +289,9 @@ def update_profile(profile_id=None, strict=True):
     import sys
     global registry
 
+    if profile_id == registry.EMPTY_PROFILE:
+        registry.profile = None
+
     if not strict:
         try:
             registry.update_profile(profile_id)
@@ -312,7 +316,6 @@ def update_profile(profile_id=None, strict=True):
     os.environ['TKLBAM_PROFILE_ID'] = registry.profile.profile_id
 
 def create_empty_profile():
-    registry.profile = None
     update_profile(registry.EMPTY_PROFILE)
 
 def hub_backups():
