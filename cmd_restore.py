@@ -95,9 +95,6 @@ Options / Configurable (see resolution order below):
     --restore-cache-dir=PATH          The path to the download cache directory
                                       default: $CONF_RESTORE_CACHE_DIR
 
-    --force-profile=PROFILE_ID        Force backup profile (e.g., "core")
-                                      default: cat /etc/turnkey_version
-
 Resolution order for configurable options:
 
   1) command line (highest precedence)
@@ -294,7 +291,7 @@ def main():
                                        ['raw-download=',
                                         'help',
                                         'simulate',
-                                        'limits=', 'address=', 'keyfile=', 'force-profile=',
+                                        'limits=', 'address=', 'keyfile=',
                                         'logfile=',
                                         'restore-cache-size=', 'restore-cache-dir=',
                                         'force',
@@ -371,9 +368,6 @@ def main():
 
         elif opt == '--debug':
             opt_debug = True
-
-        elif opt == '--force-profile':
-            conf.force_profile = val
 
     for opt, val in opts:
         for skip_opt in ('files', 'packages', 'database'):
