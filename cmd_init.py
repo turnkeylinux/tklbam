@@ -115,6 +115,20 @@ def main():
 
         apikey = args[0]
 
+    if not registry.registry.secret:
+        registry.registry.secret = generate_secret()
+        registry.registry.key = keypacket.fmt(registry.registry.secret, "")
+        print """\
+Generated backup encryption key:
+
+    For extra security run "tklbam-passphrase" to cryptographically protect it
+    with a passphrase, which will be needed later to restore. If you use lose
+    the passphrase it will be impossible to restore your backup and you may
+    suffer data loss. To safeguard against this you may want to create an
+    escrow key with "tklbam-escrow".
+
+"""
+
     if force or not registry.registry.sub_apikey:
         if not apikey:
             print "Copy paste the API-KEY from your Hub account's user profile"
@@ -134,8 +148,6 @@ def main():
             fatal(e)
 
         registry.registry.sub_apikey = sub_apikey
-        registry.registry.secret = generate_secret()
-        registry.registry.key = keypacket.fmt(registry.registry.secret, "")
 
         hb = hub.Backups(sub_apikey)
         try:
