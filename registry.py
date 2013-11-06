@@ -203,6 +203,9 @@ If you're feeling adventurous you can force another profile with the
                 self.profile = new_profile
                 print "Downloaded %s profile" % self.profile.profile_id
 
+        except hub.NotSubscribedError:
+            raise
+
         except hub_backups.Error, e:
             errno, errname, desc = e.args
             if errname == "BackupArchive.NotFound":
@@ -265,6 +268,10 @@ def update_profile(force_profile=None):
     global registry
     try:
         registry.update_profile(force_profile)
+    except hub.NotSubscribedError, e:
+        print >> sys.stderr, str(e)
+        sys.exit(1)
+        
     except registry.CachedProfile, e:
         print >> sys.stderr, "warning: " + str(e)
     except registry.ProfileNotFound, e:

@@ -295,6 +295,9 @@ class Backups:
         Raises an exception if no profile exists for profile_id.
         """
 
+        if not self.user.credentials:
+            raise NotSubscribedError()
+
         archive = dummydb.get_profile(profile_id)
         if not archive:
             raise Error(404, 'BackupArchive.NotFound', 'Backup profile archive not found: ' + profile_id)

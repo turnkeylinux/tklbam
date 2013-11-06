@@ -41,7 +41,7 @@ import sys
 import hub
 import keypacket
 
-from registry import registry
+import registry
 from conf import Conf
 
 import os
@@ -49,7 +49,6 @@ import base64
 import struct
 import hashlib
 import getopt
-import shutil
 
 def is_valid_apikey(apikey):
     padded = "A" * (20 - len(apikey)) + apikey
@@ -107,7 +106,7 @@ def main():
 
         apikey = args[0]
 
-    if force or not registry.sub_apikey:
+    if force or not registry.registry.sub_apikey:
         if not apikey:
             print "Copy paste the API-KEY from your Hub account's user profile"
             print
@@ -125,33 +124,25 @@ def main():
         except Exception, e:
             fatal(e)
 
-        registry.sub_apikey = sub_apikey
-        registry.secret = generate_secret()
-        registry.key = keypacket.fmt(registry.secret, "")
+        registry.registry.sub_apikey = sub_apikey
+        registry.registry.secret = generate_secret()
+        registry.registry.key = keypacket.fmt(registry.registry.secret, "")
 
         hb = hub.Backups(sub_apikey)
         try:
             credentials = hb.get_credentials()
-            registry.credentials = credentials
+            registry.registry.credentials = credentials
+            print "Linked TKLBAM to your Hub account."
 
         except hub.NotSubscribedError, e:
-            print >> sys.stderr, "Warning: " + str(e)
-            print >> sys.stderr
+            print "Linked TKLBAM to your Hub account but there's a problem:"
+            print
 
-        print "Linked TKLBAM to your Hub account."
-
-    elif (not force_profile and registry.profile):
+    elif (not force_profile and registry.registry.profile):
         fatal("already initialized")
 
-    if force_profile or not registry.profile:
-        try:
-            registry.update_profile(conf.force_profile)
-        except registry.ProfileNotFound, e:
-            print >> sys.stderr, "TurnKey Hub Error: %s" % str(e)
-            if not conf.force_profile:
-                print "\n" + e.__doc__
-
-            sys.exit(1)
+    if force_profile or not registry.registry.profile:
+        registry.update_profile(conf.force_profile)
 
 if __name__=="__main__":
     main()
