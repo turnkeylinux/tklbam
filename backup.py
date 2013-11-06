@@ -160,12 +160,16 @@ class Backup:
         if not conf.skip_packages or not conf.skip_files:
             self._log("\n" + fmt_title("Comparing current system state to the base state in the backup profile", '-'))
 
-        if not conf.skip_packages:
+        if not conf.skip_packages and exists(profile.packages):
             self._write_new_packages(extras.newpkgs, profile.packages)
 
         if not conf.skip_files:
+            # support empty profiles
+            dirindex = profile.dirindex if exists(profile.dirindex) else "/dev/null"
+            dirindex_conf = profile.dirindex_conf if exists(profile.dirindex_conf) else "/dev/null"
+
             self._write_whatchanged(extras.fsdelta, extras.fsdelta_olist,
-                                    profile.dirindex, profile.dirindex_conf,
+                                    dirindex, dirindex_conf,
                                     conf.overrides.fs)
 
         if not conf.skip_database:

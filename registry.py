@@ -50,6 +50,8 @@ What you can still do:
     DEFAULT_PATH = "/var/lib/tklbam"
     ENV_VARNAME = "TKLBAM_REGISTRY"
 
+    EMPTY_PROFILE = "__EMPTY__"
+
     class Paths(_Paths):
         files = ['backup-resume', 'sub_apikey', 'secret', 'key', 'credentials', 'hbr', 
                  'profile', 'profile/stamp', 'profile/profile_id']
@@ -161,9 +163,16 @@ What you can still do:
             if not exists(self.path.profile):
                 os.makedirs(self.path.profile)
 
+            if val == self.EMPTY_PROFILE:
+                self._file_str(self.path.profile.profile_id, val)
+                file(self.path.profile.stamp, "w").close()
+
+                return
+
             profile_archive.extract(self.path.profile)
             file(self.path.profile.stamp, "w").close()
             os.utime(self.path.profile.stamp, (0, profile_archive.timestamp))
+
             self._file_str(self.path.profile.profile_id, profile_archive.profile_id)
     profile = property(profile, profile)
 
@@ -191,13 +200,17 @@ What you can still do:
         has a newer profile for this appliance. If we can't contact the Hub raise
         an error if we don't already have profile."""
 
-        hub_backups = hub.Backups(self.sub_apikey)
         if not profile_id:
             if self.profile:
                 profile_id = self.profile.profile_id
             else:
                 profile_id = str(Version.from_system())
 
+        if profile_id == self.EMPTY_PROFILE:
+            self.profile = profile_id
+            return
+
+        hub_backups = hub.Backups(self.sub_apikey)
         if self.profile and self.profile.profile_id == profile_id:
             profile_timestamp = self.profile.timestamp
         else:
@@ -271,17 +284,18 @@ class BackupSessionConf(AttrDict):
 
 registry = _Registry()
 
-def update_profile(force_profile=None, strict=True):
+def update_profile(profile_id=None, strict=True):
     import sys
     global registry
+
     if not strict:
         try:
-            registry.update_profile(force_profile)
+            registry.update_profile(profile_id)
         except:
             return
     else:
         try:
-            registry.update_profile(force_profile)
+            registry.update_profile(profile_id)
         except hub.NotSubscribed, e:
             print >> sys.stderr, str(e)
             sys.exit(1)
@@ -290,12 +304,16 @@ def update_profile(force_profile=None, strict=True):
             print >> sys.stderr, "warning: " + str(e)
         except registry.ProfileNotFound, e:
             print >> sys.stderr, "TurnKey Hub Error: %s" % str(e)
-            if not force_profile:
+            if not profile_id:
                 # be extra nice to people who aren't using --force-profile
                 print "\n" + e.__doc__
 
             sys.exit(1)
     os.environ['TKLBAM_PROFILE_ID'] = registry.profile.profile_id
+
+def create_empty_profile():
+    registry.profile = None
+    update_profile(registry.EMPTY_PROFILE)
 
 def hub_backups():
     import sys

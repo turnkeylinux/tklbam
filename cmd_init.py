@@ -25,9 +25,13 @@ Arguments:
 Options:
 
     --force                        Force re-initialization with new API-KEY.
+
     --force-profile=PROFILE_ID     Force a specific backup profile (e.g., "core")
                                    default: cat /etc/turnkey_version
 
+    --empty-profile                Use an empty backup profile. Backup configurations
+                                   will only be taken from /etc/tklbam.
+   
 Security warning:
 
     Providing your Hub account's APIKEY as a command line argument is
@@ -92,13 +96,14 @@ def usage(e=None):
 
 def main():
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], "h", ["help", "force", "force-profile="])
+        opts, args = getopt.gnu_getopt(sys.argv[1:], "h", ["help", "force", "force-profile=", "empty-profile" ])
     except getopt.GetoptError, e:
         usage(e)
 
     apikey = None
     force = False
     force_profile = False
+    empty_profile = False
 
     conf = Conf()
 
@@ -106,8 +111,11 @@ def main():
         if opt in ('-h', '--help'):
             usage()
 
-        if opt == '--force':
+        elif opt == '--force':
             force = True
+
+        elif opt == '--empty-profile':
+            empty_profile = True
 
         elif opt == '--force-profile':
             force_profile = True
@@ -130,7 +138,6 @@ Generated backup encryption key:
     the passphrase it will be impossible to restore your backup and you may
     suffer data loss. To safeguard against this you may want to create an
     escrow key with "tklbam-escrow".
-
 """
 
     if force or not registry.registry.sub_apikey:
@@ -163,10 +170,13 @@ Generated backup encryption key:
             print "Linked TKLBAM to your Hub account but there's a problem:"
             print
 
-    elif (not force_profile and registry.registry.profile):
+    elif (not force_profile and not empty_profile and registry.registry.profile):
         fatal("already initialized")
 
-    if force_profile or not registry.registry.profile:
+    if empty_profile:
+        registry.create_empty_profile()
+
+    elif force_profile or not registry.registry.profile:
         registry.update_profile(conf.force_profile)
 
 if __name__=="__main__":
