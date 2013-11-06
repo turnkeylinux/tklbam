@@ -1,0 +1,10 @@
+/var/log/tklbam-restore
+/var/log/tklbam-backup
+{
+	rotate 12
+	monthly
+	missingok
+	notifempty
+	delaycompress
+	compress
+}
