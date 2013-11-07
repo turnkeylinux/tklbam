@@ -172,11 +172,10 @@ Run "tklbam-init --help" for further details.
         else:
             profile_archive = val
 
-            if not exists(self.path.profile):
-                os.makedirs(self.path.profile)
+            self.profile = None
+            os.makedirs(self.path.profile)
 
             if val == self.EMPTY_PROFILE:
-                self.profile = None
                 self._file_str(self.path.profile.profile_id, val)
                 file(self.path.profile.stamp, "w").close()
 
