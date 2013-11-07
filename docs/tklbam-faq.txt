@@ -7,7 +7,7 @@ Frequently Asked Questions
 --------------------------
 
 :Author: Liraz Siri <liraz@turnkeylinux.org>
-:Date:   2013-09-05
+:Date:   2013-11-07
 :Manual section: 7
 :Manual group: backup
 
@@ -25,9 +25,12 @@ available for peer review and modification.
 Where can I use TKLBAM?
 -----------------------
 
-On any system descended from a TurnKey Linux installation, regardless of
-hardware or location. Storing backups to Amazon S3 is easiest because
-authentication and key management are automatic. You just need to run::
+TKLBAM was originally designed to work with TurnKey Linux, but has since been
+extended to allow it to work on any Debian or Ubuntu based system, regardless
+of hardware or location.
+
+Storing backups to Amazon S3 is easiest because authentication and key
+management are automatic. You just need to run::
 
     tklbam-backup
 
@@ -48,43 +51,14 @@ And restore like this::
     tklbam-restore --address file:///mnt/otherdisk/tklbam/backup \
                    --keyfile=/mnt/otherdisk/tklbam/key
 
-Not as easy as the Hub-enabled "automatic" mode, but still vastly easier
-than your conventional backup process. The disadvantage is that you
-won't be able to restore/test your backup in the cloud, or from a VM
-running in another office branch (for example). Also keep in mind that a
-physical hard disk, even a RAID array, provides much much lower data
-reliability compared with Amazon S3.
+Not as easy as the Hub-enabled "automatic" mode, but still vastly easier than
+your conventional backup process. The disadvantage is that you won't be able to
+restore/test your backup in the cloud, or from a VM running in another office
+branch (for example). Also keep in mind that a physical hard disk, even a RAID
+array, provides much lower data reliability compared with Amazon S3.
 
 For this reason we recommend users use local backups to supplement cloud
 backups (e.g., providing fast local access).
-
-Why can't I backup a non-TurnKey Linux system with TKLBAM?
-----------------------------------------------------------
-
-TKLBAM is short for 'TurnKey Linux' Backup and Migration. It's designed
-specifically for TurnKey Linux and depends on many system-level details
-that don't necessarily apply to other Linux distributions (e.g.,
-installation method, versioning signatures, etc.).
-
-In the future, we may figure out how to extend the design to support
-additional operating systems, but it's not trivial and we don't have a
-timeline on when, or even if, that will happen.
-
-In the meantime, if you really want to use TKLBAM, consider
-virtualization-based workarounds. For example, if you install a TurnKey
-Linux VM on top of a Windows Server installation, you could use TKLBAM
-to backup anything that goes into the TurnKey Linux VM.
-
-Which TurnKey appliances are supported?
----------------------------------------
-
-With a few exceptions, all TurnKey appliances images from the
-2009.02 release batch onwards will work with TKLBAM.
-
-Unfortunately, at this time PostgreSQL based appliances (PostgreSQL, LAPP,
-OpenBravo) are not yet supported.
-
-PostgreSQL support is in the works but it's not ready yet.
 
 Which databases are supported?
 ------------------------------
@@ -94,12 +68,10 @@ MySQL and PostgreSQL.
 PRICING QUESTIONS
 =================
 
-How much does this cost?
-------------------------
+How much does cloud backup storage cost?
+----------------------------------------
 
-TKLBAM (and the TurnKey Hub) are currently free for private beta users.
-Amazon S3 storage fees are around $0.15/GB per month. Full details of
-Amazon S3 pricing can be found here.
+Amazon S3 cloud storage fees are around $0.15/GB per month.
 
 You can use simulation mode to calculate how much uncompressed data
 TKLBAM is going to store in a full backup::
@@ -124,12 +96,9 @@ If you notice $0.00 in the backups console, there's no need to open a
 support request. It's not a bug. At 15 cents per gigabyte, if you have
 just a few megabytes of data Amazon doesn't charge you anything.
 
-Backups start from about 100KB for a freshly installed TurnKey appliance.
+Backups start from around 100KB for a freshly installed TurnKey appliance.
 Remember, TKLBAM only saves changes you've made since the appliance was
 installed. 
-
-In fact, a significant number of users are being charged less than 1
-cent a month.
 
 USAGE QUESTIONS
 ===============
@@ -142,7 +111,11 @@ backup profile, which is downloaded from the Hub the first time you
 backup an appliance. When required the profile can be updated on
 demand (e.g., if we need to fix the profile)
 
-The profile is stored in /var/lib/tklbam/profile and contains the
+You can also generate your own custom profiles with the following command::
+
+    tklbam-internal create-profile
+
+The backup profile is stored in /var/lib/tklbam/profile and contains the
 following text files:
 
 1) dirindex.conf: a list of directories to check for changes by default.
@@ -251,36 +224,39 @@ and TKLBAM_CONF environment variables::
 Can I use TKLBAM to only backup a single directory?
 ===================================================
 
-Yes. There are a couple of ways to do this:
+Yes. Here are a couple of recommended ways to do this:
 
-1) The hard way: Configure TKLBAM overrides to create a system-level backup
-   that only backs up a single directory. Tweak the configuration, test it with
-   `tklbam-backup --simulate`, rinse repeat until your backup doesn't include
-   anything you don't want.
+1) Create a separate backup with an empty backup profile::
 
-2) The easy way: Use the --raw-upload option. This dashes TKLBAM's brains out
-   so instead of creating a system level backup it just backs up the directory
-   you specify. In other words, --raw-upload turns TKLBAM into a
-   directory-level backup tool rather than a system-level backup tool.
+    export TKLBAM_REGISTRY=/var/lib/tklbam.srv
+    export TKLBAM_CONF=/etc/tklbam.srv
 
-   For example, let's say you have a collection of big files that you don't
-   want to include in your system backup because you don't want to bloat your backup.
+    tklbam-init --force-profile=empty
+    tklbam-backup --skip-packages --skip-database -- /srv
 
-   So you configure an overrides to exclude that directory from your default
+2) Use the --raw-upload option 
+
+   This lobotomizes TKLBAM so instead of creating a system level backup it just
+   backs up the directory you specify. In other words, --raw-upload turns
+   TKLBAM into a directory-level backup tool rather than a system-level backup
+   tool.
+
+   For example, let's say you have a collection of big files at /srv that you don't
+   want to include in your system backup (e.g., because you don't want to bloat your backup).
+
+   So you configure an overrides to exclude the /srv directory from your default
    backup and create another TKLBAM backup just for the big files::
    
-        echo -/home/liraz/bigfiles >> /etc/tklbam/overrides
-        
-        export TKLBAM_REGISTRY=/var/lib/tklbam.bigfiles tklbam-backup
-        --raw-upload=/home/liraz/bigfiles
+        echo -/srv >> /etc/tklbam/overrides
+        export TKLBAM_REGISTRY=/var/lib/tklbam.srv-raw 
+        tklbam-backup --raw-upload=/srv
 
-   Keep if you use the --raw-upload option you'll also need to use the
-   --raw-download option when you restore::
+   Later, you'll need to use the --raw-download option to restore::
 
-        tklbam-restore --raw-download=/home/liraz/bigfiles <your-backup-id>
+        tklbam-restore --raw-download=/srv <your-backup-id>
 
    If you don't use the raw-download option, TKLBAM will assume you are trying
-   to restore a system-level backup and you'll probably get an error.
+   to restore a system-level backup and you'll get an error.
 
 What's the difference between a full backup and an incremental backup?
 ----------------------------------------------------------------------
@@ -324,12 +300,10 @@ Sorry, if your server is gone (e.g., terminated EC2 instance) nobody can
 help you. Next time either save an escrow key somewhere[s] safe or don't
 set a passphrase.
 
-Don't misunderstand, we'd love to help if we could, but we can't. The
-encryption key for your backup was generated locally on your server not
-ours. We designed passphrase protection to use special cryptographic
-countermeasures to make typical cracking techniques (e.g., dictionary
-attacks) very difficult even for someone with access to massive amounts
-of computer resources.
+The encryption key for your backup was generated locally on your server not
+ours. Passphrase protection uses special cryptographic countermeasures to make
+typical cracking techniques (e.g., dictionary attacks) very difficult even with
+access to massive computer resources.
 
 Note, if the system you backed up is still available, just log into it
 as root and change the passphrase (you don't need to know the old
@@ -340,48 +314,55 @@ passphrase)::
 AMAZON S3 QUESTIONS
 ===================
 
-Do I have to use Amazon S3 for storage?
----------------------------------------
+Do I have to store my backups in the Amazon S3 storage cloud?
+-------------------------------------------------------------
 
-No. You can dump the raw TKLBAM backup to a directory and then store it anyhow
-you want. 
+No! TKLBAM stores backups in the cloud for convenience, but it also supports
+local / custom backup storage targets.
 
-For example here's how we'd a system backup into a simple unencrypted tarball::
+There are two main alternatives to letting TKLBAM store a backup in the cloud:
 
-    cd /tmp
-    mkdir mybackup
-    tklbam-backup --dump=mybackup/
-    tar jcvf mybackup.tar.bz2 mybackup/
+1) Low-level tklbam-backup --dump option: lets you dump the raw TKLBAM backup
+   extract to a directory, which you can then store anyway you like.
 
-And later restore it like this::
+   For example here's how we'd a system backup into a simple unencrypted tarball::
+   
+       cd /tmp
+       mkdir mybackup
+       tklbam-backup --dump=mybackup/
+       tar jcvf mybackup.tar.bz2 mybackup/
+   
+   And later restore it like this::
+   
+       cd /tmp
+       tar jxvf mybackup.tar.bz2
+       tklbam-restore mybackup/
+   
+   The --dump option bypasses Duplicity, which usually create a series of
+   encrypted archive files that can be incrementally updated. These archive files
+   are stored by default in the Amazon S3 storage cloud but you can override this
+   with the --address option and specify any storage back-end supported by
+   Duplicity (e.g., local directory, rsync over ssh, ftp, sftp, etc).
 
-    cd /tmp
-    tar jxvf mybackup.tar.bz2
-    tklbam-restore mybackup/
-
-The --dump option bypasses Duplicity, which usually create a series of
-encrypted archive files that can be incrementally updated. These archive files
-are stored by default in the Amazon S3 storage cloud but you can override this
-with the --address option and specify any storage back-end supported by
-Duplicity (e.g., local directory, rsync over ssh, ftp, sftp, etc).
-
-Duplicity can be forced by adding the --address option when you backup and
-restore but make sure you know what you're doing because doing this complicates
-usage.
-
-The Hub normally helps you manage your backups metadata when it auto-configures
-the storage address. If you specify a manual address you need to manage storage
-locations, encryption keys and authentication credentials by hand.
-
-Many things can go wrong so please be careful and always rehearse a restore.
+2) High-level tklbam-backup --address option: lets you specify a custom backup
+   target URL that is passed on to Duplicity.
+   
+   It is highly recommended to rehearse a trial restore. Testing your backups
+   is always a good idea, and even more so with a custom --address as this may
+   complicate usage.
+   
+   The Hub normally helps you manage your backup's metadata when it
+   auto-configures the storage address. If you specify a manual address you
+   need to manage storage locations, encryption keys and authentication
+   credentials by hand.
 
 Why can't I access TKLBAM storage buckets with other Amazon S3 tools?
 ---------------------------------------------------------------------
 
-TKLBAM doesn't store it's data in generic S3 buckets, but in an isolated
+TKLBAM doesn't store its data in generic S3 buckets, but in an isolated
 TKLBAM-specific area on S3. This means generic S3 tools such as the AWS
-management console, or S3Fox will not be able to access the storage
-buckets in which TKLBAM backup volumes reside.
+management console, or S3Fox will not be able to access the storage buckets in
+which TKLBAM backup volumes reside.
 
 What are the advantages of isolating TKLBAM Amazon S3 storage?
 --------------------------------------------------------------
@@ -407,22 +388,19 @@ In any case, if your payment method is invalidated (e.g., cancelled or
 expired credit card), billing will fail and Amazon will attempt to
 contact you (e.g., by e-mail) to provide a new, valid payment method. 
 
-
 FAULT TOLERANCE FOR THE PARANOID IT GUY
 =======================================
 
-Is the Hub TKLBAM's central point of failure?
----------------------------------------------
+Is the Hub a central point of failure for TKLBAM?
+-------------------------------------------------
 
-Yes and no. On one hand, much of the streamlined usability of TKLBAM
-depends on the availability of the Hub. On the other hand, we designed
-TKLBAM to degrade gracefully if the Hub ever goes down (it shouldn't!).
+No, for a couple of reasons:
 
-As we scale the Hub we will gradually add capacity and build in
-additional layers of fault tolerance.
+1) After the initial setup, TKLBAM communicates directly with Amazon S3. Even
+   if the Hub does down, backups will not be interrupted.
 
-We have monitoring in place which alerts us immediately if anything
-unexpected happens.
+2) You can use TKLBAM without linking it to the Hub at all. See the tklbam-init
+   --solo option.
 
 If the Hub goes down, will my backup cron jobs still work?
 ----------------------------------------------------------
@@ -446,12 +424,12 @@ steps by hand:
 
    For more details see the tklbam-restore documentation.
 
-If the Hub goes down, can I still create a new backup?
-------------------------------------------------------
+If the Hub fails can I still create a new backup?
+-------------------------------------------------
 
-Yes - but only manually. Just remember the Hub won't know anything about
-these backups so you'll have manage keys and authentication credentials
-by hand.
+Yes - but you'll have to manage it manually. The Hub won't know anything about
+these backups so you'll have manage keys and authentication credentials by
+hand.
 
 SEE ALSO
 ========
