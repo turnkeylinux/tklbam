@@ -481,6 +481,11 @@ def main():
         if not backup_extract_path:
             backup_extract_path = get_backup_extract()
 
+        extras_paths = backup.ExtrasPaths(backup_extract_path)
+
+        if not isdir(extras_paths.path):
+            fatal("missing %s directory - this doesn't look like a system backup" % extras_paths.path)
+            
         os.environ['TKLBAM_BACKUP_EXTRACT_PATH'] = backup_extract_path
 
         if not silent:
