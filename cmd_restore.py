@@ -324,9 +324,6 @@ def main():
                 if not isdir(raw_download_path):
                     fatal("%s=%s is not a directory" % (opt, val))
 
-                if os.listdir(raw_download_path) != []:
-                    fatal("%s=%s is not an empty directory" % (opt, val))
-                
             else:
                 os.mkdir(raw_download_path)
 
@@ -384,6 +381,10 @@ def main():
 
             os.environ['TKLBAM_RESTORE_SKIP_' + skip_opt.upper()] = 'yes'
 
+    if raw_download_path:
+        if not opt_force and os.listdir(raw_download_path) != []:
+            fatal("--raw-download=%s is not an empty directory, use --force if that is ok" % raw_download_path)
+    
     restore_cache_size = conf.restore_cache_size
     restore_cache_dir = conf.restore_cache_dir
 
@@ -451,7 +452,7 @@ def main():
 
         def get_backup_extract():
             print fmt_title("Executing Duplicity to download %s to %s " % (address, raw_download_path))
-            downloader(raw_download_path, target, log=_print if not silent else None, debug=opt_debug)
+            downloader(raw_download_path, target, log=_print if not silent else None, debug=opt_debug, force=opt_force)
             return raw_download_path
 
         if raw_download_path:
