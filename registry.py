@@ -321,7 +321,7 @@ def update_profile(profile_id=None, strict=True):
     global registry
 
     if profile_id == registry.EMPTY_PROFILE:
-        print """\
+        print """
 Creating an empty profile, which means:
 
 - We only backup files as included or excluded in the override paths specified

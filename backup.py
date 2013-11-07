@@ -116,7 +116,8 @@ class Backup:
         file(dest_olist, "w").writelines((path + "\n" for path in olist))
 
         if self.verbose:
-            self._log("Save list of filesystem changes to %s:\n" % dest)
+            if changes:
+                self._log("Save list of filesystem changes to %s:\n" % dest)
 
             actions = list(changes.deleted(optimized=False)) + list(changes.statfixes(optimized=False))
             actions.sort(lambda a,b: cmp(a.args[0], b.args[0]))
@@ -137,9 +138,10 @@ class Backup:
 
                 self._log("  " + str(action))
 
-            self._log("\nSave list of new files to %s:\n" % dest_olist)
-            for path in olist:
-                self._log("  " + path)
+            if olist:
+                self._log("\nSave list of new files to %s:\n" % dest_olist)
+                for path in olist:
+                    self._log("  " + path)
 
     def _create_extras(self, extras, profile, conf):
         os.mkdir(extras.path)
