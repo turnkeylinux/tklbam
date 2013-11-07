@@ -16,13 +16,46 @@ SYNOPSIS
 
 tklbam-init [ --force ] [ `API-KEY` ]
 
+By default, this links TKLBAM to your Hub account and downloads a backup
+profile, which is used to calculate the list of system changes we need to
+backup.  The profile usually describes the installation state of a TurnKey
+appliance and contains a list of packages, filesystem paths to scan for changes
+and an index of the contents of those paths which records timestamps, ownership
+and permissions. 
+
 ARGUMENTS
 =========
 
 `API-KEY`   Cut and paste this from your Hub account's user profile.
 
 If you do not provide the API-KEY as a command line argument you will be
-prompted for it interactively.
+prompted for it interactively (unless you use the --solo option)
+
+OPTIONS
+=======
+
+--force                         Force re-initialization with new API-KEY
+
+--force-profile=PROFILE_ID     Force a specific backup profile 
+                               (e.g., "core", "turnkey-core-13.0-wheezy-amd64")
+
+                               Default value: String in /etc/turnkey_version
+
+                               Special value: "empty" creates an empty
+                               backup profile. Backup configurations will
+                               only be taken from /etc/tklbam.
+
+--force-profile=PATH           Path to a custom backup profile
+
+                               Details: tklbam-internal create-profile --help
+
+--solo                         Solo mode: disables link to Hub.
+
+                               You'll need to --force-profile=empty or use a custom profile
+
+                               tklbam-backup will only work with --address or --dump options
+
+                               tklbam-restore will only work with --address or a backup extract
 
 SECURITY WARNING
 ================
@@ -30,8 +63,8 @@ SECURITY WARNING
 Providing your Hub account's APIKEY as a command line argument is potentially less secure
 than allowing tklbam-init to prompt you for it interactively:
 
-* The APIKEY may briefly show up in the process list
 * The shell may save the APIKEY to its history file (e.g., ~/.bash_history)
+* The APIKEY may briefly show up in the process list
 
 USAGE EXAMPLES
 ==============
@@ -47,10 +80,8 @@ USAGE EXAMPLES
     # initialize TKLBAM with a non-default registry path
     TKLBAM_REGISTRY=/var/lib/tklbam2 tklbam-init
 
-OPTIONS
-=======
-
---force    Force re-initialization with new API-KEY
+    # initialize TKLBAM in solo mode with an empty profile
+    tklbam-init --solo --force-profile=empty
 
 SEE ALSO
 ========

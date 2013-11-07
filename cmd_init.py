@@ -31,7 +31,7 @@ Options:
 
                                    Default value: String in /etc/turnkey_version
 
-                                   Special value: "empty": creates an empty
+                                   Special value: "empty" creates an empty
                                    backup profile. Backup configurations will
                                    only be taken from /etc/tklbam.
 
