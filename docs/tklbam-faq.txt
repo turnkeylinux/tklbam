@@ -314,6 +314,22 @@ passphrase)::
 AMAZON S3 QUESTIONS
 ===================
 
+How do I monitor how much traffic is being uploaded or downloaded?
+------------------------------------------------------------------
+
+We recommend the following package::
+
+    apt-get install iftop
+    iftop
+
+How can I throttle how much bandwidth TKLBAM uses?
+--------------------------------------------------
+
+Here's one way to do it::
+
+    apt-get install trickle
+    trickle -u 100  -d 100 tklbam-backup
+
 Do I have to store my backups in the Amazon S3 storage cloud?
 -------------------------------------------------------------
 
