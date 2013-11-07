@@ -10,7 +10,15 @@
 # the License, or (at your option) any later version.
 # 
 """
-Create custom profile 
+Create custom backup profile 
+
+A backup profile is used to calculate the list of system changes that need to
+be backed up.  It typically describes the installation state of the system and
+includes 3 files:
+
+* dirindex.conf: list of filesystem paths to scan for changes 
+* dirindex: index of timestamps, ownership and permissions for dirindex.conf paths
+* packages: list of currently installed packages
 
 Arguments:
     
