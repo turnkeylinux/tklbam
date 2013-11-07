@@ -94,7 +94,7 @@ class Backup:
         if new_packages:
             self._log("Save list of new packages:\n")
             self._log("  cat > %s << EOF " % dest)
-            self._log(" ".join(new_packages))
+            self._log("  " + " ".join(new_packages))
             self._log("  EOF\n")
 
         fh = file(dest, "w")
