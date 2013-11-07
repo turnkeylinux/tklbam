@@ -29,7 +29,6 @@ Options:
 
     -f --force      Overwrite non-empty directories
 
-    --root=PATH     Use this as the root path, instead of /
     --no-packages   Don't create a list of installed packages from /var/lib/dpkg/status
 
                     Without this we won't be able to detect which packages have
@@ -41,6 +40,9 @@ Options:
                     Without this we won't be able to detect changes since the
                     profile was generated so the backup will include everything wholesale.
                     (e.g., all files in /etc vs only files in /etc that have changed)
+
+    --root=PATH     Use this as the root path, instead of /
+                    This is useful for generating backup profiles for chroot filesystems
 
 Usage examples:
 

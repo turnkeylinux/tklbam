@@ -13,7 +13,7 @@
 
 import os
 import re
-from os.path import exists
+from os.path import *
 from paths import Paths as _Paths
 import simplejson
 
@@ -42,15 +42,22 @@ system. Sorry about that! However even without a profile you can still:
 - Restore existing backups
 - Backup raw directories with the --raw-upload option
 
-Also, you can work around this problem by using the --force-profile=empty
-option to create an empty profile or specify a profile id for the another
-system (e.g., --force-profile=core).
+Also, you can use the --force-profile option to work around this in several ways:
+
+- Download a profile for the another system  (e.g., --force-profile=core).
+- Use an empty profile with --force-profile=empty
+- Use a custom profile with --force-profile=path/to/custom/profile/
+
+    tklbam-internal create-profile --help
+
+Run "tklbam-init --help" for further details.
 """
 
     DEFAULT_PATH = "/var/lib/tklbam"
     ENV_VARNAME = "TKLBAM_REGISTRY"
 
     EMPTY_PROFILE = "empty"
+    CUSTOM_PROFILE = "custom"
 
     class Paths(_Paths):
         files = ['backup-resume', 'sub_apikey', 'secret', 'key', 'credentials', 'hbr', 
@@ -144,6 +151,11 @@ system (e.g., --force-profile=core).
 
     hbr = property(hbr, hbr)
 
+    @classmethod
+    def _custom_profile_id(cls, path):
+        name = basename(abspath(path))
+        return "%s:%s" % (cls.CUSTOM_PROFILE, name)
+
     def profile(self, val=UNDEFINED):
         if val is None:
             return shutil.rmtree(self.path.profile, ignore_errors=True)
@@ -164,16 +176,22 @@ system (e.g., --force-profile=core).
                 os.makedirs(self.path.profile)
 
             if val == self.EMPTY_PROFILE:
+                self.profile = None
                 self._file_str(self.path.profile.profile_id, val)
                 file(self.path.profile.stamp, "w").close()
 
-                return
+            elif isdir(str(val)):
+                self.profile = None
+                shutil.copytree(val, self.path.profile)
+                self._file_str(self.path.profile.profile_id, self._custom_profile_id(val))
+                file(self.path.profile.stamp, "w").close()
 
-            profile_archive.extract(self.path.profile)
-            file(self.path.profile.stamp, "w").close()
-            os.utime(self.path.profile.stamp, (0, profile_archive.timestamp))
+            else:
+                profile_archive.extract(self.path.profile)
+                file(self.path.profile.stamp, "w").close()
+                os.utime(self.path.profile.stamp, (0, profile_archive.timestamp))
+                self._file_str(self.path.profile.profile_id, profile_archive.profile_id)
 
-            self._file_str(self.path.profile.profile_id, profile_archive.profile_id)
     profile = property(profile, profile)
 
     def backup_resume_conf(self, val=UNDEFINED):
@@ -206,7 +224,7 @@ system (e.g., --force-profile=core).
             else:
                 profile_id = str(Version.from_system())
 
-        if profile_id == self.EMPTY_PROFILE:
+        if profile_id == self.EMPTY_PROFILE or isdir(profile_id):
             self.profile = profile_id
             return
 
@@ -237,6 +255,13 @@ system (e.g., --force-profile=core).
             raise self.CachedProfile("using cached profile because of a Hub error: " + desc)
 
     def update_profile(self, profile_id=None):
+        if profile_id is None:
+            # don't empty empty or custom profiles
+            if self.profile and \
+               (self.profile.profile_id == registry.EMPTY_PROFILE or 
+                self.profile.profile_id.startswith(registry.CUSTOM_PROFILE + ":")):
+                return
+
         try:
             # look for exact match first
             self._update_profile(profile_id)
@@ -289,7 +314,6 @@ def update_profile(profile_id=None, strict=True):
     global registry
 
     if profile_id == registry.EMPTY_PROFILE:
-        registry.profile = None
         print """\
 
 Creating an empty profile, which means:
@@ -317,10 +341,10 @@ Creating an empty profile, which means:
         except registry.CachedProfile, e:
             print >> sys.stderr, "warning: " + str(e)
         except registry.ProfileNotFound, e:
-            print >> sys.stderr, "TurnKey Hub Error: %s" % str(e)
+            print >> sys.stderr, "\nTurnKey Hub Error: %s" % str(e)
             if not profile_id:
                 # be extra nice to people who aren't using --force-profile
-                print "\n" + e.__doc__
+                print >> sys.stderr, "\n" + e.__doc__
 
             sys.exit(1)
     os.environ['TKLBAM_PROFILE_ID'] = registry.profile.profile_id

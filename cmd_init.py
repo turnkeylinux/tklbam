@@ -34,6 +34,9 @@ Options:
                                    Special value: "empty": creates an empty
                                    backup profile. Backup configurations will
                                    only be taken from /etc/tklbam.
+
+    --force-profile=PATH           Path to a custom backup profile
+                                   Details: tklbam-internal create-profile --help
    
 Security warning:
 
