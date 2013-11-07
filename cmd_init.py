@@ -12,13 +12,11 @@
 """
 Initialization (start here)
 
-Links TKLBAM to your Hub account and downloads a backup profile.
-
-The backup profile describes the installation state of a TurnKey appliance.  It
-contains a list of packages, directories to scan for changes, and an
-index of those directories which records timestamps, ownership and permissions.
-TKLBAM uses this to calculate a list of things that have changed since
-installation.
+This links TKLBAM to your Hub account and downloads a backup profile, which is
+used to calculate the list of system changes we need to backup. The profile
+usually describes the installation state of a TurnKey appliance and contains a
+list of packages, filesystem paths to scan for changes and an index of the
+contents of those paths which records timestamps, ownership and permissions. 
 
 Arguments:
 
@@ -31,7 +29,7 @@ Options:
     --force-profile=PROFILE_ID     Force a specific backup profile 
                                    (e.g., "core", "turnkey-core-13.0-wheezy-amd64")
 
-                                   Default: cat /etc/turnkey_version
+                                   Default value: String in /etc/turnkey_version
 
                                    Special value: "empty": creates an empty
                                    backup profile. Backup configurations will
