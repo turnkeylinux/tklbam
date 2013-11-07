@@ -350,7 +350,7 @@ Creating an empty profile, which means:
         except registry.CachedProfile, e:
             print >> sys.stderr, "warning: " + str(e)
         except registry.ProfileNotFound, e:
-            print >> sys.stderr, "\nTurnKey Hub Error: %s" % str(e)
+            print >> sys.stderr, "TurnKey Hub Error: %s" % str(e)
             if not profile_id:
                 # be extra nice to people who aren't using --force-profile
                 print >> sys.stderr, "\n" + e.__doc__
