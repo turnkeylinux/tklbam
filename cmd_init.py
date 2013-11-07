@@ -15,8 +15,10 @@ Initialization (start here)
 Links TKLBAM to your Hub account and downloads a backup profile.
 
 The backup profile describes the installation state of a TurnKey appliance.  It
-contains a list of packages, directories, and file timestamps which TKLBAM uses
-to calculate a list of things that have changed since installation.
+contains a list of packages, directories to scan for changes, and an
+index of those directories which records timestamps, ownership and permissions.
+TKLBAM uses this to calculate a list of things that have changed since
+installation.
 
 Arguments:
 
