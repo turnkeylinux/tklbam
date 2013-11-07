@@ -169,7 +169,7 @@ class Backups:
 
     def __init__(self, subkey=None):
         if subkey is None:
-            raise self.NotInitialized("no APIKEY - tklbam not initialized")
+            raise self.NotInitialized("no APIKEY - tklbam not linked to the Hub")
 
         self.subkey = subkey
         self.api = API()

@@ -12,11 +12,11 @@
 """
 Initialization (start here)
 
-This links TKLBAM to your Hub account and downloads a backup profile, which is
-used to calculate the list of system changes we need to backup. The profile
-usually describes the installation state of a TurnKey appliance and contains a
-list of packages, filesystem paths to scan for changes and an index of the
-contents of those paths which records timestamps, ownership and permissions. 
+By default, this links TKLBAM to your Hub account and downloads a backup profile, 
+which is used to calculate the list of system changes we need to backup. 
+The profile usually describes the installation state of a TurnKey appliance and 
+contains a list of packages, filesystem paths to scan for changes and an index of 
+the contents of those paths which records timestamps, ownership and permissions. 
 
 Arguments:
 
@@ -37,6 +37,12 @@ Options:
 
     --force-profile=PATH           Path to a custom backup profile
                                    Details: tklbam-internal create-profile --help
+
+    --solo                         Solo mode: disables link to Hub.
+                                   You'll need to --force-profile=empty or use a custom profile
+
+                                   tklbam-backup will only work with --address or --dump options
+                                   tklbam-restore will only work with --address or a backup extract
    
 Security warning:
 
@@ -57,6 +63,9 @@ Examples:
 
     # initialize TKLBAM with a non-default registry path
     TKLBAM_REGISTRY=/var/lib/tklbam2 tklbam-init
+
+    # initialize TKLBAM in solo mode with an empty profile
+    tklbam-init --solo --force-profile=empty
 
 """
 
@@ -102,13 +111,14 @@ def usage(e=None):
 
 def main():
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], "h", ["help", "force", "force-profile="])
+        opts, args = getopt.gnu_getopt(sys.argv[1:], "h", ["help", "solo", "force", "force-profile="])
     except getopt.GetoptError, e:
         usage(e)
 
     apikey = None
     force = False
     force_profile = False
+    solo = False
 
     conf = Conf()
 
@@ -122,6 +132,9 @@ def main():
         elif opt == '--force-profile':
             force_profile = True
             conf.force_profile = val
+
+        elif opt == "--solo":
+            solo = True
 
     if args:
         if len(args) != 1:
@@ -142,41 +155,50 @@ Generated backup encryption key:
     escrow key with "tklbam-escrow".
 """
 
-    if force or not registry.registry.sub_apikey:
-        if not apikey:
-            print "Copy paste the API-KEY from your Hub account's user profile"
-            print
+    if solo:
+        if registry.registry.sub_apikey:
+            print "Broken TKLBAM link to your Hub account (--solo mode)"
+            registry.registry.sub_apikey = None
+            registry.registry.credentials = None
+    else:
+        if force or not registry.registry.sub_apikey:
+            if not apikey:
+                print "Copy paste the API-KEY from your Hub account's user profile"
+                print
 
-            while True:
-                apikey = raw_input("API-KEY: ").strip()
-                if apikey:
-                    break
+                while True:
+                    apikey = raw_input("API-KEY: ").strip()
+                    if apikey:
+                        break
 
-        if not is_valid_apikey(apikey):
-            fatal("'%s' is an invalid API-KEY" % apikey)
+            if not is_valid_apikey(apikey):
+                fatal("'%s' is an invalid API-KEY" % apikey)
 
-        try:
-            sub_apikey = hub.Backups.get_sub_apikey(apikey)
-        except Exception, e:
-            fatal(e)
+            try:
+                sub_apikey = hub.Backups.get_sub_apikey(apikey)
+            except Exception, e:
+                fatal(e)
 
-        registry.registry.sub_apikey = sub_apikey
+            registry.registry.sub_apikey = sub_apikey
 
-        hb = hub.Backups(sub_apikey)
-        try:
-            credentials = hb.get_credentials()
-            registry.registry.credentials = credentials
-            print "Linked TKLBAM to your Hub account."
+            hb = hub.Backups(sub_apikey)
+            try:
+                credentials = hb.get_credentials()
+                registry.registry.credentials = credentials
+                print "Linked TKLBAM to your Hub account."
 
-        except hub.NotSubscribed, e:
-            print "Linked TKLBAM to your Hub account but there's a problem:"
-            print
+            except hub.NotSubscribed, e:
+                print "Linked TKLBAM to your Hub account but there's a problem:"
+                print
 
-    elif not force_profile and registry.registry.profile:
-        fatal("already initialized")
+        elif not force_profile and registry.registry.profile:
+            fatal("already initialized")
 
     if force_profile or not registry.registry.profile:
-        registry.update_profile(conf.force_profile)
+        try:
+            registry.update_profile(conf.force_profile)
+        except hub.Backups.NotInitialized:
+            fatal("--solo requires --force-profile=empty or --force-profile=path/to/custom/profile ")
 
 if __name__=="__main__":
     main()

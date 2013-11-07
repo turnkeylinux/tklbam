@@ -308,13 +308,20 @@ class BackupSessionConf(AttrDict):
 
 registry = _Registry()
 
+class NotInitialized(hub.Backups.NotInitialized):
+    def __init__(self):
+        command = "tklbam-init"
+        if registry.path != registry.DEFAULT_PATH:
+            command = "%s=%s %s" % (registry.ENV_VARNAME, registry.path, command)
+
+        hub.Backups.NotInitialized.__init__(self, 'Hub link required, run "%s" first' % command)
+
 def update_profile(profile_id=None, strict=True):
     import sys
     global registry
 
     if profile_id == registry.EMPTY_PROFILE:
         print """\
-
 Creating an empty profile, which means:
 
 - We only backup files as included or excluded in the override paths specified
@@ -333,6 +340,9 @@ Creating an empty profile, which means:
     else:
         try:
             registry.update_profile(profile_id)
+        except hub.Backups.NotInitialized:
+            raise NotInitialized()
+
         except hub.NotSubscribed, e:
             print >> sys.stderr, str(e)
             sys.exit(1)
@@ -350,16 +360,10 @@ Creating an empty profile, which means:
 
 def hub_backups():
     import sys
-    global registry
 
     try:
         hb = hub.Backups(registry.sub_apikey)
     except hub.Backups.NotInitialized:
-        command = "tklbam-init"
-        if registry.path != registry.DEFAULT_PATH:
-            command = "%s=%s %s" % (registry.ENV_VARNAME, registry.path, command)
-
-        print >> sys.stderr, 'error: you need to run "%s" first' % command
-        sys.exit(1)
+        raise NotInitialized()
 
     return hb

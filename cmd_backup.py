@@ -322,13 +322,23 @@ def main():
     if conf.s3_parallel_uploads > 1 and conf.s3_parallel_uploads > (conf.volsize / 5):
         warn("s3-parallel-uploads > volsize / 5 (minimum upload chunk is 5MB)")
 
-    hb = hub_backups()
-
     if not raw_upload_path:
-        update_profile(conf.force_profile)
+        try:
+            update_profile(conf.force_profile)
+        except hub.Backups.NotInitialized, e:
+            print >> sys.stderr, "error: you need a profile to backup, run tklbam-init first"
+            sys.exit(1)
 
     credentials = None
     if not conf.address and not dump_path:
+        try:
+            hb = hub_backups()
+        except hub.Backups.NotInitialized, e:
+            print >> sys.stderr, "error: " + str(e)
+            print >> sys.stderr, "tip: you can still use tklbam-backup with --dump or --address"
+
+            sys.exit(1)
+
         try:
             registry.credentials = hb.get_credentials()
         except hb.Error, e:

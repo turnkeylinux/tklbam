@@ -400,7 +400,14 @@ def main():
             backup_extract_path = arg
         else:
             try:
-                hbr = get_backup_record(arg)
+                try:
+                    hbr = get_backup_record(arg)
+                except hub.Backups.NotInitialized, e:
+                    print >> sys.stderr, "error: " + str(e)
+                    print >> sys.stderr, "tip: you can still use tklbam-restore with --address or a backup extract"
+
+                    sys.exit(1)
+
                 credentials = hub.Backups(registry.sub_apikey).get_credentials()
             except Error, e:
                 fatal(e)
@@ -420,7 +427,7 @@ def main():
                 fatal("a manual --address is incompatible with a <backup-id>")
 
             if not opt_key:
-                fatal("a manual --address needs a --keyfile")
+                fatal("a manual --address needs a tklbam-escrow created --keyfile")
 
         address = hbr.address if hbr else opt_address
 
