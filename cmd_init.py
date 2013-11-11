@@ -102,11 +102,13 @@ def fatal(e):
     sys.exit(1)
 
 def usage(e=None):
-    if e:
-        print >> sys.stderr, "error: " + str(e)
+    from paged import stdout
 
-    print >> sys.stderr, "Usage: %s [ API-KEY ]" % sys.argv[0]
-    print >> sys.stderr, __doc__.strip()
+    if e:
+        print >> stdout, "error: " + str(e)
+
+    print >> stdout, "Usage: %s [ API-KEY ]" % sys.argv[0]
+    print >> stdout, __doc__.strip()
     sys.exit(1)
 
 def main():
