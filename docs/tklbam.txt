@@ -7,7 +7,7 @@ TurnKey Linux Backup and Migration
 ----------------------------------
 
 :Author: Liraz Siri <liraz@turnkeylinux.org>
-:Date:   2010-09-01
+:Date:   2013-11-11
 :Manual section: 8
 :Manual group: backup
 
@@ -45,6 +45,29 @@ configurations between different versions of the same type of virtual
 appliance though for some applications, additional manual steps, such as
 a database schema update, may be required to complete migration between
 versions.
+
+Features
+--------
+
+* Figures out which files, databases and packages need to be backed up
+  automatically by detecting changes since installation
+
+* Lets you simulate a backup beforehand to review if you need to include
+  or exclude any file paths or databases
+
+* Restoring automatically adds missing users and groups, fixes file
+  ownership and permission issues
+
+* Makes it easy to create lightweight backups that can be migrated
+  across operating system versions
+
+* Supports a wide variety of storage targets (e.g., Amazon S3, local
+  filesystem, rsync, ftp, SSH, etc.)
+
+* Leverages Duplicity to creates PGP encrypted, incremental backup
+  archives
+
+* Easy to embed in an existing backup solution
 
 Key elements
 ------------
