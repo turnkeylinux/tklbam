@@ -1,0 +1,151 @@
+==================
+v1.4 Release Notes
+==================
+
+This release focused mainly on improving TKLBAM's usability, making it
+more robust, and improving it as an independent general purpose tool.
+
+Motivation: more people would find TKLBAM useful if...
+------------------------------------------------------
+
+* If it worked on other Linux distributions (e.g., Debian and Ubuntu to
+  begin with) 
+
+* If users understood how it worked and realized they were in control.
+  Magic is scary in a backup tool.
+
+* If it worked without the TurnKey Hub or better yet without needing a
+  network connection at all.
+
+* If users realized that TKLBAM works with all the usual non-cloud storage
+  back-ends such as the local filesystem, rsync, ftp, ssh, etc.
+
+* If users could more easily tell when something is wrong, diagnose the
+  problem and fix it without having to go through TKLBAM's code or
+  internals
+
+* If users could mix and match different parts of TKLBAM as required (e.g.,
+  the part that identifies system changes, the part that interfaces with
+  Duplicity to incrementally update their encrypted backup archives,
+  etc.)
+    
+* If users could embed TKLBAM in their existing backup solutions
+
+* If users realized TKLBAM allowed them to backup different things at
+  different frequencies (e.g., the database every hour, the code every
+  day, the system every week)
+
+  Monolithic all-or-nothing system-level backups are not the only way to
+  go.
+
+* If it could help with broken migrations (e.g., restoring a backup from
+  TurnKey Redmine 12 to TurnKey Redmine 13)
+
+* If it worked more robustly, tolerated failures, and with fewer bugs
+
+Changes
+-------
+
+* TKLBAM no longer needs the TurnKey Hub or even a network connection
+
+  - tklbam-init --solo option
+
+  - tklbam-backup and tklbam-restore can now work without being linked
+    to the TurnKey Hub
+
+* More powerful --force-profile option in init, backup and restore
+
+  - The --force-profile=empty option allows you to force an empty
+    profile, which is useful if:
+  
+    * you don't want TKLBAM to do a full system backup (e.g., you only
+      want to backup a single directory)
+
+    * TKLBAM can't download a profile to auto-configure itself (e.g.,
+      unsupported appliance or Linux distribution)
+    
+    * you want full control over the configuration of the backup
+
+    * don't want to link TKLBAM to a Hub account (tklbam-init --solo)
+
+  - The --force-profile option accepts appliance codenames (e.g.,
+    --force-profile=core). This makes --force-profile much easier to
+    use. Previously the only option was to give it the exact profile
+    version (e.g., ---force-profile=turnkey-core-13.0-wheezy-amd64)
+
+  - The --force-profile option now accepts custom profiles such as
+    those created by the "tklbam-internal create-profile" command.
+
+  - tklbam-init and tklbam-restore now support the --force-profile
+    option for setting a non-default backup profile. Previously, only
+    tklbam-backup accepted the --force-profile option.
+
+* Increase the robustness of MySQL backup/restore by detecting and
+  working around broken debian.cnf files, which can sometimes get out of
+  sync with the mysql user database.
+
+* Improved logging
+
+  - Log backup/restore output in real-time to /var/log
+
+    Previously the logfile would only be written when backup/restore
+    finished, which made it hard to diagnose problems with
+    non-interactive runs of tklbam-backup (e.g.,
+    /etc/cron.daily/tklbam-backup)
+
+  - Log exception tracebacks
+
+  - Added a log rotation script
+
+* Usability improvements make TKLBAM more verbose and self-documenting
+
+  Goals:
+
+  - make TKLBAM easier to understand, less magical
+
+  - make it easier to tell when something is wrong, diagnose the
+    problem and fix it without having to go through TKLBAM's code or
+    internals 
+
+  - explain that TKLBAM works with all the usual non-cloud storage
+    back-ends such as the local filesystem, rsync, ftp, ssh, etc. many
+    users probably didn't realize these worked
+
+  - better explain the things users don't realize are possible
+        don't expect users to read every bit of documentation first
+
+  Highlights:
+  
+  - tklbam-backup now explains what files and packages have changed,
+    what databases will be backed up, etc.
+
+  - illustrative usage examples
+
+  - run help output through pager
+
+  - list URLs for custom --address storage backends we know work
+
+  - replace cryptic error messages with more helpful suggestions
+
+  - embedded usage help goes through pager (e.g., less)
+
+* better --debug behavior
+    
+  - print an explanation before dropping you into the debug shell
+
+  - fix a PATH override issue which prevented duplicity from working in
+    the debug shell
+
+  - added another "breakpoint" when using restore --debug, right before
+    duplicity is executed
+
+* Cryptographically signed profile-level hooks are now supported. It's a
+  generic mechanism but the original motivation for this was to allow us
+  to automatically fix migrations between two versions of an appliance
+  (E.g., TurnKey Redmine 12 and TurnKey Redmine 13)
+
+* At least 17 bugfixes including...
+
+  - restore --simulate would overwrite debian.cnf, breaking mysql
+  - chmod 700 /TKLBAM
+
