@@ -12,13 +12,43 @@
 """
 Create custom backup profile 
 
-A backup profile is used to calculate the list of system changes that need to
-be backed up.  It typically describes the installation state of the system and
-includes 3 files:
+What is a backup profile?
 
-* dirindex.conf: list of filesystem paths to scan for changes 
+A backup profile is used to calculate the list of system changes that need to
+be backed up (e.g., new files and packages). It typically describes the
+installation state of the system and includes 3 files:
+
+* dirindex.conf: list of filesystem paths to scan for changes
 * dirindex: index of timestamps, ownership and permissions for dirindex.conf paths
-* packages: list of currently installed packages
+* packages: list of currently installed packages.
+
+What file paths should a backup profile keep track of?
+
+It depends on what you're using TKLBAM for. If you want to use it like TurnKey
+take a look at the dirindex.conf file in the "core" profile, which all
+appliance backup profiles inherit from. 
+
+In principle, we want to track changes to the user-servicable, customizable
+parts of the filesystem (e.g., /etc /root /home /var /usr/local /var /opt /srv)
+while ignoring changes in areas maintained by the package management system.
+The "Filesystem Hierarchy Standard" describes the Linux filesystem structure.
+
+Why not backup everything?
+
+TKLBAM was originaly designed to make it easy for users to only backup the
+delta (I.e., changes) from a fixed installation base (I.e., an appliance). In
+this usage scenario, less is more.
+
+By default we only backup your data and configurations, plus a list of new
+packages you've installed. Later when you restore these will be overlaid on top
+of the new appliance's filesystem and the package management system will be
+asked to install the missing packages.
+
+By contrast, If you backup the entire filesystem TKLBAM won't be able to help
+you migrate your data and configurations to a newer version of an appliance.
+The restore will just run everything over. At best you'll end up with the old
+appliance in a new location. But more likely you'll end up mixing the old and
+new filesystems and break the package management system.
 
 Arguments:
     
@@ -43,6 +73,7 @@ Options:
 
     --root=PATH     Use this as the root path, instead of /
                     This is useful for generating backup profiles for chroot filesystems
+
 
 Usage examples:
 
@@ -69,11 +100,13 @@ class Error(Exception):
     pass
 
 def usage(e=None):
-    if e:
-        print >> sys.stderr, "error: " + str(e)
+    from paged import stdout
 
-    print >> sys.stderr, "Syntax: %s [ -options ] output/profile/ <conf>" % sys.argv[0]
-    print >> sys.stderr, __doc__.strip()
+    if e:
+        print >> stdout, "error: " + str(e)
+
+    print >> stdout, "Syntax: %s [ -options ] output/profile/ <conf>" % sys.argv[0]
+    print >> stdout, __doc__.strip()
     sys.exit(1)
 
 def fatal(e):
