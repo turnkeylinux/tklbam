@@ -65,51 +65,48 @@ Which databases are supported?
 
 MySQL and PostgreSQL.
 
-PRICING QUESTIONS
-=================
-
-How much does cloud backup storage cost?
-----------------------------------------
-
-Amazon S3 cloud storage fees are around $0.15/GB per month.
-
-You can use simulation mode to calculate how much uncompressed data
-TKLBAM is going to store in a full backup::
-
-    $ tklbam-backup --simulate
-    CREATING /TKLBAM
-    FULL UNCOMPRESSED FOOTPRINT: 148.30 MB in 6186 files
-
-In practice, the actual footprint of a full backup will usually be
-smaller due to compression, but this depends on the type of data being
-compressed (e.g., text compresses very well, video very poorly).
-
-By default, a full backup is performed if one month has passed since the
-last full backup. In between, incremental backups will be performed
-which only record changes since the last backup. The full backup
-frequency can be customized. See this manual page for details.
-
-The Hub says my backup costs $0.00, what am I really paying?
-------------------------------------------------------------
-
-If you notice $0.00 in the backups console, there's no need to open a
-support request. It's not a bug. At 15 cents per gigabyte, if you have
-just a few megabytes of data Amazon doesn't charge you anything.
-
-Backups start from around 100KB for a freshly installed TurnKey appliance.
-Remember, TKLBAM only saves changes you've made since the appliance was
-installed. 
-
 USAGE QUESTIONS
 ===============
+
+How do I tune and optimize a TKLBAM backup?
+-------------------------------------------
+
+One of my favorite ways to do this::
+
+    # step 1: generate a backup dump
+    tklbam-backup --dump=/tmp/mybackup
+
+    # step 2: interactively review the dump's file contents & disk usage 
+    cd /tmp/mybackup
+    apt-get install ncdu
+    ncdu
+
+    # step 3: add includes or excludes, go back to step 1, rinse, repeat
+    vim /etc/tklbam/overrides
+
+    # Everything perfect?
+    tklbam-backup --upload-raw=/tmp/mybackup
+
+By default, TKLBAM will automatically determine what paths and databases need
+to be backed up on a given TurnKey system according to the backup profile it
+gets from the Hub. The default profile tracks changes to the user-servicable,
+customizable parts of the filesystem (e.g., /etc /root /home /var /usr/local
+/var /opt /srv) while ignoring changes in areas maintained by the package
+management system.
+
+You can "override" the default backup profile configuration by specifying
+overrides, either on the command line, or preferably by editing
+the /etc/tklbam/overrides configuration file.
 
 How does TKLBAM know what to backup on my system?
 -------------------------------------------------
 
-Every TurnKey appliance that TKLBAM supports has a corresponding
-backup profile, which is downloaded from the Hub the first time you
-backup an appliance. When required the profile can be updated on
-demand (e.g., if we need to fix the profile)
+Every TurnKey appliance that TKLBAM supports has a corresponding backup
+profile, which is downloaded from the Hub when you initialize TKLBAM. The
+profile is used to calculate the list of system changes we need to backup.  It
+usually describes the installation state of a TurnKey appliance and contains a
+list of packages, filesystem paths to scan for changes and an index of the
+contents of those paths which records timestamps, ownership and permissions. 
 
 You can also generate your own custom profiles with the following command::
 
@@ -188,7 +185,7 @@ only the database or table specified in the override is included in the backup.
 You can mix positive overrides with negative overrides.
 
 Can I have multiple TKLBAM backups on a single system?
-======================================================
+------------------------------------------------------
 
 Yes. For example, let's say your default TKLBAM backup is several gigabytes in
 size and you'd like to create a lighter 100 MB backup that will be updated more
@@ -222,7 +219,7 @@ and TKLBAM_CONF environment variables::
     chmod +x /usr/local/bin/tklbam-backup-light
 
 Can I use TKLBAM to only backup a single directory?
-===================================================
+---------------------------------------------------
 
 Yes. Here are a couple of recommended ways to do this:
 
@@ -403,6 +400,38 @@ more permanent than a credit card.
 In any case, if your payment method is invalidated (e.g., cancelled or
 expired credit card), billing will fail and Amazon will attempt to
 contact you (e.g., by e-mail) to provide a new, valid payment method. 
+
+How much does cloud backup storage cost?
+----------------------------------------
+
+Amazon S3 cloud storage fees are around $0.15/GB per month.
+
+You can use simulation mode to calculate how much uncompressed data
+TKLBAM is going to store in a full backup::
+
+    $ tklbam-backup --simulate
+    CREATING /TKLBAM
+    FULL UNCOMPRESSED FOOTPRINT: 148.30 MB in 6186 files
+
+In practice, the actual footprint of a full backup will usually be
+smaller due to compression, but this depends on the type of data being
+compressed (e.g., text compresses very well, video very poorly).
+
+By default, a full backup is performed if one month has passed since the
+last full backup. In between, incremental backups will be performed
+which only record changes since the last backup. The full backup
+frequency can be customized. See this manual page for details.
+
+The Hub says my backup costs $0.00, what am I really paying?
+------------------------------------------------------------
+
+If you notice $0.00 in the backups console, there's no need to open a
+support request. It's not a bug. At 15 cents per gigabyte, if you have
+just a few megabytes of data Amazon doesn't charge you anything.
+
+Backups start from around 100KB for a freshly installed TurnKey appliance.
+Remember, TKLBAM only saves changes you've made since the appliance was
+installed. 
 
 FAULT TOLERANCE FOR THE PARANOID IT GUY
 =======================================
