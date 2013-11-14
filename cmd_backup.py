@@ -144,7 +144,7 @@ import hooks
 from registry import registry, update_profile, hub_backups
 from conf import Conf
 
-from version import Version
+from version import detect_profile_id
 from stdtrap import UnitedStdTrap
 
 from utils import is_writeable, fmt_title, fmt_timestamp
@@ -373,7 +373,7 @@ def main():
 
         if not registry.hbr:
             registry.hbr = hb.new_backup_record(registry.key,
-                                                str(Version.from_system()),
+                                                detect_profile_id(),
                                                 get_server_id())
 
         conf.address = registry.hbr.address

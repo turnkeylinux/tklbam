@@ -151,7 +151,7 @@ import hooks
 
 from registry import registry, update_profile, hub_backups
 
-from version import Version
+from version import TurnKeyVersion
 from utils import is_writeable, fmt_timestamp, fmt_title
 
 from conf import Conf
@@ -169,10 +169,18 @@ class ExitCode:
     INCOMPATIBLE = 10
     BADPASSPHRASE = 11
 
-def do_compatibility_check(backup_turnkey_version, interactive=True):
+def do_compatibility_check(backup_profile_id, interactive=True):
+    # unless both backup and restore are TurnKey skip compatibility check
+    try:
+        backup_codename = TurnKeyVersion.from_string(backup_profile_id).codename
+    except TurnKeyVersion.Error: 
+        return
 
-    backup_codename = Version.from_string(backup_turnkey_version).codename
-    local_codename = Version.from_system().codename
+    turnkey_version = TurnKeyVersion.from_system()
+    if not turnkey_version:
+        return
+    
+    local_codename = turnkey_version.codename
 
     if local_codename == backup_codename:
         return
@@ -186,8 +194,8 @@ def do_compatibility_check(backup_turnkey_version, interactive=True):
     print "WARNING: INCOMPATIBLE APPLIANCE BACKUP"
     print "======================================"
     print
-    print "Restoring a %s backup to a %s appliance is not recommended." % (backup_codename, local_codename)
-    print "For best results, restore to a fresh %s installation instead." % backup_codename
+    print "Restoring a %s backup to a %s appliance may create complications." % (backup_codename, local_codename)
+    print "For best results try restoring instead to a fresh %s installation." % backup_codename
 
     if not interactive:
         sys.exit(ExitCode.INCOMPATIBLE)
@@ -434,7 +442,7 @@ def main():
 
         if hbr:
             if not opt_force and not raw_download_path:
-                do_compatibility_check(hbr.turnkey_version, interactive)
+                do_compatibility_check(hbr.profile_id, interactive)
 
             if opt_key and \
                keypacket.fingerprint(hbr.key) != keypacket.fingerprint(opt_key):

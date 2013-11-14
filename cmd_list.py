@@ -18,7 +18,7 @@ Format variables:
 
     %id                     Backup id
     %label                  Descriptive label
-    %turnkey_version        Appliance version code
+    %profile_id             Appliance version code
     %server_id              Associated server id (- if empty)
     %created                Date the backup record was created
     %updated                Date the backup record was last updated
@@ -63,6 +63,9 @@ class Formatter:
         self.tpl = string.Template(tpl)
 
     def __call__(self, hbr):
+        # backwards compat. hack
+        hbr = hbr.copy()
+        hbr['turnkey_version'] = hbr['profile_id']
         return self.tpl.substitute(**hbr)
 
 def key_has_passphrase(key):

@@ -23,7 +23,7 @@ import shutil
 from utils import AttrDict
 import hub
 
-from version import Version
+from version import TurnKeyVersion, detect_profile_id
 
 import conf
 
@@ -42,13 +42,18 @@ system. Sorry about that! However even without a profile you can still:
 - Restore existing backups
 - Backup raw directories with the --raw-upload option
 
-Also, you can use the --force-profile option to work around this in several ways:
+You can use the --force-profile option to fix or workaround a missing profile
+in several ways:
 
-- Download a profile for the another system  (e.g., --force-profile=core).
 - Use an empty profile with --force-profile=empty
 - Use a custom profile with --force-profile=path/to/custom/profile/
 
     tklbam-internal create-profile --help
+
+Also, if TKLBAM is linked to the Hub you can:
+
+- Download a profile for another TurnKey system with --force-profile=codename (e.g., "core")
+- Download the all-purpose generic profile with --force-profile=generic
 
 Run "tklbam-init --help" for further details.
 """
@@ -167,7 +172,7 @@ Run "tklbam-init --help" for further details.
             timestamp = int(os.stat(self.path.profile.stamp).st_mtime)
             profile_id = self._file_str(self.path.profile.profile_id)
             if profile_id is None:
-                profile_id = str(Version.from_system())
+                profile_id = detect_profile_id()
             return Profile(self.path.profile, profile_id, timestamp)
         else:
             profile_archive = val
@@ -221,7 +226,7 @@ Run "tklbam-init --help" for further details.
             if self.profile:
                 profile_id = self.profile.profile_id
             else:
-                profile_id = str(Version.from_system())
+                profile_id = detect_profile_id()
 
         if profile_id == self.EMPTY_PROFILE or isdir(profile_id):
             self.profile = profile_id
@@ -255,7 +260,7 @@ Run "tklbam-init --help" for further details.
 
     def update_profile(self, profile_id=None):
         if profile_id is None:
-            # don't empty empty or custom profiles
+            # don't attempt to update empty or custom profiles
             if self.profile and \
                (self.profile.profile_id == registry.EMPTY_PROFILE or 
                 self.profile.profile_id.startswith(registry.CUSTOM_PROFILE + ":")):
@@ -269,19 +274,22 @@ Run "tklbam-init --help" for further details.
                 if not re.match(r'^turnkey-', profile_id):
                     profile_id = "turnkey-" + profile_id
 
-                if not Version.from_string(profile_id).is_complete():
+                if not TurnKeyVersion.from_string(profile_id).is_complete():
                     completed_profile_id = _complete_profile_id(profile_id)
-                    try:
-                        self._update_profile(completed_profile_id)
-                        return
-                    except:
-                        pass
+                    if completed_profile_id:
+                        try:
+                            self._update_profile(completed_profile_id)
+                            return
+                        except:
+                            pass
 
             raise first_exception
 
 def _complete_profile_id(partial):
-    partial = Version.from_string(partial)
-    system = Version.from_system()
+    partial = TurnKeyVersion.from_string(partial)
+    system = TurnKeyVersion.from_system()
+    if not system:
+        return
 
     if partial.arch is None:
         partial.arch = system.arch

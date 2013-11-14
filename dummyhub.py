@@ -78,12 +78,12 @@ class DummyUser(AttrDict):
     def unsubscribe(self):
         self.credentials = None
 
-    def new_backup(self, address, key, turnkey_version, server_id=None):
+    def new_backup(self, address, key, profile_id, server_id=None):
         self.backups_max += 1
 
         id = str(self.backups_max)
         backup_record = DummyBackupRecord(id, address, key, \
-                                          turnkey_version, server_id)
+                                          profile_id, server_id)
 
         self.backups[id] = backup_record
 
@@ -142,11 +142,11 @@ def _parse_duplicity_sessions(path):
 
 class DummyBackupRecord(AttrDict):
     # backup_id, address
-    def __init__(self, backup_id, address, key, turnkey_version, server_id):
+    def __init__(self, backup_id, address, key, profile_id, server_id):
         self.backup_id = backup_id
         self.address = address
         self.key = key
-        self.turnkey_version = turnkey_version
+        self.profile_id = profile_id
         self.server_id = server_id
 
         self.created = datetime.now()
@@ -218,8 +218,8 @@ class _DummyDB(AttrDict):
         return user
 
 
-    def get_profile(self, turnkey_version):
-        matches = glob.glob("%s/%s.tar.*" % (self.path.profiles, turnkey_version))
+    def get_profile(self, profile_id):
+        matches = glob.glob("%s/%s.tar.*" % (self.path.profiles, profile_id))
         if not matches:
             return None
 
@@ -308,7 +308,7 @@ class Backups:
 
         return DummyProfileArchive(profile_id, archive, archive_timestamp)
 
-    def new_backup_record(self, key, turnkey_version, server_id=None):
+    def new_backup_record(self, key, profile_id, server_id=None):
         # in the real implementation the hub would create a bucket not a dir...
         # the real implementation would have to make sure this is unique
         path = "/var/tmp/duplicity/" + base64.b32encode(os.urandom(10))
@@ -316,7 +316,7 @@ class Backups:
         address = "file://" + path
 
         backup_record = self.user.new_backup(address, key,
-                                             turnkey_version, server_id)
+                                             profile_id, server_id)
 
         dummydb.save()
 

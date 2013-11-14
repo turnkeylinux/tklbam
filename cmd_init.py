@@ -12,11 +12,13 @@
 """
 Initialization (start here)
 
-By default, this links TKLBAM to your Hub account and downloads a backup profile, 
-which is used to calculate the list of system changes we need to backup. 
-The profile usually describes the installation state of a TurnKey appliance and 
-contains a list of packages, filesystem paths to scan for changes and an index of 
-the contents of those paths which records timestamps, ownership and permissions. 
+By default, this links TKLBAM to your Hub account and downloads an appropriate
+backup profile, which is used to calculate the list of system changes we need
+to backup. On a TurnKey system the profile describes the installation state of
+the appliance and contains a list of packages, filesystem paths to scan for
+changes and an index of the contents of those paths which records timestamps,
+ownership and permissions. On a non-TurnKey system the default backup profile
+will not describe installation state, only a list of directories to backup.
 
 Arguments:
 
@@ -29,11 +31,12 @@ Options:
     --force-profile=PROFILE_ID     Force a specific backup profile 
                                    (e.g., "core", "turnkey-core-13.0-wheezy-amd64")
 
-                                   Default value: String in /etc/turnkey_version
+                                   Without --force-profile the profile_id is 
+                                   automatically detected.
 
-                                   Special value: "empty" creates an empty
-                                   backup profile. Backup configurations will
-                                   only be taken from /etc/tklbam.
+    --force-profile=empty          "empty" is a special profile_id value that creates an empty
+                                   backup profile. Backup configurations will only be taken 
+                                   from /etc/tklbam.
 
     --force-profile=PATH           Path to a custom backup profile
                                    Details: tklbam-internal create-profile --help

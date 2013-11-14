@@ -139,7 +139,7 @@ class BackupRecord(AttrDict):
         self.address = response['address']
         self.backup_id = response['backup_id']
         self.server_id = response['server_id']
-        self.turnkey_version = response['turnkey_version']
+        self.profile_id = response['turnkey_version']
 
         self.created = self._parse_datetime(response['date_created'])
         self.updated = self._parse_datetime(response['date_updated'])
@@ -215,8 +215,8 @@ class Backups:
 
         return ProfileArchive(profile_id, archive_path, archive_timestamp)
 
-    def new_backup_record(self, key, turnkey_version, server_id=None):
-        attrs = {'key': key, 'turnkey_version': turnkey_version}
+    def new_backup_record(self, key, profile_id, server_id=None):
+        attrs = {'key': key, 'turnkey_version': profile_id}
         if server_id:
             attrs['server_id'] = server_id
 
