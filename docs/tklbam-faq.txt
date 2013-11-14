@@ -25,12 +25,25 @@ available for peer review and modification.
 Where can I use TKLBAM?
 -----------------------
 
-TKLBAM was originally designed to work with TurnKey Linux, but has since been
-extended to allow it to work on any Debian or Ubuntu based system, regardless
-of hardware or location.
+Using TKLBAM on TurnKey Linux provides the best experience but it will also
+work with any Debian or Ubuntu derived system and even with other Linux
+distributions if you use the --skip-packages option to disable integration with
+APT, the Debian package manager.
 
-Storing backups to Amazon S3 is easiest because authentication and key
-management are automatic. You just need to run::
+TKLBAM was originally designed to work with TurnKey Linux, where it takes
+advantage of an appliance's fixed installation state to make the smallest
+possible backup and make migration easier. The design has since been extended
+to work well with any Debian derived system, including Ubuntu. 
+
+In principle it should backup/restore files and databases on any Linux system
+(e.g., you can always install it and its dependencies from source), it just
+doesn't know how to talk with non-APT package management systems (yet).
+
+What can I use for backup storage?
+----------------------------------
+
+Pretty much anything, though storing backups to Amazon S3 is easiest because
+authentication and key management are automatic. You just need to run::
 
     tklbam-backup
 
@@ -63,7 +76,9 @@ backups (e.g., providing fast local access).
 Which databases are supported?
 ------------------------------
 
-MySQL and PostgreSQL.
+Currently, only MySQL and PostgreSQL have built-in support but TKLBAM can work
+with other databases so long as you configure custom
+serialization/unserialization procedures in a hook script.
 
 USAGE QUESTIONS
 ===============
