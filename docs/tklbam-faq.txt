@@ -204,7 +204,7 @@ Can I have multiple TKLBAM backups on a single system?
 
 Yes. For example, let's say your default TKLBAM backup is several gigabytes in
 size and you'd like to create a lighter 100 MB backup that will be updated more
-frequently and take less time to update/restore.
+frequently and take less time to update/restore::
 
     cp -a /etc/tklbam /etc/tklbam.light
 
