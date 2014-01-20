@@ -207,9 +207,12 @@ Run "tklbam-init --help" for further details.
         if val is UNDEFINED:
             s = self._file_str(self.path.backup_resume)
             if s is None:
-                return s
+                return
 
-            return BackupSessionConf(simplejson.loads(s))
+            try:
+                return BackupSessionConf(simplejson.loads(s))
+            except:
+                return
 
         else:
             s = simplejson.dumps(val)
