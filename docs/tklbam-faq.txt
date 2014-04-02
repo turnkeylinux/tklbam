@@ -14,30 +14,42 @@ Frequently Asked Questions
 GENERAL QUESTIONS
 =================
 
-Is TKLBAM open source?
-----------------------
+Is TKLBAM free software?
+------------------------
 
 Yes, TKLBAM is licensed under the GPL3. You don't have to care about
 free software ideology to appreciate the advantages. Any code running on
 your server doing something as critical as encrypted backups should be
 available for peer review and modification.
 
-Where can I use TKLBAM?
------------------------
+Where can I install TKLBAM?
+---------------------------
 
-Using TKLBAM on TurnKey Linux provides the best experience but it will also
-work with any Debian or Ubuntu derived system and even with other Linux
-distributions if you use the --skip-packages option to disable integration with
-APT, the Debian package manager.
+If you're using any TurnKey derived system, you don't need to install it
+as TKLBAM is a bundled into the TurnKey Core.
 
-TKLBAM was originally designed to work with TurnKey Linux, where it takes
-advantage of an appliance's fixed installation state to make the smallest
-possible backup and make migration easier. The design has since been extended
-to work well with any Debian derived system, including Ubuntu. 
+If you're using a generic Debian or Ubuntu derived system you can
+install it with the following shell command:
 
-In principle it should backup/restore files and databases on any Linux system
-(e.g., you can always install it and its dependencies from source), it just
-doesn't know how to talk with non-APT package management systems (yet).
+    wget -O - -q \
+    https://raw.github.com/turnkeylinux/tklbam/master/contrib/ez-apt-install.sh \
+    | PACKAGE=tklbam /bin/bash
+
+This adds the TurnKey package repository to your APT sources and uses
+APT to install the tklbam package and its dependencies.
+
+Using TKLBAM on TurnKey Linux provides the best experience but it will
+also work well with any Debian or Ubuntu derived system and even with
+other Linux distributions if you install from source and use the
+--skip-packages option to disable integration with APT, the Debian
+package manager.
+
+When you use TKLBAM with TurnKey Linux it takes advantage of the known
+fixed installation state to make the smallest possible backup. For
+example, it will only backup /etc configuration files that you have
+changed. This makes migration easier by increasing visibility into what
+actually changed. By comparison on a generic Debian or Ubuntu system it
+will backup all /etc configuration files.
 
 What can I use for backup storage?
 ----------------------------------
@@ -435,7 +447,7 @@ compressed (e.g., text compresses very well, video very poorly).
 By default, a full backup is performed if one month has passed since the
 last full backup. In between, incremental backups will be performed
 which only record changes since the last backup. The full backup
-frequency can be customized. See this manual page for details.
+frequency can be customized. See the manual page for details.
 
 The Hub says my backup costs $0.00, what am I really paying?
 ------------------------------------------------------------
