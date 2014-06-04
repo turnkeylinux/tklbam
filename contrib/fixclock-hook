@@ -18,9 +18,15 @@ following command::
 
     $COMMAND
 
+You can change the NTP server like this:
+
+    export NTPSERVER=my.ntp-server.net
+    tklbam-backup
+
 Unfortunately, something went wrong...
 
 $ERROR
+
 """
 
 def fixclock():
