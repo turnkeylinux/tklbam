@@ -3,7 +3,7 @@ TKLBAM
 ======
 
 ----------------------------------
-TurnKey Linux Backup and Migration
+TurnKey GNU/Linux Backup and Migration
 ----------------------------------
 
 :Author: Liraz Siri <liraz@turnkeylinux.org>
@@ -27,8 +27,8 @@ ENVIRONMENT VARIABLES
 DESCRIPTION
 ===========
 
-TKLBAM (TurnKey Linux Backup and Migration), is a smart automated backup
-and restore facility for the TurnKey Linux Virtual Appliance Library.
+TKLBAM (TurnKey GNU/Linux Backup and Migration), is a smart automated backup
+and restore facility for the TurnKey GNU/Linux Virtual Appliance Library.
 
 Goals
 -----

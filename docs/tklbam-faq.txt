@@ -38,13 +38,13 @@ install it with the following shell command:
 This adds the TurnKey package repository to your APT sources and uses
 APT to install the tklbam package and its dependencies.
 
-Using TKLBAM on TurnKey Linux provides the best experience but it will
+Using TKLBAM on TurnKey GNU/Linux provides the best experience but it will
 also work well with any Debian or Ubuntu derived system and even with
 other Linux distributions if you install from source and use the
 --skip-packages option to disable integration with APT, the Debian
 package manager.
 
-When you use TKLBAM with TurnKey Linux it takes advantage of the known
+When you use TKLBAM with TurnKey GNU/Linux it takes advantage of the known
 fixed installation state to make the smallest possible backup. For
 example, it will only backup /etc configuration files that you have
 changed. This makes migration easier by increasing visibility into what
