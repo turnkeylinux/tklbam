@@ -65,7 +65,8 @@ Run "tklbam-init --help" for further details.
     CUSTOM_PROFILE = "custom"
 
     class Paths(_Paths):
-        files = ['backup-resume', 'sub_apikey', 'secret', 'key', 'credentials', 'hbr',
+        files = ['restore.log', 'backup.log', 'backup.pid',
+                 'backup-resume', 'sub_apikey', 'secret', 'key', 'credentials', 'hbr',
                  'profile', 'profile/stamp', 'profile/profile_id']
 
     def __init__(self, path=None):

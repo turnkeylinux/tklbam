@@ -61,14 +61,14 @@ def move(src, dst):
         linkto = os.readlink(src)
         os.symlink(linkto, dst)
         os.unlink(src)
-    else: 
-        shutil.move(src, dst) 
+    else:
+        shutil.move(src, dst)
         os.lchown(dst, st.st_uid, st.st_gid)
 
 def apply_overlay(src, dst, olist_path):
     orig_cwd = os.getcwd()
     os.chdir(src)
-    executil.getoutput("tar --create --files-from=%s | tar --extract --directory %s" % 
+    executil.getoutput("tar --create --files-from=%s | tar --extract --directory %s" %
                        (olist_path, executil.mkarg(dst)))
 
     os.chdir(orig_cwd)
@@ -86,3 +86,11 @@ def fmt_timestamp():
     print >> fh, "#" * len(s)
 
     return fh.getvalue()
+
+def path_global_or_local(path_global, path_local):
+    """Return global path if writeable, otherwise return local path"""
+    if os.access(os.path.dirname(path_global), os.W_OK):
+        return path_global
+
+    return path_local
+

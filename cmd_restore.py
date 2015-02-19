@@ -62,7 +62,7 @@ Options / Duplicity:
           webdav://user[:password]@other.host/some_dir
           webdavs://user[:password]@other.host/some_dir
           gdocs://user[:password]@other.host/some_dir
-                                      
+
 Options / System restore:
 
     --simulate                        Do a dry run simulation of the system restore
@@ -118,7 +118,7 @@ Examples:
     tklbam-restore 2 --raw-download=/srv
 
     # Restore from Duplicity archives at a custom backup address on the local filesystem
-    tklbam-restore --address=file:///mnt/backups/mybackup --keyfile=mybackup.escrow 
+    tklbam-restore --address=file:///mnt/backups/mybackup --keyfile=mybackup.escrow
 
     # Simulate restoring Hub backup id 1 while excluding changes to the /root path,
     # mysql 'customers' DB, and the 'emails' table in the 'webapps' DB
@@ -152,14 +152,14 @@ import hooks
 from registry import registry, update_profile, hub_backups
 
 from version import TurnKeyVersion
-from utils import is_writeable, fmt_timestamp, fmt_title
+from utils import is_writeable, fmt_timestamp, fmt_title, path_global_or_local
 
 from conf import Conf
 
 import backup
 import traceback
 
-PATH_LOGFILE = "/var/log/tklbam-restore"
+PATH_LOGFILE = path_global_or_local("/var/log/tklbam-restore", registry.path.restore_log)
 
 class Error(Exception):
     pass
@@ -173,13 +173,13 @@ def do_compatibility_check(backup_profile_id, interactive=True):
     # unless both backup and restore are TurnKey skip compatibility check
     try:
         backup_codename = TurnKeyVersion.from_string(backup_profile_id).codename
-    except TurnKeyVersion.Error: 
+    except TurnKeyVersion.Error:
         return
 
     turnkey_version = TurnKeyVersion.from_system()
     if not turnkey_version:
         return
-    
+
     local_codename = turnkey_version.codename
 
     if local_codename == backup_codename:
@@ -301,7 +301,7 @@ def main():
     interactive = True
 
     opt_debug = False
-    
+
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'h',
                                        ['raw-download=',
@@ -392,7 +392,7 @@ def main():
     if raw_download_path:
         if not opt_force and os.listdir(raw_download_path) != []:
             fatal("--raw-download=%s is not an empty directory, use --force if that is ok" % raw_download_path)
-    
+
     restore_cache_size = conf.restore_cache_size
     restore_cache_dir = conf.restore_cache_dir
 
@@ -477,7 +477,7 @@ def main():
 
         print >> log_fh
         print >> log_fh, "\n" + fmt_timestamp()
-    
+
         log_fh.flush()
 
         trap = UnitedStdTrap(usepty=True, transparent=(False if silent else True), tee=log_fh)
@@ -494,7 +494,7 @@ def main():
 
         if not isdir(extras_paths.path):
             fatal("missing %s directory - this doesn't look like a system backup" % extras_paths.path)
-            
+
         os.environ['TKLBAM_BACKUP_EXTRACT_PATH'] = backup_extract_path
 
         if not silent:

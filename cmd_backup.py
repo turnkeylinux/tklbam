@@ -147,11 +147,12 @@ from conf import Conf
 from version import detect_profile_id
 from stdtrap import UnitedStdTrap
 
-from utils import is_writeable, fmt_title, fmt_timestamp
+from utils import is_writeable, fmt_title, fmt_timestamp, path_global_or_local
 
 import traceback
 
-PATH_LOGFILE = "/var/log/tklbam-backup"
+PATH_LOGFILE = path_global_or_local("/var/log/tklbam-backup", registry.path.backup_log)
+PATH_PIDLOCK = path_global_or_local("/var/run/tklbam-backup.pid", registry.path.backup_pid)
 
 def usage(e=None):
     from paged import stdout
@@ -313,7 +314,7 @@ def main():
         fatal("--simulate will destroy your aborted backup session. To force use --disable-resume")
 
 
-    lock = PidLock("/var/run/tklbam-backup.pid", nonblock=True)
+    lock = PidLock(PATH_PIDLOCK, nonblock=True)
     try:
         lock.lock()
     except lock.Locked:
