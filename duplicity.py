@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2010-2013 Liraz Siri <liraz@turnkeylinux.org>
+# Copyright (c) 2010-2015 Liraz Siri <liraz@turnkeylinux.org>
 #
 # This file is part of TKLBAM (TurnKey GNU/Linux BAckup and Migration).
 #
@@ -35,6 +35,8 @@ PATH_DEPS = os.environ.get('TKLBAM_DEPS', '/usr/lib/tklbam/deps')
 PATH_DEPS_BIN = join(PATH_DEPS, "bin")
 PATH_DEPS_PYLIB = _find_duplicity_pylib(PATH_DEPS)
 
+from cmd_internal import fmt_internal_command
+
 class Error(Exception):
     pass
 
@@ -61,16 +63,25 @@ class Duplicity:
     def run(self, passphrase, creds=None, debug=False):
         sys.stdout.flush()
 
-        if creds:
+        if creds.type in ('devpay', 'iamuser'):
             os.environ['AWS_ACCESS_KEY_ID'] = creds.accesskey
             os.environ['AWS_SECRET_ACCESS_KEY'] = creds.secretkey
-            os.environ['X_AMZ_SECURITY_TOKEN'] = ",".join([creds.producttoken, creds.usertoken])
+            os.environ['X_AMZ_SECURITY_TOKEN'] = (",".join([creds.producttoken,
+                                                            creds.usertoken])
+                                                  if creds.type == 'devpay'
+                                                  else creds.sessiontoken)
+
+        elif creds.type == 'iamrole':
+            os.environ['AWS_STSAGENT'] = fmt_internal_command('stsagent')
 
         if PATH_DEPS_BIN not in os.environ['PATH'].split(':'):
             os.environ['PATH'] = PATH_DEPS_BIN + ':' + os.environ['PATH']
 
         if PATH_DEPS_PYLIB:
-            os.environ['PYTHONPATH'] = PATH_DEPS_PYLIB
+            pythonpath = os.environ.get('PYTHONPATH')
+            pythonpath = ((PATH_DEPS_PYLIB + ':' + pythonpath)
+                          if pythonpath else PATH_DEPS_PYLIB)
+            os.environ['PYTHONPATH'] = pythonpath
 
         os.environ['PASSPHRASE'] = passphrase
 
@@ -91,7 +102,7 @@ class Duplicity:
                 shell += " --norc"
 
             executil.system(shell)
-            
+
 
         child = Popen(self.command)
         del os.environ['PASSPHRASE']
@@ -147,7 +158,7 @@ class Downloader(AttrDict):
             opts = []
 
         log("// started squid: caching downloaded backup archives to " + self.cache_dir + "\n")
-            
+
         squid = Squid(self.cache_size, self.cache_dir)
         squid.start()
 
@@ -170,10 +181,10 @@ class Downloader(AttrDict):
         else:
             del os.environ['http_proxy']
 
-        sys.stdout.flush()
-
         log("\n// stopping squid: download complete so caching no longer required\n")
         squid.stop()
+
+        sys.stdout.flush()
 
 class Uploader(AttrDict):
     """High-level interface to Duplicity uploads"""
@@ -182,13 +193,13 @@ class Uploader(AttrDict):
     FULL_IF_OLDER_THAN = "1M"
     S3_PARALLEL_UPLOADS = 1
 
-    def __init__(self, 
+    def __init__(self,
                  verbose=True,
-                 volsize=VOLSIZE, 
+                 volsize=VOLSIZE,
                  full_if_older_than=FULL_IF_OLDER_THAN,
-                 s3_parallel_uploads=S3_PARALLEL_UPLOADS, 
+                 s3_parallel_uploads=S3_PARALLEL_UPLOADS,
 
-                 includes=[], 
+                 includes=[],
                  include_filelist=None,
                  excludes=[],
                  ):
