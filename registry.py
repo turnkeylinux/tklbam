@@ -65,7 +65,7 @@ Run "tklbam-init --help" for further details.
     CUSTOM_PROFILE = "custom"
 
     class Paths(_Paths):
-        files = ['backup-resume', 'sub_apikey', 'secret', 'key', 'credentials', 'hbr', 
+        files = ['backup-resume', 'sub_apikey', 'secret', 'key', 'credentials', 'hbr',
                  'profile', 'profile/stamp', 'profile/profile_id']
 
     def __init__(self, path=None):
@@ -127,16 +127,9 @@ Run "tklbam-init --help" for further details.
     key = property(key, key)
 
     def credentials(self, val=UNDEFINED):
-        if val and val is not UNDEFINED:
-            val = AttrDict({'accesskey': val.accesskey,
-                            'secretkey': val.secretkey,
-                            'usertoken': val.usertoken,
-                            'producttoken': val.producttoken})
-
         retval = self._file_dict(self.path.credentials, val)
         if retval:
-            return hub.Credentials(retval)
-
+            return hub.Credentials.from_dict(retval)
     credentials = property(credentials, credentials)
 
     def hbr(self, val=UNDEFINED):
@@ -265,7 +258,7 @@ Run "tklbam-init --help" for further details.
         if profile_id is None:
             # don't attempt to update empty or custom profiles
             if self.profile and \
-               (self.profile.profile_id == registry.EMPTY_PROFILE or 
+               (self.profile.profile_id == registry.EMPTY_PROFILE or
                 self.profile.profile_id.startswith(registry.CUSTOM_PROFILE + ":")):
                 return
 
@@ -339,7 +332,7 @@ Creating an empty profile, which means:
   on the command line or configured in /etc/tklbam/overrides
 
 - We can't detect which files have changed since installation so we will
-  indiscriminately backup all files in the included directories. 
+  indiscriminately backup all files in the included directories.
 """
 
 
@@ -357,7 +350,7 @@ Creating an empty profile, which means:
         except hub.NotSubscribed, e:
             print >> sys.stderr, str(e)
             sys.exit(1)
-            
+
         except registry.CachedProfile, e:
             print >> sys.stderr, "warning: " + str(e)
         except registry.ProfileNotFound, e:

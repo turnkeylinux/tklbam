@@ -120,7 +120,7 @@ class API(_API):
                 raise InvalidBackupError(e.description)
 
             if e.name in ("BackupAccount.NotSubscribed",
-                         "BackupAccount.NotFound"): 
+                         "BackupAccount.NotFound"):
                 raise NotSubscribed()
 
             raise APIError(e.code, e.name, e.description)
@@ -152,14 +152,54 @@ class BackupRecord(AttrDict):
 
         AttrDict.__init__(self)
 
-class Credentials(AttrDict):
-    def __init__(self, response):
-        self.accesskey = response['accesskey']
-        self.secretkey = response['secretkey']
-        self.usertoken = response['usertoken']
-        self.producttoken = response['producttoken']
+class BaseCredentials(AttrDict):
+    pass
 
-        AttrDict.__init__(self)
+class Credentials:
+
+    class IAMRole(BaseCredentials):
+        pass
+
+    class IAMUser(BaseCredentials):
+        def __init__(self, accesskey, secretkey, sessiontoken):
+            self.accesskey = accesskey
+            self.secretkey = secretkey
+            self.sessiontoken = sessiontoken
+
+            BaseCredentials.__init__(self)
+
+    class DevPay(BaseCredentials):
+        def __init__(self, accesskey, secretkey, usertoken, producttoken):
+            self.accesskey = accesskey
+            self.secretkey = secretkey
+            self.usertoken = usertoken
+            self.producttoken = producttoken
+
+            BaseCredentials.__init__(self)
+
+    @classmethod
+    def from_dict(cls, d):
+
+        creds_types = { subcls.__name__.lower(): subcls
+                        for subcls in cls.__dict__.values()
+                        if isinstance(subcls, type) and issubclass(subcls, BaseCredentials) }
+
+        creds_type = d.get('type')
+
+        kwargs = d.copy()
+        try:
+            del kwargs['type']
+        except KeyError:
+            pass
+
+        # implicit devpay if no type (backwards compat with existing registry)
+        if not creds_type:
+            return cls.DevPay(**kwargs)
+
+        if creds_type not in creds_types:
+            raise Error('unknown credentials type "%s"' % creds_type)
+
+        return(creds_types[creds_type](**kwargs))
 
 class Backups:
     API_URL = os.getenv('TKLBAM_APIURL', 'https://hub.turnkeylinux.org/api/backup/')
@@ -185,7 +225,7 @@ class Backups:
 
     def get_credentials(self):
         response = self._api('GET', 'credentials/')
-        return Credentials(response)
+        return Credentials.from_dict(response)
 
     def get_new_profile(self, profile_id, profile_timestamp):
         """
