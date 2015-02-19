@@ -326,18 +326,15 @@ def main():
         try:
             update_profile(conf.force_profile)
         except hub.Backups.NotInitialized, e:
-            print >> sys.stderr, "error: you need a profile to backup, run tklbam-init first"
-            sys.exit(1)
+            fatal("you need a profile to backup, run tklbam-init first")
 
     credentials = None
     if not conf.address and not dump_path:
         try:
             hb = hub_backups()
         except hub.Backups.NotInitialized, e:
-            print >> sys.stderr, "error: " + str(e)
-            print >> sys.stderr, "tip: you can still use tklbam-backup with --dump or --address"
-
-            sys.exit(1)
+            fatal(str(e) + "\n" +
+                  "tip: you can still use tklbam-backup with --dump or --address")
 
         try:
             registry.credentials = hb.get_credentials()
