@@ -343,11 +343,10 @@ def main():
             # asking for get_credentials() might fail if the hub is down.
             # But If we already have the credentials we can survive that.
 
-            if isinstance(e, hub.NotSubscribed):
+            if isinstance(e, hub.NotSubscribed) or \
+                    not registry.credentials or \
+                    registry.credentials.type == 'iamrole':
                 fatal(e)
-
-            if not registry.credentials:
-                pass
 
             warn("using cached backup credentials: " + e.description)
 
