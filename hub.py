@@ -153,12 +153,19 @@ class BackupRecord(AttrDict):
         AttrDict.__init__(self)
 
 class BaseCredentials(AttrDict):
-    pass
+    def __init__(self):
+        self.type = self.__class__.__name__.lower()
 
 class Credentials:
 
     class IAMRole(BaseCredentials):
-        pass
+        def __init__(self, accesskey, secretkey, sessiontoken, expiration):
+            self.accesskey = accesskey
+            self.secretkey = secretkey
+            self.sessiontoken = sessiontoken
+            self.expiration = expiration
+
+            BaseCredentials.__init__(self)
 
     class IAMUser(BaseCredentials):
         def __init__(self, accesskey, secretkey, sessiontoken):
