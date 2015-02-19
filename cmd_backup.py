@@ -95,7 +95,7 @@ Configuration file format ($CONF_PATH):
 
   <option-name> <value>
 
-Examples: 
+Examples:
 
     # Full system-level backup
     tklbam-backup
@@ -227,7 +227,7 @@ def main():
 
                 if os.listdir(dump_path) != []:
                     fatal("--dump=%s is not an empty directory" % dump_path)
-                
+
             else:
                 os.mkdir(dump_path)
 
@@ -402,7 +402,7 @@ def main():
 
         print >> log_fh
         print >> log_fh, "\n" + fmt_timestamp()
-    
+
         log_fh.flush()
 
         trap = UnitedStdTrap(usepty=True, transparent=opt_verbose, tee=log_fh)
@@ -429,20 +429,20 @@ def main():
 
         if raw_upload_path:
             print fmt_title("Executing Duplicity to backup %s to %s" % (raw_upload_path, target.address))
-            
+
             _print("export PASSPHRASE=$(cat %s)" % conf.secretfile)
             uploader = duplicity.Uploader(True,
-                                          conf.volsize, 
-                                          conf.full_backup, 
+                                          conf.volsize,
+                                          conf.full_backup,
                                           conf.s3_parallel_uploads)
-            uploader(raw_upload_path, target, force_cleanup=not opt_resume, dry_run=opt_simulate, debug=opt_debug, 
+            uploader(raw_upload_path, target, force_cleanup=not opt_resume, dry_run=opt_simulate, debug=opt_debug,
                      log=_print)
 
         else:
             hooks.backup.pre()
-            b = backup.Backup(registry.profile, 
-                              conf.overrides, 
-                              conf.backup_skip_files, conf.backup_skip_packages, conf.backup_skip_database, 
+            b = backup.Backup(registry.profile,
+                              conf.overrides,
+                              conf.backup_skip_files, conf.backup_skip_packages, conf.backup_skip_database,
                               opt_resume, True, dump_path if dump_path else "/")
 
             hooks.backup.inspect(b.extras_paths.path)
@@ -454,16 +454,16 @@ def main():
                 _print("export PASSPHRASE=$(cat %s)" % conf.secretfile)
 
                 uploader = duplicity.Uploader(True,
-                                              conf.volsize, 
-                                              conf.full_backup, 
+                                              conf.volsize,
+                                              conf.full_backup,
                                               conf.s3_parallel_uploads,
                                               includes=[ b.extras_paths.path ],
-                                              include_filelist=b.extras_paths.fsdelta_olist 
-                                                               if exists(b.extras_paths.fsdelta_olist) 
+                                              include_filelist=b.extras_paths.fsdelta_olist
+                                                               if exists(b.extras_paths.fsdelta_olist)
                                                                else None,
                                               excludes=[ '**' ])
 
-                uploader('/', target, force_cleanup=not b.resume, dry_run=opt_simulate, debug=opt_debug, 
+                uploader('/', target, force_cleanup=not b.resume, dry_run=opt_simulate, debug=opt_debug,
                          log=_print)
 
             hooks.backup.post()
