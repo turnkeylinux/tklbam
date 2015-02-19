@@ -94,3 +94,5 @@ def path_global_or_local(path_global, path_local):
 
     return path_local
 
+def iamroot():
+    return os.getuid() == 0

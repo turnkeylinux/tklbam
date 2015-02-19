@@ -16,7 +16,7 @@ import sys
 from subprocess import *
 from squid import Squid
 
-from utils import AttrDict
+from utils import AttrDict, iamroot
 
 import resource
 RLIMIT_NOFILE_MAX = 8192
@@ -55,7 +55,8 @@ class Duplicity:
         if not args:
             raise Error("no arguments!")
 
-        opts += [ ('archive-dir', '/var/cache/duplicity') ]
+        if iamroot():
+            opts += [ ('archive-dir', '/var/cache/duplicity') ]
 
         opts = [ "--%s=%s" % (key, val) for key, val in opts ]
         self.command = ["duplicity"] + opts + list(args)
@@ -157,13 +158,14 @@ class Downloader(AttrDict):
         else:
             opts = []
 
-        log("// started squid: caching downloaded backup archives to " + self.cache_dir + "\n")
+        if iamroot():
+            log("// started squid: caching downloaded backup archives to " + self.cache_dir + "\n")
 
-        squid = Squid(self.cache_size, self.cache_dir)
-        squid.start()
+            squid = Squid(self.cache_size, self.cache_dir)
+            squid.start()
 
-        orig_env = os.environ.get('http_proxy')
-        os.environ['http_proxy'] = squid.address
+            orig_env = os.environ.get('http_proxy')
+            os.environ['http_proxy'] = squid.address
 
         _raise_rlimit(resource.RLIMIT_NOFILE, RLIMIT_NOFILE_MAX)
         args = [ '--s3-unencrypted-connection', target.address, download_path ]
@@ -176,13 +178,14 @@ class Downloader(AttrDict):
 
         command.run(target.secret, target.credentials, debug=debug)
 
-        if orig_env:
-            os.environ['http_proxy'] = orig_env
-        else:
-            del os.environ['http_proxy']
+        if iamroot():
+            if orig_env:
+                os.environ['http_proxy'] = orig_env
+            else:
+                del os.environ['http_proxy']
 
-        log("\n// stopping squid: download complete so caching no longer required\n")
-        squid.stop()
+            log("\n// stopping squid: download complete so caching no longer required\n")
+            squid.stop()
 
         sys.stdout.flush()
 
