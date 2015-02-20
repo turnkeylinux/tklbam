@@ -1,0 +1,71 @@
+===================
+v1.4.1 Release Notes
+====================
+
+support for more secure Hub IAM role type temporary credentials
+---------------------------------------------------------------
+
+* implemented internal stsagent command
+
+* added support for multiple credential types (e.g., devpay, iamrole,
+  iamuser)
+
+* updated dependencies: newer version of tklbam-python-boto with STS
+  agent support, python-dateutil (using this to parse
+
+* fallback to local registry path if global paths in non-writeable paths
+
+  rational:
+  
+  1) allow tklbam to be used by a non-root user
+  2) make testing easier
+
+* duplicity.py: allow graceful degradation of functionality when not running as root
+
+* backup: fatal error on bad subapikey if no cached credentials or iamrole credentials
+
+* added python-dateutil dependency
+
+improve generic Debian/Ubuntu support
+-------------------------------------
+
+* ez-apt-install.sh: cut and paste convenience script that can be piped from wget
+
+  Rational: make installation on Ubuntu/Debian ridiculously easy
+  
+  Usage::
+  
+      # I feel lucky
+      wget -O - -q https://raw.github.com/turnkeylinux/tklbam/master/contrib/ez-apt-install.sh | PACKAGE=tklbam /bin/bash
+  
+      # I feel cautious
+      wget https://raw.github.com/turnkeylinux/tklbam/master/contrib/ez-apt-install.sh
+      cat ez-apt-install.sh
+      chmod +x
+      ./ez-apt-install.sh tklbam
+
+* created detect-profile internal command
+
+  rational: primitive for generic Ubuntu/Debian support
+
+* profile_id detection for non-TurnKey systems
+
+documentation improvements
+--------------------------
+
+* fixed man page for tklbam-init.txt to be in sync with embedded usage
+
+* added Features section to docs/tklbam.txt
+
+* tweaked and improved FAQ, added question on how to tune a backup
+
+* updated FAQ to clarify supported Linux systems, storage backends and databases
+
+* committed fix to fixclock hook to explain how to change ntp server
+
+debugging improvements
+----------------------
+
+* removed some of the obstacles to running tklbam as a non-root user
+  (e.g., useful for testing/debugging, or with --raw-upload /
+  --raw-download) mode
