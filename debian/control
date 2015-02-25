@@ -6,7 +6,7 @@ Build-Depends: debhelper (>> 4.2.0), python-docutils
 Standards-Version: 3.6.1
 
 Package: tklbam
-Architecture: any
+Architecture: all
 Depends: python (>= 2.4), tklbam-squid (>= 2.7.STABLE9-2.1turnkey+25), tklbam-duplicity (>=  0.6.18), tklbam-python-boto (>= 2.3.0-2turnkey), turnkey-pylib (>= 0.5), python-crypto, pycurl-wrapper (>= 1.2), python-simplejson, ca-certificates, ntpdate
 Section: misc
 Description: TurnKey GNU/Linux Backup and Migration agent
