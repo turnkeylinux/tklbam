@@ -64,16 +64,17 @@ class Duplicity:
     def run(self, passphrase, creds=None, debug=False):
         sys.stdout.flush()
 
-        if creds.type in ('devpay', 'iamuser'):
-            os.environ['AWS_ACCESS_KEY_ID'] = creds.accesskey
-            os.environ['AWS_SECRET_ACCESS_KEY'] = creds.secretkey
-            os.environ['X_AMZ_SECURITY_TOKEN'] = (",".join([creds.producttoken,
-                                                            creds.usertoken])
-                                                  if creds.type == 'devpay'
-                                                  else creds.sessiontoken)
+        if creds:
+            if creds.type in ('devpay', 'iamuser'):
+                os.environ['AWS_ACCESS_KEY_ID'] = creds.accesskey
+                os.environ['AWS_SECRET_ACCESS_KEY'] = creds.secretkey
+                os.environ['X_AMZ_SECURITY_TOKEN'] = (",".join([creds.producttoken,
+                                                                creds.usertoken])
+                                                    if creds.type == 'devpay'
+                                                    else creds.sessiontoken)
 
-        elif creds.type == 'iamrole':
-            os.environ['AWS_STSAGENT'] = fmt_internal_command('stsagent')
+            elif creds.type == 'iamrole':
+                os.environ['AWS_STSAGENT'] = fmt_internal_command('stsagent')
 
         if PATH_DEPS_BIN not in os.environ['PATH'].split(':'):
             os.environ['PATH'] = PATH_DEPS_BIN + ':' + os.environ['PATH']
