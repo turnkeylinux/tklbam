@@ -2,7 +2,7 @@
 /var/log/tklbam-backup
 {
 	rotate 12
-	monthly
+	weekly
 	missingok
 	notifempty
 	delaycompress
