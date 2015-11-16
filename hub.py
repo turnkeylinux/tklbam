@@ -187,9 +187,9 @@ class Credentials:
     @classmethod
     def from_dict(cls, d):
 
-        creds_types = { subcls.__name__.lower(): subcls
-                        for subcls in cls.__dict__.values()
-                        if isinstance(subcls, type) and issubclass(subcls, BaseCredentials) }
+        creds_types = dict((subcls.__name__.lower(), subcls)
+                           for subcls in cls.__dict__.values()
+                           if isinstance(subcls, type) and issubclass(subcls, BaseCredentials))
 
         creds_type = d.get('type')
 
