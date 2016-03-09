@@ -4,6 +4,8 @@ from os.path import *
 import executil
 from registry import registry
 
+from conf import Conf
+
 class HookError(Exception):
     pass
 
@@ -50,7 +52,7 @@ class Hooks:
         post hook
 
     Restore hook invocation:
-        
+
         pre hook
         run duplicity to get extras + overlay
         inspect hook
@@ -59,7 +61,7 @@ class Hooks:
 
     """
     BASENAME = "hooks.d"
-    LOCAL_HOOKS = os.environ.get("TKLBAM_HOOKS", "/etc/tklbam/" + BASENAME)
+    LOCAL_HOOKS = os.environ.get("TKLBAM_HOOKS", join(Conf.DEFAULT_PATH, BASENAME))
 
     PROFILE_KEYRING = "/etc/apt/trusted.gpg.d/turnkey.gpg"
 
