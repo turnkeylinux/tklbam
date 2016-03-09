@@ -58,8 +58,8 @@ Also, if TKLBAM is linked to the Hub you can:
 Run "tklbam-init --help" for further details.
 """
 
-    DEFAULT_PATH = "/var/lib/tklbam"
     ENV_VARNAME = "TKLBAM_REGISTRY"
+    DEFAULT_PATH = os.environ.get(ENV_VARNAME, '/var/lib/tklbam')
 
     EMPTY_PROFILE = "empty"
     CUSTOM_PROFILE = "custom"
