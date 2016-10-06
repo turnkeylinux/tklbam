@@ -14,6 +14,11 @@
 import sys
 from registry import hub_backups
 import hub
+from retry import retry
+
+@retry(5, backoff=2)
+def get_credentials(hb):
+    return hb.get_credentials()
 
 def usage(e=None):
     if e:
@@ -31,6 +36,7 @@ def format(creds):
     values = [ creds[k] for k in ('accesskey', 'secretkey', 'sessiontoken', 'expiration') ]
     return " ".join(values)
 
+
 def main():
     args = sys.argv[1:]
     if args:
@@ -41,7 +47,7 @@ def main():
     except hub.Backups.NotInitialized, e:
         print >> sys.stderr, "error: " + str(e)
 
-    creds = hb.get_credentials()
+    creds = get_credentials(hb)
     if creds.type != 'iamrole':
         fatal("STS agent incompatible with '%s' type credentials" % creds.type)
 
