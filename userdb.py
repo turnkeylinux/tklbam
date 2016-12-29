@@ -159,7 +159,7 @@ class Base(dict):
         return ent
 
     @classmethod
-    def merge_db(cls, db_old, db_new):
+    def merge(cls, db_old, db_new):
 
         db_merged = cls()
         old2newids = {}
