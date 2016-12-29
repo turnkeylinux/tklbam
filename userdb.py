@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2010-2012 Liraz Siri <liraz@turnkeylinux.org>
+# Copyright (c) 2010-2016 Liraz Siri <liraz@turnkeylinux.org>
 #
 # This file is part of TKLBAM (TurnKey GNU/Linux BAckup and Migration).
 #
@@ -11,20 +11,52 @@
 class Error(Exception):
     pass
 
-
 class Base(dict):
     class Ent(list):
         LEN = None
 
-        def id(self, val=None):
-            if val:
-                self[2] = str(val)
+        def _field(self, index, val=None):
+            if val is not None:
+                self[index] = str(val)
             else:
-                return int(self[2])
+                return self[index]
+
+        def name(self, val=None):
+            return self._field(0, val)
+        name = property(name, name)
+
+        def id(self, val=None):
+            val = self._field(2, val)
+            if val is not None:
+                return int(val)
         id = property(id, id)
 
         def copy(self):
             return type(self)(self[:])
+
+    def _fix_missing_root(self):
+
+        if 'root' in self:
+            return
+
+        def get_altroot(db):
+            for name in db:
+                if db[name].id == 0:
+                    altroot = db[name].copy()
+                    break
+
+            else:
+                names = db.keys()
+                if not names:
+                    return # empty db, nothing we can do.
+
+                altroot = db[names.pop()].copy()
+                altroot.id = 0
+
+            altroot.name = 'root'
+            return altroot
+
+        self['root'] = get_altroot(self)
 
     def __init__(self, arg=None):
         if not arg:
@@ -40,8 +72,12 @@ class Base(dict):
                 name = vals[0]
                 self[name] = self.Ent(vals)
 
+            self._fix_missing_root()
+
         elif isinstance(arg, dict):
             dict.__init__(self, arg)
+
+
 
     def __str__(self):
         arr = [ self[name] for name in self ]
@@ -198,9 +234,9 @@ class Base(dict):
 
                     # we can't remap ids in new, so merge new entry as *_copy of itself
                     new_ent = cls.Ent(db_new[name])
-                    new_ent[0] = new_ent[0] + '_orig'
+                    new_ent.name = new_ent.name + '_orig'
 
-                    db_merged[new_ent[0]] = new_ent
+                    db_merged[new_ent.name] = new_ent
 
         return db_merged, idmap
 
