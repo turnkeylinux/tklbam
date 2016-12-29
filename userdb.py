@@ -162,7 +162,7 @@ class Base(dict):
     def merge_db(cls, db_old, db_new):
 
         db_merged = cls()
-        idmap = {}
+        old2newids = {}
 
         aliased = []
         names = set(db_old) | set(db_new)
@@ -171,7 +171,7 @@ class Base(dict):
 
             ent = cls._merge_get_entry(name, db_old, db_new, db_merged.ids)
             if name in db_old and db_old[name].id != ent.id:
-                idmap[db_old[name].id] = ent.id
+                old2newids[db_old[name].id] = ent.id
 
             db_merged[name] = ent
 
@@ -238,7 +238,7 @@ class Base(dict):
 
                     db_merged[new_ent.name] = new_ent
 
-        return db_merged, idmap
+        return db_merged, old2newids
 
 class EtcGroup(Base):
     class Ent(Base.Ent):
