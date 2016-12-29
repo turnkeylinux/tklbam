@@ -11,6 +11,7 @@
 class Error(Exception):
     pass
 
+
 class Base(dict):
     class Ent(list):
         LEN = None
@@ -21,6 +22,9 @@ class Base(dict):
             else:
                 return int(self[2])
         id = property(id, id)
+
+        def copy(self):
+            return type(self)(self[:])
 
     def __init__(self, arg=None):
         if not arg:
@@ -70,32 +74,135 @@ class Base(dict):
 
         raise Error("can't find slot for new id")
 
-    @classmethod
-    def merge(cls, old, new):
+    def aliases(self, name):
+        if name not in self:
+            return []
 
-        merged = cls()
+        name_id = self[name].id
+        aliases = []
+        for other in self:
+            if other == name:
+                continue
+
+            if self[other].id == name_id:
+                aliases.append(other)
+
+        return aliases
+
+    @staticmethod
+    def _merge_get_entry(name, db_old, db_new, merged_ids=[]):
+        """get merged db entry (without side effects)"""
+
+        oldent = db_old[name].copy() if name in db_old else None
+        newent = db_new[name].copy() if name in db_new else None
+
+        # entry exists in neither
+        if oldent is None and newent is None:
+            return
+
+        # entry exists only in new db
+        if newent and oldent is None:
+            return newent
+
+        # entry exists in old db
+        ent = oldent
+
+        # entry exists in both new and old dbs
+        if oldent and newent:
+
+            if ent.id != newent.id:
+                ent.id = newent.id
+
+        # entry exists only in old db
+        if oldent and newent is None:
+
+            used_ids = db_new.ids + merged_ids
+            if ent.id in used_ids:
+                ent.id = db_old.new_id(used_ids)
+
+        return ent
+
+    @classmethod
+    def merge_db(cls, db_old, db_new):
+
+        db_merged = cls()
         idmap = {}
 
-        names = set(old) | set(new)
+        aliased = []
+        names = set(db_old) | set(db_new)
+
+        def merge_entry(name):
+
+            ent = cls._merge_get_entry(name, db_old, db_new, db_merged.ids)
+            if name in db_old and db_old[name].id != ent.id:
+                idmap[db_old[name].id] = ent.id
+
+            db_merged[name] = ent
+
+        # merge non-aliased entries first
         for name in names:
 
-            if name in old and name in new:
-                merged[name] = cls.Ent(old[name])
-                merged[name].id = new[name].id
+            if db_old.aliases(name):
+                aliased.append(name)
+                continue
 
-                if old[name].id != new[name].id:
-                    idmap[old[name].id] = new[name].id
+            merge_entry(name)
 
-            elif name in new:
-                merged[name] = cls.Ent(new[name])
+        def aliased_sort(a, b):
+            # sorting order:
 
-            elif name in old:
-                merged[name] = cls.Ent(old[name])
-                if old[name].id in new.ids:
-                    merged[name].id = new.new_id(old.ids)
-                    idmap[old[name].id] = merged[name].id
+            # 1) common entry with common uid first
+            # 2) common entry without common uid
+            # 3) uncommon entry
 
-        return merged, idmap
+            a_has_common_uid = a in db_new and db_new[a].id == db_old[a].id
+            b_has_common_uid = b in db_new and db_new[b].id == db_old[b].id
+
+            comparison = cmp(b_has_common_uid, a_has_common_uid)
+            if comparison != 0:
+                return comparison
+
+            # if we're here, neither a or b has a common uid
+            # check if a or b are common to both db_old and db_new
+
+            a_is_common = a in db_old and a in db_new
+            b_is_common = b in db_old and b in db_new
+
+            return cmp(b_is_common, a_is_common)
+
+        aliased.sort(aliased_sort)
+
+        def get_merged_alias_id(name):
+
+            for alias in db_old.aliases(name):
+                if alias not in db_merged:
+                    continue
+
+                return db_merged[alias].id
+
+            return None
+
+        for name in aliased:
+            ent = cls.Ent(db_old[name])
+
+            merged_id = get_merged_alias_id(name)
+
+            if merged_id is None:
+                merge_entry(name)
+            else:
+                # merge alias entry with the id of any previously merged alias
+                ent.id = merged_id
+                db_merged[name] = ent
+
+                if name in db_new and db_new[name].id != ent.id:
+
+                    # we can't remap ids in new, so merge new entry as *_copy of itself
+                    new_ent = cls.Ent(db_new[name])
+                    new_ent[0] = new_ent[0] + '_orig'
+
+                    db_merged[new_ent[0]] = new_ent
+
+        return db_merged, idmap
 
 class EtcGroup(Base):
     class Ent(Base.Ent):
