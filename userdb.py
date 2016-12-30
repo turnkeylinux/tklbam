@@ -11,7 +11,9 @@
 class Error(Exception):
     pass
 
-class Base(dict):
+from collections import OrderedDict
+
+class Base(OrderedDict):
     class Ent(list):
         LEN = None
 
@@ -59,6 +61,8 @@ class Base(dict):
         self['root'] = get_altroot(self)
 
     def __init__(self, arg=None):
+        OrderedDict.__init__(self)
+
         if not arg:
             return
 
@@ -75,15 +79,13 @@ class Base(dict):
             self._fix_missing_root()
 
         elif isinstance(arg, dict):
-            dict.__init__(self, arg)
-
-
+            OrderedDict.__init__(self, arg)
 
     def __str__(self):
-        arr = [ self[name] for name in self ]
-        # order by id ascending
-        arr.sort(lambda x,y: cmp(x.id, y.id))
-        return "\n".join([ ':'.join(ent) for ent in arr ]) + "\n"
+        ents = self.values()
+        ents.sort(lambda a,b: cmp(a.id, b.id))
+
+        return "\n".join([ ':'.join(ent) for ent in ents ]) + "\n"
 
     def ids(self):
         return [ self[name].id for name in self ]
