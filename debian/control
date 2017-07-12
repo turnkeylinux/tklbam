@@ -4,8 +4,11 @@ Priority: optional
 Maintainer: Liraz Siri <liraz@turnkeylinux.org>
 Build-Depends:
  debhelper (>= 10),
+ dh-exec,
  python-docutils,
+ python-all (>= 2.6.6-3~),
 Standards-Version: 4.0.0
+X-Python-Version: >= 2.6
 
 Package: tklbam
 Architecture: all
@@ -14,7 +17,7 @@ Depends:
  ${misc:Depends},
  ntpdate,
  pycurl-wrapper (>= 1.2),
- python (>= 2.4),
+ ${python:Depends},
  python-crypto,
  python-simplejson,
  tklbam-duplicity (>=  0.6.18),

@@ -1,0 +1,6 @@
+#!/usr/bin/dh-exec
+
+contrib/example-conf => /etc/tklbam/conf
+contrib/example-overrides => /etc/tklbam/overrides
+contrib/example-hook => /etc/tklbam/hooks.d/example
+contrib/fixclock-hook => /etc/tklbam/hooks.d/fixclock

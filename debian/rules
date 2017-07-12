@@ -1,43 +1,9 @@
 #! /usr/bin/make -f
 
-buildroot=debian/$(shell awk '/^Package/ {print $$2}' debian/control)
-prefix=$(buildroot)/usr
+include /usr/share/dpkg/pkg-info.mk
 
-clean:
-	dh_clean
+%:
+	dh $@ --with python2 --buildsystem=makefile
 
-build:
-	mkdir -p $(prefix)
-
-install: 
-	dh_testroot
-	dh_clean -k
-	dh_testdir
-	dh_installdirs
-	dh_install
-	$(MAKE) install prefix=$(prefix)
-	mkdir -p $(buildroot)/etc/cron.daily
-	cp contrib/cron.sh $(buildroot)/etc/cron.daily/tklbam-backup
-	mkdir -p $(buildroot)/usr/share/tklbam/contrib
-	cp contrib/cron.sh $(buildroot)/usr/share/tklbam/contrib
-	mkdir -p $(buildroot)/etc/tklbam/hooks.d
-	cp contrib/example-conf $(buildroot)/etc/tklbam/conf
-	cp contrib/example-overrides $(buildroot)/etc/tklbam/overrides
-	cp contrib/example-hook $(buildroot)/etc/tklbam/hooks.d/example
-	cp contrib/fixclock-hook $(buildroot)/etc/tklbam/hooks.d/fixclock
-
-binary-indep: install
-	dh_testdir
-	dh_testroot
-	dh_installdocs
-	dh_installman
-	dh_installdeb
-	dh_installlogrotate
-	dh_gencontrol
-	dh_md5sums
-	dh_builddeb
-
-binary-arch: install
-
-binary: binary-indep binary-arch
-.PHONY: clean binary-indep binary-arch binary install
+override_dh_auto_install:
+	dh_auto_install -- prefix=debian/$(DEB_SOURCE)/usr
