@@ -21,5 +21,4 @@ Depends:
  tklbam-python-boto (>= 2.3.0-2turnkey),
  tklbam-squid (>= 2.7.STABLE9-2.1turnkey+25),
  turnkey-pylib (>= 0.5),
-Section: misc
 Description: TurnKey GNU/Linux Backup and Migration agent
