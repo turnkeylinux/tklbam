@@ -5,7 +5,7 @@ Maintainer: Liraz Siri <liraz@turnkeylinux.org>
 Build-Depends:
  debhelper (>> 4.2.0),
  python-docutils,
-Standards-Version: 3.6.1
+Standards-Version: 4.0.0
 
 Package: tklbam
 Architecture: all
