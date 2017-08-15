@@ -114,7 +114,7 @@ OPTIONS
           webdavs://user[:password]@other.host/some_dir
           gdocs://user[:password]@other.host/some_dir
           
-      Note: Alternate targets may require additional dependancies E.g. to use SSH you will need to
+      Note: Alternate targets may require additional dependencies E.g. to use SSH you will need to
             install 'python-paramiko' (`apt-get update && apt-get install python-paramiko`).
             Currently the requirements of each target are not documented; however if you keep in mind
             that TKLBAM uses Duplicity as a back end, google should provide guidance.
@@ -165,7 +165,7 @@ Configurable options
 
 Resolution order for configurable options:
 
-1) comand line (highest precedence)
+1) command line (highest precedence)
 2) configuration file (/etc/tklbam/conf)::
 
       # comment
