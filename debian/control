@@ -15,6 +15,7 @@ Architecture: all
 Depends:
  ca-certificates,
  ${misc:Depends},
+ gnupg,
  ntpdate,
  pycurl-wrapper (>= 1.2),
  ${python:Depends},
