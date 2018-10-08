@@ -344,6 +344,7 @@ def main():
             # But If we already have the credentials we can survive that.
             if isinstance(e, hub.NotSubscribed) or \
                     not registry.credentials or \
+                    (registry.credentials and hub.credentials_expired(registry.credentials)) or \
                     registry.credentials.type == 'iamrole':
                 # if we don't have cached credentials we might still be
                 # able to use the fallback credentials
@@ -351,14 +352,14 @@ def main():
                     credentials = hub.Credentials.IAMUser(
                         registry.fallback_access_key,
                         registry.fallback_secret_key,
-                        None)
+                        '')
+                    warn("using fallback credentials: " + e.description)
                 else:
                     fatal(e)
-            elif registry.credentials:
+            
+            else:
                 warn("using cached backup credentials: " + e.description)
-
-
-        credentials = registry.credentials
+                credentials = registry.credentials
 
         if registry.hbr:
             try:
