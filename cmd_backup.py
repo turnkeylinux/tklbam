@@ -342,13 +342,21 @@ def main():
         except hb.Error, e:
             # asking for get_credentials() might fail if the hub is down.
             # But If we already have the credentials we can survive that.
-
             if isinstance(e, hub.NotSubscribed) or \
                     not registry.credentials or \
                     registry.credentials.type == 'iamrole':
-                fatal(e)
+                # if we don't have cached credentials we might still be
+                # able to use the fallback credentials
+                if registry.fallback_access_key:
+                    credentials = hub.Credentials.IAMUser(
+                        registry.fallback_access_key,
+                        registry.fallback_secret_key,
+                        None)
+                else:
+                    fatal(e)
+            elif registry.credentials:
+                warn("using cached backup credentials: " + e.description)
 
-            warn("using cached backup credentials: " + e.description)
 
         credentials = registry.credentials
 
