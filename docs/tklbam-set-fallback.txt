@@ -22,8 +22,8 @@ or not possible.
 ARGUMENTS
 =========
 
-`FALLBACK-ACCESS-KEY`	Your IAMUser access key
-`FALLBACK-SECRET-KEY` 	Your IAMUser secret access key
+`FALLBACK-ACCESS-KEY`   Your IAMUser access key
+`FALLBACK-SECRET-KEY`   Your IAMUser secret access key
 
 If you do not provide FALLBACK-ACCESS-KEY and/or FALLBACK-SECRET-KEY you will be
 prompted for it/them interactively.
@@ -37,9 +37,8 @@ than allowing tklbam-set-fallback to prompt you for it interactively.
 * The shell may save the credentials in its history file (e.g. ~/.bash_history)
 * The credentials may briefly show up in the process list.
 
-AWS IAMUser credentials must exist on your system in plaintext as they are intended to work
-even when you can only access your AWS bucket and should work automatically without
-interaction.
+AWS IAMUser credentials exist on your system in plaintext. This is to allow backups to work
+seamlessly without interaction.
 
 SEE ALSO
 ========
