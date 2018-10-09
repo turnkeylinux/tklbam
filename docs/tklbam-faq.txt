@@ -474,12 +474,19 @@ No, for a couple of reasons:
 2) You can use TKLBAM without linking it to the Hub at all. See the tklbam-init
    --solo option.
 
+3) You can setup fallback access keys to your Amazon S3. Even if the Hub goes
+   down AND your cached credentials become invalidated you're backups can still
+   function as normal.
+
 If the Hub goes down, will my backup cron jobs still work?
 ----------------------------------------------------------
 
 Yes. Backups which have already been configured will continue to work
 normally. If TKLBAM can't reach the Hub it just uses the locally cached
 profile and S3 address.
+
+In the event that locally cached credentials become invalidated you can also
+setup fallback keys to S3 as an additional protective measure.
 
 If my connection to the Hub goes down, can I still restore?
 -----------------------------------------------------------
