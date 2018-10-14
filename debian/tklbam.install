@@ -4,3 +4,8 @@ contrib/example-conf => /etc/tklbam/conf
 contrib/example-overrides => /etc/tklbam/overrides
 contrib/example-hook => /etc/tklbam/hooks.d/example
 contrib/fixclock-hook => /etc/tklbam/hooks.d/fixclock
+contrib/cron.sh => /etc/cron.daily/tklbam-backup
+
+contrib/example-hook-pre-backup => /usr/share/tklbam/contrib/example-hook-pre-backup
+contrib/example-hook-post-restore => /usr/share/tklbam/contrib/example-hook-post-restore
+contrib/ez-apt-install.sh => /usr/share/tklbam/contrib/ez-apt-install.sh
