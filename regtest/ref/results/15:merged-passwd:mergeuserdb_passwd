@@ -28,6 +28,6 @@ foo1:x:1001:1005:,,,:/home/foo1:/bin/bash
 testopenid:x:1002:1002:,,,:/home/testopenid:/bin/bash
 alon:x:1003:1003:,,,:/home/alon:/bin/bash
 liraz:x:1004:1004:,,,:/home/liraz:/bin/bash
-foo:x:1005:1005:,,,:/home/foo:/bin/bash
+foo:x:1005:1006:,,,:/home/foo:/bin/bash
 nobody:x:65534:65534:nobody:/nonexistent:/bin/sh
 
