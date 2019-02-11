@@ -234,7 +234,7 @@ Thankfully, all the output is also saved to a log file at
 Alon consults the log file and can see that only the files he added or
 changed on DevBox were restored to CloudBox. Database state was
 unserialized. The xcache package was installed via the package manager.
-User alon was recreated. It's uid didn't conflict with any other
+User alon was recreated. Its uid didn't conflict with any other
 existing user on CloudBox so the restore process didn't need to remap it
 to another uid and fix ownership of Alon's files. Not that it would
 matter to Alon either way. It's all automagic.
