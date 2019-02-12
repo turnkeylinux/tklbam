@@ -112,7 +112,7 @@ One of my favorite ways to do this::
     vim /etc/tklbam/overrides
 
     # Everything perfect?
-    tklbam-backup --upload-raw=/tmp/mybackup
+    tklbam-backup --raw-upload=/tmp/mybackup
 
 By default, TKLBAM will automatically determine what paths and databases need
 to be backed up on a given TurnKey system according to the backup profile it
