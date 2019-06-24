@@ -31,10 +31,10 @@ libcurses-perl
 libcurses-ui-perl
 libdigest-sha1-perl
 liberror-perl
-libfcgi0ldbl
 libfcgi-dev
-libgamin0
+libfcgi0ldbl
 libgamin-dev
+libgamin0
 libgdbm-dev
 libglib2.0-0
 libgomp1
@@ -47,8 +47,8 @@ libkrb5-dev
 libldap2-dev
 liblua5.1-0
 liblua5.1-0-dev
-libmemcache0
 libmemcache-dev
+libmemcache0
 libmysqlclient15-dev
 libncurses5-dev
 libpcre3-dev
@@ -63,8 +63,8 @@ libtimedate-perl
 liburi-perl
 libusb-0.1-4
 libwww-perl
-libxml2-dev
 libxml-parser-perl
+libxml2-dev
 lighttpd
 lighttpd-mod-magnet
 linux-image-2.6.24-24-generic

@@ -1,2 +1,2 @@
 chmod 0 testdir/chmod
-chown -h 666:999 testdir/chown
+chown -h 666:docker testdir/chown
