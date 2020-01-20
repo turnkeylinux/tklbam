@@ -18,6 +18,7 @@ Depends:
  gnupg,
  ntpdate,
  pycurl-wrapper (>= 1.2),
+ pycurl-wrapper (<< 2.0),
  ${python:Depends},
  python-crypto,
  python-simplejson,
