@@ -1,0 +1,15 @@
+====================
+v1.4.2 Release Notes
+====================
+
+Not really significant enough changes for a new version release, but
+doing it anyway...
+
+Improvements to Debian packaging, plus making TKLBAM reproducable.
+    - Thanks to Chris Lamb <lamby@debiandebian.org>
+
+Fix bug when path that includes spaces is included as an override (also
+fixed for commandline usage).
+    - Thanks to Stefan Davis <stefan@turnkeylinux.org>
+
+Numerous fixes/improvements to documentation.
