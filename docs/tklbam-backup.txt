@@ -23,6 +23,11 @@ ARGUMENTS
 
 Overrides are usually configured in /etc/tklbam/overrides.
 
+Note overrides that include a space in their path do NOT need to be escaped
+when included in /etc/tklbam/overrides (just put them on their own line).
+If excluding/including them from the commandline, they can be escaped or
+quoted. E.g. /path\ with\ space/ or "/path with space/".
+
 Filesystem overrides
 --------------------
 

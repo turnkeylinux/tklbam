@@ -30,7 +30,7 @@ class Limits(list):
             if not line:
                 continue
 
-            limits += line.split()
+            limits.append(line)
 
         def is_legal(limit):
             if cls._is_db_limit(limit):

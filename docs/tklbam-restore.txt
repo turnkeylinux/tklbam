@@ -88,6 +88,9 @@ System restore options
                                   Preceding a limit with a minus sign
                                   turns it into an exclusion.
 
+                                  Mutliple items are space separated. Spaces in paths must be
+                                  escaped. E.g. --limits="/path\ with\ spaces -/another\ path"
+
   `LIMITS` := "``LIMIT``-1 .. ``LIMIT``-N"
   
   ``LIMIT`` :=  -?( /path/to/include/or/exclude | 

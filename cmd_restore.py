@@ -135,6 +135,7 @@ import getopt
 
 from string import Template
 import re
+import shlex
 
 from os.path import *
 from restore import Restore
@@ -338,7 +339,7 @@ def main():
         elif opt == '--simulate':
             opt_simulate = True
         elif opt == '--limits':
-            opt_limits += re.split(r'\s+', val)
+            opt_limits += shlex.split(val)
         elif opt == '--keyfile':
             if not isfile(val):
                 fatal("keyfile %s does not exist or is not a file" % `val`)
