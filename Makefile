@@ -24,8 +24,8 @@ dist:
 	tar jcvf $(PATH_DIST).tar.bz2 $(PATH_DIST)
 	rm -rf $(PATH_DIST)
 
-docs:
-	$(MAKE) -C docs
+#docs:
+#	$(MAKE) -C docs
 
 help:
 	@echo '=== Targets:'
@@ -58,7 +58,7 @@ define with-py-executables
 	fi;
 endef
 
-install: docs
+install: #docs
 	@echo
 	@echo \*\* CONFIG: prefix = $(prefix) \*\*
 	@echo 
