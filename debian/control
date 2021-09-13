@@ -5,7 +5,6 @@ Maintainer: Liraz Siri <liraz@turnkeylinux.org>
 Build-Depends:
  debhelper (>= 10),
  dh-exec,
- python-docutils,
  dh-python,
  python-all (>= 2.6.6-3~),
 Standards-Version: 4.0.0
