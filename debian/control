@@ -20,6 +20,7 @@ Depends:
  ntpdate,
  pycurl-wrapper (>= 1.2),
  pycurl-wrapper (<< 2.0),
+ gpg (>= 2.2.12),
  ${python:Depends},
  python-crypto,
  python-simplejson,
