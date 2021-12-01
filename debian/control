@@ -5,7 +5,7 @@ Maintainer: Liraz Siri <liraz@turnkeylinux.org>
 Build-Depends:
  debhelper (>= 10),
  dh-exec,
- python-docutils,
+ dh-python,
  python-all (>= 2.6.6-3~),
 Standards-Version: 4.0.0
 X-Python-Version: >= 2.6
@@ -19,6 +19,7 @@ Depends:
  ntpdate,
  pycurl-wrapper (>= 1.2),
  pycurl-wrapper (<< 2.0),
+ gpg (>= 2.2.12),
  ${python:Depends},
  python-crypto,
  python-simplejson,
