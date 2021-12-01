@@ -6,7 +6,7 @@ import sys
 import executil
 from string import Template
 
-NTPSERVER = os.environ.get("NTPSERVER", "pool.ntp.org")
+NTPSERVER = os.environ.get("NTPSERVER", "2.pool.ntp.org")
 
 ERROR_TPL = """\
 ##########################
