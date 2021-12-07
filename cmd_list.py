@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 #
 # Copyright (c) 2010-2012 Liraz Siri <liraz@turnkeylinux.org>
 #

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 # hook that runs ntpdate before duplicity to sync clock to UTC
 
 import os
