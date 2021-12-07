@@ -27,7 +27,7 @@ main = CliWrapper.main
 
 def fmt_internal_command(command, *args):
     internal_command = [ realpath(__file__), command ] + list(args)
-    return fmt_command("python", *internal_command)
+    return fmt_command("python2", *internal_command)
 
 if __name__ == "__main__":
     CliWrapper.main()
