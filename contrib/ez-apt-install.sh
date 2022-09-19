@@ -44,9 +44,9 @@ EOF
     exit 1
 fi
 
-if [[ "$APT_KEY_URL" == *.asc ]];
+if [[ "$APT_KEY_URL" == *.asc ]]; then
     tmp_file=/tmp/$(basename $APT_KEY_URL)
-elif [[ "$APT_KEY_URL" == *.gpg ]]
+elif [[ "$APT_KEY_URL" == *.gpg ]]; then
     tmp_file=''
 else
     error "APT_KEY_URL does not appear to be a GPG file (should end with .gpg or .asc)"
