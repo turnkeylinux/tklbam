@@ -6,8 +6,30 @@ if [ -n "$1" ]; then
     PACKAGE="$1"
 fi
 
+error() {
+    1>&2 echo "error: $1"
+    exit 1
+}
+
+get_debian_dist() {
+    case "$1" in
+        6.*)  echo squeeze ;;
+        7.*)  echo wheezy ;;
+        8.*)  echo jessie ;;
+        9.*)  echo stretch ;;
+        10.*) echo buster ;;
+        11.*) echo bullseye ;;
+        12.*) echo bookworm ;;
+        */*)  echo $1 | sed 's|/.*||' ;;
+    esac
+}
+
+[ -f /etc/debian_version ] || error "not a Debian derived system - no /etc/debian_version file"
+deb_dist=$(get_debian_dist "$(cat /etc/debian_version)")
+
 set ${APT_URL:="http://archive.turnkeylinux.org/debian"}
-set ${APT_KEY:=A16EB94D}
+key_url="https://raw.githubusercontent.com/turnkeylinux/common/master/overlays/bootstrap_apt/usr/share/keyrings/tkl-${deb_dist}-main.asc"
+set ${APT_KEY_URL:="$key_url"}
 
 if [ -z "$PACKAGE" ]; then
     cat<<EOF
@@ -17,38 +39,35 @@ Environment variables:
 
     PACKAGE      package to install
     APT_URL      apt source url (default: $APT_URL)
-    APT_KEY      apt source key (default: $APT_KEY)
+    APT_KEY_URL  apt source key url (default: $APT_KEY_URL)
 EOF
     exit 1
 fi
 
-error() {
-    1>&2 echo "error: $1"
-    exit 1
-}
-
-get_debian_dist() {
-    case "$1" in 
-        6.*) echo squeeze ;;
-        7.*) echo wheezy ;;
-        8.*) echo jessie ;;
-        */*) echo $1 | sed 's|/.*||' ;;
-    esac
-}
-
+if [[ "$APT_KEY_URL" == *.asc ]]; then
+    tmp_file=/tmp/$(basename $APT_KEY_URL)
+elif [[ "$APT_KEY_URL" == *.gpg ]]; then
+    tmp_file=''
+else
+    error "APT_KEY_URL does not appear to be a GPG file (should end with .gpg or .asc)"
+fi
+key_file="/usr/share/keyrings/$(basename $APT_KEY_URL | sed 's|.asc$|.gpg|')"
 
 if ! rgrep . /etc/apt/sources.list* | sed 's/#.*//' | grep -q $APT_URL; then
-    [ -f /etc/debian_version ] || error "not a Debian derived system - no /etc/debian_version file"
 
     apt_name=$(echo $APT_URL | sed 's|.*//||; s|/.*||')
     apt_file="/etc/apt/sources.list.d/${apt_name}.list"
 
-    debian_dist=$(get_debian_dist "$(cat /etc/debian_version)")
-    echo "deb $APT_URL $debian_dist main" > $apt_file
+    echo "deb [signed-by=$key_file] $APT_URL $deb_dist main" > $apt_file
 
-    echo "+ apt-key adv --keyserver pgpkeys.mit.edu --recv-keys $APT_KEY"
-    apt-key adv --keyserver pgpkeys.mit.edu --recv-keys $APT_KEY
-
+    echo "+ downloading $APT_KEY_URL"
+    if [[ -z "$tmp_file" ]]; then
+        wget -O $key_file $APT_KEY_URL
+    else
+        wget -O $tmp_file $APT_KEY_URL
+        gpg -o $key_file --dearmor $tmp_file
+        rm -f $tmp_file
+    fi
     echo
     echo "Added $APT_URL package source to $apt_file"
 fi
@@ -64,4 +83,3 @@ else
     echo "    apt-get install $PACKAGE"
     echo
 fi
-    
