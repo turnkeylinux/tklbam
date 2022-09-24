@@ -67,16 +67,16 @@ if ! rgrep . /etc/apt/sources.list* | sed 's/#.*//' | grep -q $APT_URL; then
     apt_name=$(echo $APT_URL | sed 's|.*//||; s|/.*||')
     apt_file="/etc/apt/sources.list.d/${apt_name}.list"
 
-    echo "deb [signed-by=$KEY_FILE] $APT_URL $deb_dist main" > $apt_file
+    echo "deb [signed-by=/$KEY_FILE] $APT_URL $deb_dist main" > $apt_file
 
     info "downloading $APT_KEY_URL"
-    local_file=$KEY_FILE
+    local_file=/$KEY_FILE
     if [[ -n "$tmp_file" ]]; then
         local_file=$tmp_file
     fi
     wget -O $local_file $APT_KEY_URL
     if [[ -n "$tmp_file" ]]; then
-        gpg -o $KEY_FILE --dearmor $tmp_file
+        gpg -o /$KEY_FILE --dearmor $tmp_file
         rm -f $tmp_file
     fi
     info "Added $APT_URL package source to $apt_file"
