@@ -1,14 +1,18 @@
 #!/bin/bash -e
-# This is a disabled hook example. 
-# To enable, make it executable: chmod +x /etc/tklbam/hooks.d/pre-backup
+# This is a disabled hook example.
+#
+# To enable, make it executable:
+#
+#     chmod +x /etc/tklbam/hooks.d/example-pre-backup
 
 # hooks are always called with two arguments
 op=$1
 state=$2
 
-if [ "$state" = "pre" ] && [ "$op" = "backup" ]; then
+if [[ "$state" == "pre" ]] && [[ "$op" = "backup" ]]; then
 
     echo "HOOK $0 :: op=$op state=$state pwd=$(pwd) :: "
 
+    # run some commands here...
+    # e.g. clear caches, dump some data to the filesystem, etc
 fi
-
