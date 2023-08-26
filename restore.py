@@ -53,7 +53,8 @@ class Restore:
         if simulate:
             rollback = False
 
-        self.conf = AttrDict(json.loads(file(self.extras.backup_conf).read())) \
+        with open(self.extras.backup_conf) as fob:
+            self.conf = AttrDict(json.loads(fob.read())) \
                     if exists(self.extras.backup_conf) else None
 
         self.simulate = simulate
@@ -98,7 +99,8 @@ class Restore:
         if not exists(newpkgs_file):
             return
 
-        packages = file(newpkgs_file).read().strip()
+        with open(newpkgs_file) as fob:
+            packages = fob.read().strip()
         packages = [] if not packages else packages.split('\n')
 
         if not packages:
@@ -155,7 +157,8 @@ class Restore:
         new_group = join(new_etc, "group")
 
         def r(path):
-            return file(path).read()
+            with open(path) as fob:
+                return fob.read()
 
         return userdb.merge(r(old_passwd), r(old_group),
                             r(new_passwd), r(new_group))
@@ -163,8 +166,9 @@ class Restore:
     @staticmethod
     def _get_fsdelta_olist(fsdelta_olist_path, limits=[]):
         pathmap = PathMap(limits)
-        return [ fpath 
-                 for fpath in file(fsdelta_olist_path).read().splitlines() 
+        with open(fsdelta_olist_path) as fob:
+            return [ fpath
+                 for fpath in fob.read().splitlines()
                  if fpath in pathmap ] 
 
     @staticmethod
@@ -238,7 +242,8 @@ class Restore:
             print()
 
         def w(path, s):
-            file(path, "w").write(str(s))
+            with open(path, "w") as fob:
+                fob.write(str(s))
 
         if not simulate:
             w("/etc/passwd", passwd)
