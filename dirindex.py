@@ -139,7 +139,6 @@ class DirIndex(dict):
                 del self[path]
 
     def save(self, tofile):
-        fh = file(tofile, "w")
         paths = list(self.keys())
         paths.sort()
         with open(tofile, "w") as fh:
