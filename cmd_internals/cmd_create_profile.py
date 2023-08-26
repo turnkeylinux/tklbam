@@ -176,7 +176,7 @@ class ProfileGenerator:
 
         if packages:
             packages = self._get_packages(rootfs)
-            with openpaths.packages, "w") as fob:
+            with open(paths.packages, "w") as fob:
                 fob.writelines([ package + "\n"
                                  for package in packages ])
 
