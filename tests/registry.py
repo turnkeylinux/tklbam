@@ -27,7 +27,7 @@ registry = _Registry()
 def main():
     args = sys.argv[1:]
 
-    print `registry.foo`
+    print(repr(registry.foo))
     if args:
         registry.foo = args[0]
 

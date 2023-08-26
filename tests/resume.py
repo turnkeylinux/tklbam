@@ -31,9 +31,9 @@ class Session:
 def main():
     try:
         opts, conf = getopt.gnu_getopt(sys.argv[1:], '', ['resume'])
-    except getopt.GetoptError, e:
-        print >> sys.stderr, "error: " + str(e)
-        print >> sys.stderr, "syntax: %s [ --resume ] [ conf ]" % sys.argv[0]
+    except getopt.GetoptError as e:
+        print("error: " + str(e), file=sys.stderr)
+        print("syntax: %s [ --resume ] [ conf ]" % sys.argv[0], file=sys.stderr)
         sys.exit(1)
 
     opt_resume = None
@@ -60,12 +60,12 @@ def main():
         elif conf != prev_conf:
             raise Error("can't resume with different arguments")
 
-        print "resuming..."
+        print("resuming...")
     else:
-        print "not resuming..."
+        print("not resuming...")
 
-    print "conf: " + `conf`
-    print "opt_resume = " + `opt_resume`
+    print("conf: " + repr(conf))
+    print("opt_resume = " + repr(opt_resume))
 
     Session.save(conf)
     time.sleep(3)
