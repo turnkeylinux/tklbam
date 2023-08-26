@@ -86,14 +86,15 @@ Run "tklbam-init --help" for further details.
             if not exists(path):
                 return None
 
-            return file(path).read().rstrip()
+            with open(path) as fob:
+                return fob.read().rstrip()
 
         else:
             if s is None:
                 if exists(path):
                     os.remove(path)
             else:
-                fh = file(path, "w")
+                fh = open(path, "w")
                 os.chmod(path, 0o600)
                 print(s, file=fh)
                 fh.close()
@@ -177,17 +178,17 @@ Run "tklbam-init --help" for further details.
 
             if val == self.EMPTY_PROFILE:
                 self._file_str(self.path.profile.profile_id, val)
-                file(self.path.profile.stamp, "w").close()
+                open(self.path.profile.stamp, "w").close()
 
             elif isdir(str(val)):
                 self.profile = None
                 shutil.copytree(val, self.path.profile)
                 self._file_str(self.path.profile.profile_id, self._custom_profile_id(val))
-                file(self.path.profile.stamp, "w").close()
+                open(self.path.profile.stamp, "w").close()
 
             else:
                 profile_archive.extract(self.path.profile)
-                file(self.path.profile.stamp, "w").close()
+                open(self.path.profile.stamp, "w").close()
                 os.utime(self.path.profile.stamp, (0, profile_archive.timestamp))
                 self._file_str(self.path.profile.profile_id, profile_archive.profile_id)
 
