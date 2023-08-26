@@ -93,7 +93,6 @@ def main():
         os.chmod(keyfile, 0o600)
 
     print(key, file=fh)
-    fh.close()
 
 if __name__ == "__main__":
     main()

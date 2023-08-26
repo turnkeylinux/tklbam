@@ -97,7 +97,6 @@ Run "tklbam-init --help" for further details.
                 fh = open(path, "w")
                 os.chmod(path, 0o600)
                 print(s, file=fh)
-                fh.close()
 
     @classmethod
     def _file_tuple(cls, path, t=UNDEFINED):
