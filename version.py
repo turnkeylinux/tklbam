@@ -37,7 +37,8 @@ class TurnKeyVersion(AttrDict):
     @classmethod
     def from_system(cls):
         try:
-            system_version = file("/etc/turnkey_version").readline().strip()
+            with open("/etc/turnkey_version") as fob:
+                system_version = fob.readline().strip()
         except:
             return
 
