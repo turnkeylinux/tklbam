@@ -16,7 +16,7 @@ import shutil
 import stat
 import datetime
 
-from StringIO import StringIO
+from io import StringIO
 
 def remove_any(path):
     """Remove a path whether it is a file or a directory.
@@ -81,9 +81,9 @@ def fmt_timestamp():
     fh = StringIO()
 
     s = "### %s ###" % datetime.datetime.now().ctime()
-    print >> fh, "#" * len(s)
-    print >> fh, s
-    print >> fh, "#" * len(s)
+    print("#" * len(s), file=fh)
+    print(s, file=fh)
+    print("#" * len(s), file=fh)
 
     return fh.getvalue()
 

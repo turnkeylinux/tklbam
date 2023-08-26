@@ -99,7 +99,7 @@ class Backup:
 
         fh = file(dest, "w")
         for package in new_packages:
-            print >> fh, package
+            print(package, file=fh)
 
         fh.close()
 
@@ -128,7 +128,7 @@ class Backup:
             for action in actions:
                 if action.func is os.chmod:
                     path, mode = action.args
-                    default_mode = (0777 if isdir(path) else 0666) ^ umask
+                    default_mode = (0o777 if isdir(path) else 0o666) ^ umask
                     if default_mode == stat.S_IMODE(mode):
                         continue
                 elif action.func is os.lchown:
@@ -145,7 +145,7 @@ class Backup:
 
     def _create_extras(self, extras, profile, conf):
         os.mkdir(extras.path)
-        os.chmod(extras.path, 0700)
+        os.chmod(extras.path, 0o700)
 
         etc = str(extras.etc)
         os.mkdir(etc)
@@ -194,7 +194,7 @@ class Backup:
 
     def _log(self, s=""):
         if self.verbose:
-            print s
+            print(s)
 
     def __init__(self, profile, overrides, 
                  skip_files=False, skip_packages=False, skip_database=False, resume=False, verbose=True, extras_root="/"):

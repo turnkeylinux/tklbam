@@ -44,10 +44,10 @@ from registry import registry, hub_backups
 
 def usage(e=None):
     if e:
-        print >> sys.stderr, "error: " + str(e)
+        print("error: " + str(e), file=sys.stderr)
 
-    print >> sys.stderr, "Usage: %s [ <format> ]" % (sys.argv[0])
-    print >> sys.stderr, __doc__
+    print("Usage: %s [ <format> ]" % (sys.argv[0]), file=sys.stderr)
+    print(__doc__, file=sys.stderr)
 
     sys.exit(1)
 
@@ -89,7 +89,7 @@ def fmt_size(bytes):
 def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], "h", ["help"])
-    except getopt.GetoptError, e:
+    except getopt.GetoptError as e:
         usage(e)
 
     for opt, val in opts:
@@ -112,12 +112,12 @@ def main():
         for hbr in hbrs:
             hbr.id = hbr.backup_id
             hbr.skpp = fmt_skpp(hbr.key)
-            print format(hbr)
+            print(format(hbr))
 
     elif hbrs:
-        print "# ID  SKPP  Created     Updated     Size (MB)  Label"
+        print("# ID  SKPP  Created     Updated     Size (MB)  Label")
         for hbr in hbrs:
-            print "%4s  %-3s   %s  %-10s  %-8s   %s" % \
+            print("%4s  %-3s   %s  %-10s  %-8s   %s" % \
                     (hbr.backup_id, fmt_skpp(hbr.key),
                      hbr.created.strftime("%Y-%m-%d"),
 
@@ -125,7 +125,7 @@ def main():
                      if hbr.updated else "-",
 
                      fmt_size(hbr.size),
-                     hbr.label)
+                     hbr.label))
 
 if __name__ == "__main__":
     main()

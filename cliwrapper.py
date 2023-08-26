@@ -45,14 +45,14 @@ class CliWrapper:
     @classmethod
     def _usage(cls, commands, e=None):
         if e:
-            print >> sys.stderr, "error: " + str(e)
+            print("error: " + str(e), file=sys.stderr)
 
-        print >> sys.stderr, "Usage: %s <command> [arguments]" % sys.argv[0]
-        print >> sys.stderr, cls.DESCRIPTION.strip()
+        print("Usage: %s <command> [arguments]" % sys.argv[0], file=sys.stderr)
+        print(cls.DESCRIPTION.strip(), file=sys.stderr)
 
-        print >> sys.stderr, "\nCommands: \n"
+        print("\nCommands: \n", file=sys.stderr)
 
-        command_names = commands.keys()
+        command_names = list(commands.keys())
         command_names.sort()
 
         maxlen = max([ len(name) for name in command_names ]) + 2
@@ -63,12 +63,12 @@ class CliWrapper:
 
         for command in cls.COMMANDS_USAGE_ORDER:
             if command == '':
-                print >> sys.stderr
+                print(file=sys.stderr)
             else:
-                print >> sys.stderr, tpl % (command, shortdesc(command))
+                print(tpl % (command, shortdesc(command)), file=sys.stderr)
 
         for command in set(commands.keys()) - set(cls.COMMANDS_USAGE_ORDER):
-                print >> sys.stderr, tpl % (command, shortdesc(command))
+                print(tpl % (command, shortdesc(command)), file=sys.stderr)
 
         sys.exit(1)
 

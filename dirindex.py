@@ -69,7 +69,7 @@ class DirIndex(dict):
 
         def __repr__(self):
             return "DirIndex.Record(%s, mod=%s, uid=%d, gid=%d, size=%d, mtime=%d)" % \
-                    (`self.path`, oct(self.mod), self.uid, self.gid, self.size, self.mtime)
+                    (repr(self.path), oct(self.mod), self.uid, self.gid, self.size, self.mtime)
 
     @classmethod
     def create(cls, path_index, paths):
@@ -132,16 +132,16 @@ class DirIndex(dict):
         """prune index down to paths that are included AND not excluded"""
 
         pathmap = PathMap(paths)
-        for path in self.keys():
+        for path in list(self.keys()):
             if not path in pathmap:
                 del self[path]
 
     def save(self, tofile):
         fh = file(tofile, "w")
-        paths = self.keys()
+        paths = list(self.keys())
         paths.sort()
         for path in paths:
-            print >> fh, self[path].fmt()
+            print(self[path].fmt(), file=fh)
 
     def diff(self, other):
         a = set(self)
@@ -202,7 +202,7 @@ def read_paths(fh):
 
         # only accept absolute paths
         if not re.match(r'^-?/', path):
-            raise Error(`path` + " is not an absolute path")
+            raise Error(repr(path) + " is not an absolute path")
 
         paths.append(path)
 

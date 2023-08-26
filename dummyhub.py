@@ -48,7 +48,7 @@ class APIKey:
         return self.encoded
 
     def __repr__(self):
-        return "APIKey(%s)" % `str(self)`
+        return "APIKey(%s)" % repr(str(self))
 
     def __eq__(self, other):
         return self.encoded == other.encoded
@@ -138,7 +138,7 @@ def _parse_duplicity_sessions(path):
         else:
             sessions[df.timestamp].size += fsize
 
-    return sessions.values()
+    return list(sessions.values())
 
 class DummyBackupRecord(AttrDict):
     # backup_id, address
@@ -329,8 +329,8 @@ class Backups:
         return self.user.backups[backup_id]
 
     def list_backups(self):
-        backups = self.user.backups.values()
-        return sorted(self.user.backups.values(),
+        backups = list(self.user.backups.values())
+        return sorted(list(self.user.backups.values()),
                       lambda a,b: cmp(int(a.backup_id), int(b.backup_id)))
 
     def updated_backup(self, address):
@@ -338,7 +338,7 @@ class Backups:
         # with the user's credentials and updates the Hub database (e.g., size,
         # data on backup sessions, etc.)
 
-        for backup in self.user.backups.values():
+        for backup in list(self.user.backups.values()):
             if address == backup.address:
                 backup.update()
                 dummydb.save()

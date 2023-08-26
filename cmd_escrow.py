@@ -30,16 +30,16 @@ from passphrase import *
 
 def usage(e=None):
     if e:
-        print >> sys.stderr, "error: " + str(e)
+        print("error: " + str(e), file=sys.stderr)
 
-    print >> sys.stderr, "Usage: %s [-options] KEYFILE" % sys.argv[0]
-    print >> sys.stderr, __doc__
+    print("Usage: %s [-options] KEYFILE" % sys.argv[0], file=sys.stderr)
+    print(__doc__, file=sys.stderr)
     sys.exit(1)
 
 def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], "hRP", ["help", "no-passphrase", "random-passphrase"])
-    except getopt.GetoptError, e:
+    except getopt.GetoptError as e:
         usage(e)
 
     if not args:
@@ -64,11 +64,11 @@ def main():
             opt_random_passphrase = True
 
     if opt_no_passphrase and opt_random_passphrase:
-        print >> sys.stderr, "error: --no-passphrase and --random-passphrase are incompatible options"
+        print("error: --no-passphrase and --random-passphrase are incompatible options", file=sys.stderr)
         sys.exit(1)
 
     if not registry.secret:
-        print >> sys.stderr, "error: you need to run init first"
+        print("error: you need to run init first", file=sys.stderr)
         sys.exit(1)
 
     def _passphrase():
@@ -77,7 +77,7 @@ def main():
 
         if opt_random_passphrase:
             passphrase = random_passphrase()
-            print passphrase
+            print(passphrase)
             return passphrase
 
         return get_passphrase()
@@ -89,9 +89,9 @@ def main():
         fh = sys.stdout
     else:
         fh = file(keyfile, "w")
-        os.chmod(keyfile, 0600)
+        os.chmod(keyfile, 0o600)
 
-    print >> fh, key
+    print(key, file=fh)
 
 if __name__ == "__main__":
     main()

@@ -45,7 +45,7 @@ class Rollback:
         if exists(path):
             shutil.rmtree(path)
         os.makedirs(path)
-        os.chmod(path, 0700)
+        os.chmod(path, 0o700)
 
         self = cls(path)
 
@@ -57,7 +57,7 @@ class Rollback:
         """deletes path if it exists and creates it if it doesn't"""
 
         if not exists(path):
-            raise Error("No such directory " + `path`)
+            raise Error("No such directory " + repr(path))
 
         self.paths = self.Paths(path)
         self.timestamp = datetime.fromtimestamp(os.stat(path).st_ctime)
@@ -65,7 +65,7 @@ class Rollback:
     @staticmethod
     def _move(source, dest):
         if not lexists(source):
-            raise Error("no such file or directory " + `source`)
+            raise Error("no such file or directory " + repr(source))
 
         if not exists(dirname(dest)):
             os.makedirs(dirname(dest))
@@ -150,7 +150,7 @@ class Rollback:
                 method()
             except:
                 exceptions += 1
-                print >> sys.stderr, "error: %s raised an exception:" % method.__name__
+                print("error: %s raised an exception:" % method.__name__, file=sys.stderr)
                 traceback.print_exc(file=sys.stderr)
 
         shutil.rmtree(self.paths)
@@ -178,7 +178,7 @@ class Rollback:
 
         fh = file(self.paths.newpkgs, "w")
         for package in packages:
-            print >> fh, package
+            print(package, file=fh)
         fh.close()
 
     def save_database(self):

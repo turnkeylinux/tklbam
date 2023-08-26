@@ -40,7 +40,7 @@ def get_passphrase(confirm=True):
         confirm_passphrase = getpass.getpass("Confirm passphrase: ")
         if passphrase == confirm_passphrase:
             break
-        print >> sys.stderr, "Sorry, passphrases do not match"
+        print("Sorry, passphrases do not match", file=sys.stderr)
 
     return passphrase
 

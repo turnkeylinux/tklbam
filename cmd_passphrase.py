@@ -27,16 +27,16 @@ from passphrase import *
 
 def usage(e=None):
     if e:
-        print >> sys.stderr, "error: " + str(e)
+        print("error: " + str(e), file=sys.stderr)
 
-    print >> sys.stderr, "Usage: %s [-options]" % sys.argv[0]
-    print >> sys.stderr, __doc__.strip()
+    print("Usage: %s [-options]" % sys.argv[0], file=sys.stderr)
+    print(__doc__.strip(), file=sys.stderr)
     sys.exit(1)
 
 def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], "h", ["help", "random"])
-    except getopt.GetoptError, e:
+    except getopt.GetoptError as e:
         usage(e)
 
     opt_random = False
@@ -51,9 +51,9 @@ def main():
 
     if opt_random:
         passphrase = random_passphrase()
-        print passphrase
+        print(passphrase)
     else:
-        print "(For no passphrase, just press Enter)"
+        print("(For no passphrase, just press Enter)")
         passphrase = get_passphrase()
 
     key = keypacket.fmt(registry.secret, passphrase)
@@ -66,8 +66,8 @@ def main():
             hb.update_key(hbr.backup_id, key)
             registry.key = key
 
-            print ("Updated" if passphrase else "Removed") + \
-                    " passphrase - uploaded key to Hub."
+            print(("Updated" if passphrase else "Removed") + \
+                    " passphrase - uploaded key to Hub.")
 
         except hub.Error:
             raise

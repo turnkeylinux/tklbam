@@ -15,7 +15,7 @@ def _is_listening(localport):
     try:
         sock.connect(('127.0.0.1', localport))
         return True
-    except socket.error, e:
+    except socket.error as e:
         if e.errno == errno.ECONNREFUSED:
             return False
 

@@ -101,23 +101,23 @@ def generate_secret():
     return base64.b64encode(hashlib.sha1(os.urandom(32)).digest()).rstrip("=")
 
 def fatal(e):
-    print >> sys.stderr, "error: " + str(e)
+    print("error: " + str(e), file=sys.stderr)
     sys.exit(1)
 
 def usage(e=None):
     from paged import stdout
 
     if e:
-        print >> stdout, "error: " + str(e)
+        print("error: " + str(e), file=stdout)
 
-    print >> stdout, "Usage: %s [ API-KEY ]" % sys.argv[0]
-    print >> stdout, __doc__.strip()
+    print("Usage: %s [ API-KEY ]" % sys.argv[0], file=stdout)
+    print(__doc__.strip(), file=stdout)
     sys.exit(1)
 
 def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], "h", ["help", "solo", "force", "force-profile="])
-    except getopt.GetoptError, e:
+    except getopt.GetoptError as e:
         usage(e)
 
     apikey = None
@@ -150,7 +150,7 @@ def main():
     if not registry.registry.secret:
         registry.registry.secret = generate_secret()
         registry.registry.key = keypacket.fmt(registry.registry.secret, "")
-        print """\
+        print("""\
 Generated backup encryption key:
 
     For extra security run "tklbam-passphrase" to cryptographically protect it
@@ -158,21 +158,21 @@ Generated backup encryption key:
     the passphrase it will be impossible to restore your backup and you may
     suffer data loss. To safeguard against this you may want to create an
     escrow key with "tklbam-escrow".
-"""
+""")
 
     if solo:
         if registry.registry.sub_apikey:
-            print "Broken TKLBAM link to your Hub account (--solo mode)"
+            print("Broken TKLBAM link to your Hub account (--solo mode)")
             registry.registry.sub_apikey = None
             registry.registry.credentials = None
     else:
         if force or not registry.registry.sub_apikey:
             if not apikey:
-                print "Copy paste the API-KEY from your Hub account's user profile"
-                print
+                print("Copy paste the API-KEY from your Hub account's user profile")
+                print()
 
                 while True:
-                    apikey = raw_input("API-KEY: ").strip()
+                    apikey = input("API-KEY: ").strip()
                     if apikey:
                         break
 
@@ -181,7 +181,7 @@ Generated backup encryption key:
 
             try:
                 sub_apikey = hub.Backups.get_sub_apikey(apikey)
-            except Exception, e:
+            except Exception as e:
                 fatal(e)
 
             registry.registry.sub_apikey = sub_apikey
@@ -190,11 +190,11 @@ Generated backup encryption key:
             try:
                 credentials = hb.get_credentials()
                 registry.registry.credentials = credentials
-                print "Linked TKLBAM to your Hub account."
+                print("Linked TKLBAM to your Hub account.")
 
-            except hub.NotSubscribed, e:
-                print "Linked TKLBAM to your Hub account but there's a problem:"
-                print
+            except hub.NotSubscribed as e:
+                print("Linked TKLBAM to your Hub account but there's a problem:")
+                print()
 
         elif not force_profile and registry.registry.profile:
             fatal("already initialized")

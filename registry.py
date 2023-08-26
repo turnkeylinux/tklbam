@@ -75,7 +75,7 @@ Run "tklbam-init --help" for further details.
 
         if not exists(path):
             os.makedirs(path)
-            os.chmod(path, 0700)
+            os.chmod(path, 0o700)
 
         self.path = self.Paths(path)
 
@@ -93,8 +93,8 @@ Run "tklbam-init --help" for further details.
                     os.remove(path)
             else:
                 fh = file(path, "w")
-                os.chmod(path, 0600)
-                print >> fh, s
+                os.chmod(path, 0o600)
+                print(s, file=fh)
                 fh.close()
 
     @classmethod
@@ -109,7 +109,7 @@ Run "tklbam-init --help" for further details.
     @classmethod
     def _file_dict(cls, path, d=UNDEFINED):
         if d and d is not UNDEFINED:
-            d = "\n".join([ "%s=%s" % (k, v) for k, v in d.items() ])
+            d = "\n".join([ "%s=%s" % (k, v) for k, v in list(d.items()) ])
 
         retval = cls._file_str(path, d)
         if retval:
@@ -240,12 +240,12 @@ Run "tklbam-init --help" for further details.
             new_profile = hub_backups.get_new_profile(profile_id, profile_timestamp)
             if new_profile:
                 self.profile = new_profile
-                print "Downloaded %s profile" % self.profile.profile_id
+                print("Downloaded %s profile" % self.profile.profile_id)
 
         except hub.NotSubscribed:
             raise
 
-        except hub_backups.Error, e:
+        except hub_backups.Error as e:
             errno, errname, desc = e.args
             if errname == "BackupArchive.NotFound":
                 raise self.ProfileNotFound(desc)
@@ -266,7 +266,7 @@ Run "tklbam-init --help" for further details.
         try:
             # look for exact match first
             self._update_profile(profile_id)
-        except self.ProfileNotFound, first_exception:
+        except self.ProfileNotFound as first_exception:
             if profile_id:
                 if not re.match(r'^turnkey-', profile_id):
                     profile_id = "turnkey-" + profile_id
@@ -326,7 +326,7 @@ def update_profile(profile_id=None, strict=True):
     global registry
 
     if profile_id == registry.EMPTY_PROFILE:
-        print """
+        print("""
 Creating an empty profile, which means:
 
 - We only backup files as included or excluded in the override paths specified
@@ -334,7 +334,7 @@ Creating an empty profile, which means:
 
 - We can't detect which files have changed since installation so we will
   indiscriminately backup all files in the included directories.
-"""
+""")
 
 
     if not strict:
@@ -348,17 +348,17 @@ Creating an empty profile, which means:
         except hub.Backups.NotInitialized:
             raise NotInitialized()
 
-        except hub.NotSubscribed, e:
-            print >> sys.stderr, str(e)
+        except hub.NotSubscribed as e:
+            print(str(e), file=sys.stderr)
             sys.exit(1)
 
-        except registry.CachedProfile, e:
-            print >> sys.stderr, "warning: " + str(e)
-        except registry.ProfileNotFound, e:
-            print >> sys.stderr, "TurnKey Hub Error: %s" % str(e)
+        except registry.CachedProfile as e:
+            print("warning: " + str(e), file=sys.stderr)
+        except registry.ProfileNotFound as e:
+            print("TurnKey Hub Error: %s" % str(e), file=sys.stderr)
             if not profile_id:
                 # be extra nice to people who aren't using --force-profile
-                print >> sys.stderr, "\n" + e.__doc__
+                print("\n" + e.__doc__, file=sys.stderr)
 
             sys.exit(1)
     os.environ['TKLBAM_PROFILE_ID'] = registry.profile.profile_id

@@ -192,21 +192,21 @@ def do_compatibility_check(backup_profile_id, interactive=True):
     backup_codename = fmt(backup_codename)
     local_codename = fmt(local_codename)
 
-    print "WARNING: INCOMPATIBLE APPLIANCE BACKUP"
-    print "======================================"
-    print
-    print "Restoring a %s backup to a %s appliance may create complications." % (backup_codename, local_codename)
-    print "For best results try restoring instead to a fresh %s installation." % backup_codename
+    print("WARNING: INCOMPATIBLE APPLIANCE BACKUP")
+    print("======================================")
+    print()
+    print("Restoring a %s backup to a %s appliance may create complications." % (backup_codename, local_codename))
+    print("For best results try restoring instead to a fresh %s installation." % backup_codename)
 
     if not interactive:
         sys.exit(ExitCode.INCOMPATIBLE)
 
-    print
-    print "(Use --force to suppress this check)"
-    print
+    print()
+    print("(Use --force to suppress this check)")
+    print()
 
     while True:
-        answer = raw_input("Do you want to continue? [yes/no] ")
+        answer = input("Do you want to continue? [yes/no] ")
         if answer:
             break
 
@@ -220,7 +220,7 @@ def get_backup_record(arg):
 
         try:
             return hb.get_backup_record(backup_id)
-        except hub.InvalidBackupError, e:
+        except hub.InvalidBackupError as e:
             raise Error('invalid backup id (%s)' % backup_id)
 
     # treat our argument as a pattern
@@ -246,39 +246,39 @@ def decrypt_key(key, interactive=True):
             if interactive:
                 p = passphrase.get_passphrase(confirm=False)
             else:
-                print "Passphrase: "
+                print("Passphrase: ")
                 p = sys.stdin.readline().strip()
 
             return keypacket.parse(key, p)
 
         except keypacket.Error:
             if not interactive:
-                print >> sys.stderr, "Incorrect passphrase"
+                print("Incorrect passphrase", file=sys.stderr)
                 sys.exit(ExitCode.BADPASSPHRASE)
 
-            print >> sys.stderr, "Incorrect passphrase, try again"
+            print("Incorrect passphrase, try again", file=sys.stderr)
 
 def warn(e):
-    print >> sys.stderr, "warning: " + str(e)
+    print("warning: " + str(e), file=sys.stderr)
 
 def fatal(e):
-    print >> sys.stderr, "error: " + str(e)
+    print("error: " + str(e), file=sys.stderr)
     sys.exit(1)
 
 def usage(e=None):
     from paged import stdout
 
     if e:
-        print >> stdout, "error: " + str(e)
+        print("error: " + str(e), file=stdout)
 
-    print >> stdout, "Usage: %s [ -options ] <hub-backup>" % sys.argv[0]
-    print >> stdout, "Usage: %s [ -options ] --address=<address> --keyfile=path/to/key.escrow" % sys.argv[0]
+    print("Usage: %s [ -options ] <hub-backup>" % sys.argv[0], file=stdout)
+    print("Usage: %s [ -options ] --address=<address> --keyfile=path/to/key.escrow" % sys.argv[0], file=stdout)
 
     tpl = Template(__doc__.strip())
     conf = Conf()
-    print >> stdout, tpl.substitute(CONF_PATH=conf.paths.conf,
+    print(tpl.substitute(CONF_PATH=conf.paths.conf,
                                     CONF_RESTORE_CACHE_SIZE=conf.restore_cache_size,
-                                    CONF_RESTORE_CACHE_DIR=conf.restore_cache_dir)
+                                    CONF_RESTORE_CACHE_DIR=conf.restore_cache_dir), file=stdout)
 
     sys.exit(1)
 
@@ -318,7 +318,7 @@ def main():
                                         'debug',
                                         'skip-files', 'skip-database', 'skip-packages',
                                         'no-rollback'])
-    except getopt.GetoptError, e:
+    except getopt.GetoptError as e:
         usage(e)
 
     conf = Conf()
@@ -342,7 +342,7 @@ def main():
             opt_limits += shlex.split(val)
         elif opt == '--keyfile':
             if not isfile(val):
-                fatal("keyfile %s does not exist or is not a file" % `val`)
+                fatal("keyfile %s does not exist or is not a file" % repr(val))
 
             opt_key = file(val).read()
             try:
@@ -412,14 +412,14 @@ def main():
             try:
                 try:
                     hbr = get_backup_record(arg)
-                except hub.Backups.NotInitialized, e:
-                    print >> sys.stderr, "error: " + str(e)
-                    print >> sys.stderr, "tip: you can still use tklbam-restore with --address or a backup extract"
+                except hub.Backups.NotInitialized as e:
+                    print("error: " + str(e), file=sys.stderr)
+                    print("tip: you can still use tklbam-restore with --address or a backup extract", file=sys.stderr)
 
                     sys.exit(1)
 
                 credentials = hub.Backups(registry.sub_apikey).get_credentials()
-            except Error, e:
+            except Error as e:
                 fatal(e)
 
     else:
@@ -457,10 +457,10 @@ def main():
         downloader = duplicity.Downloader(opt_time, restore_cache_size, restore_cache_dir)
 
         def _print(s):
-            print s
+            print(s)
 
         def get_backup_extract():
-            print fmt_title("Executing Duplicity to download %s to %s " % (address, raw_download_path))
+            print(fmt_title("Executing Duplicity to download %s to %s " % (address, raw_download_path)))
             downloader(raw_download_path, target, log=_print if not silent else None, debug=opt_debug, force=opt_force)
             return raw_download_path
 
@@ -469,15 +469,15 @@ def main():
             return
         else:
             raw_download_path = TempDir(prefix="tklbam-")
-            os.chmod(raw_download_path, 0700)
+            os.chmod(raw_download_path, 0o700)
 
     update_profile(conf.force_profile, strict=False)
 
     if not (opt_simulate or opt_debug):
         log_fh = file(opt_logfile, "a")
 
-        print >> log_fh
-        print >> log_fh, "\n" + fmt_timestamp()
+        print(file=log_fh)
+        print("\n" + fmt_timestamp(), file=log_fh)
 
         log_fh.flush()
 
@@ -499,7 +499,7 @@ def main():
         os.environ['TKLBAM_BACKUP_EXTRACT_PATH'] = backup_extract_path
 
         if not silent:
-            print fmt_title("Restoring system from backup extract at " + backup_extract_path)
+            print(fmt_title("Restoring system from backup extract at " + backup_extract_path))
 
         restore = Restore(backup_extract_path, limits=opt_limits, rollback=not no_rollback, simulate=opt_simulate)
 
@@ -508,14 +508,14 @@ def main():
         hooks.restore.inspect(restore.extras.path)
 
         if opt_debug:
-            print """\
+            print("""\
   The --debug option has (again) dropped you into an interactive shell so that
   you can explore the state of the system just before restore. The current
   working directory contains the backup extract.
 
   To exit from the shell and continue the restore run "exit 0".
   To exit from the shell and abort the restore run "exit 1".
-"""
+""")
             os.chdir(backup_extract_path)
             executil.system(os.environ.get("SHELL", "/bin/bash"))
             os.chdir('/')
@@ -529,12 +529,12 @@ def main():
         if not skip_database:
             restore.database()
 
-        print
+        print()
         hooks.restore.post()
 
     except:
         if trap:
-            print >> log_fh
+            print(file=log_fh)
             traceback.print_exc(file=log_fh)
 
         raise
@@ -548,7 +548,7 @@ def main():
             log_fh.close()
 
     if not silent:
-        print "We're done. You may want to reboot now to reload all service configurations."
+        print("We're done. You may want to reboot now to reload all service configurations.")
 
 if __name__=="__main__":
     main()

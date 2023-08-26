@@ -23,22 +23,22 @@ import getopt
 from rollback import Rollback
 
 def fatal(e):
-    print >> sys.stderr, "error: " + str(e)
+    print("error: " + str(e), file=sys.stderr)
     sys.exit(1)
 
 def usage(e=None):
     if e:
-        print >> sys.stderr, "error: " + str(e)
+        print("error: " + str(e), file=sys.stderr)
 
-    print >> sys.stderr, "Usage: %s" % sys.argv[0]
-    print >> sys.stderr, __doc__.strip()
+    print("Usage: %s" % sys.argv[0], file=sys.stderr)
+    print(__doc__.strip(), file=sys.stderr)
     sys.exit(1)
 
 def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'h',
                                        ['force', 'help'])
-    except getopt.GetoptError, e:
+    except getopt.GetoptError as e:
         usage(e)
 
     opt_force = False
@@ -57,17 +57,17 @@ def main():
         fatal("nothing to rollback")
 
     if not opt_force:
-        print "DATA LOSS WARNING: this will rollback your system to the pre-restore"
-        print "snapshot from " + rollback.timestamp.ctime()
-        print
+        print("DATA LOSS WARNING: this will rollback your system to the pre-restore")
+        print("snapshot from " + rollback.timestamp.ctime())
+        print()
 
         while True:
-            answer = raw_input("Is this really what you want? [yes/no] ")
+            answer = input("Is this really what you want? [yes/no] ")
             if answer:
                 break
 
         if answer.lower() != "yes":
-            print "You didn't answer 'yes'. Aborting!"
+            print("You didn't answer 'yes'. Aborting!")
             sys.exit(1)
 
     rollback.rollback()

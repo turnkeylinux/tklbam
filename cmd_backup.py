@@ -158,24 +158,24 @@ def usage(e=None):
     from paged import stdout
 
     if e:
-        print >> stdout, "error: " + str(e)
+        print("error: " + str(e), file=stdout)
 
-    print >> stdout, "Usage: %s [ -options ] [ override ... ]" % sys.argv[0]
+    print("Usage: %s [ -options ] [ override ... ]" % sys.argv[0], file=stdout)
     tpl = Template(__doc__.strip())
     conf = Conf()
-    print >> stdout, tpl.substitute(CONF_PATH=conf.paths.conf,
+    print(tpl.substitute(CONF_PATH=conf.paths.conf,
                                     CONF_OVERRIDES=conf.paths.overrides,
                                     CONF_VOLSIZE=conf.volsize,
                                     CONF_FULL_BACKUP=conf.full_backup,
                                     CONF_S3_PARALLEL_UPLOADS=conf.s3_parallel_uploads,
-                                    LOGFILE=PATH_LOGFILE)
+                                    LOGFILE=PATH_LOGFILE), file=stdout)
     sys.exit(1)
 
 def warn(e):
-    print >> sys.stderr, "warning: " + str(e)
+    print("warning: " + str(e), file=sys.stderr)
 
 def fatal(e):
-    print >> sys.stderr, "error: " + str(e)
+    print("error: " + str(e), file=sys.stderr)
     sys.exit(1)
 
 from conffile import ConfFile
@@ -202,7 +202,7 @@ def main():
                                         'simulate', 'quiet',
                                         'force-profile=', 'secretfile=', 'address=',
                                         'volsize=', 's3-parallel-uploads=', 'full-backup='])
-    except getopt.GetoptError, e:
+    except getopt.GetoptError as e:
         usage(e)
 
     raw_upload_path = None
@@ -257,7 +257,7 @@ def main():
 
         elif opt == '--secretfile':
             if not exists(val):
-                usage("secretfile %s does not exist" % `val`)
+                usage("secretfile %s does not exist" % repr(val))
             conf.secretfile = val
 
         elif opt == '--address':
@@ -326,20 +326,20 @@ def main():
     if not raw_upload_path:
         try:
             update_profile(conf.force_profile)
-        except hub.Backups.NotInitialized, e:
+        except hub.Backups.NotInitialized as e:
             fatal("you need a profile to backup, run tklbam-init first")
 
     credentials = None
     if not conf.address and not dump_path:
         try:
             hb = hub_backups()
-        except hub.Backups.NotInitialized, e:
+        except hub.Backups.NotInitialized as e:
             fatal(str(e) + "\n" +
                   "tip: you can still use tklbam-backup with --dump or --address")
 
         try:
             registry.credentials = hb.get_credentials()
-        except hb.Error, e:
+        except hb.Error as e:
             # asking for get_credentials() might fail if the hub is down.
             # But If we already have the credentials we can survive that.
 
@@ -355,7 +355,7 @@ def main():
         if registry.hbr:
             try:
                 registry.hbr = hb.get_backup_record(registry.hbr.backup_id)
-            except hb.Error, e:
+            except hb.Error as e:
                 # if the Hub is down we can hope that the cached address
                 # is still valid and warn and try to backup anyway.
                 #
@@ -380,9 +380,9 @@ def main():
     else:
         # implicit resume
         if not opt_simulate and not opt_disable_resume and registry.backup_resume_conf == conf:
-            print "Implicit --resume: Detected a rerun of an aborted backup session"
-            print "                   You can disable this with the --disable-resume option"
-            print
+            print("Implicit --resume: Detected a rerun of an aborted backup session")
+            print("                   You can disable this with the --disable-resume option")
+            print()
             time.sleep(5)
 
             opt_resume = True
@@ -397,8 +397,8 @@ def main():
     if not (opt_simulate or opt_debug or dump_path):
         log_fh = file(opt_logfile, "a")
 
-        print >> log_fh
-        print >> log_fh, "\n" + fmt_timestamp()
+        print(file=log_fh)
+        print("\n" + fmt_timestamp(), file=log_fh)
 
         log_fh.flush()
 
@@ -412,7 +412,7 @@ def main():
         if is_hub_address and not (dump_path or opt_simulate):
             try:
                 hb.set_backup_inprogress(registry.hbr.backup_id, bool)
-            except hb.Error, e:
+            except hb.Error as e:
                 warn("can't update Hub of backup %s: %s" % ("in progress" if bool else "completed", str(e)))
 
     try:
@@ -420,12 +420,12 @@ def main():
 
         def _print(s):
             if s == "\n":
-                print
+                print()
             else:
-                print "# " + str(s)
+                print("# " + str(s))
 
         if raw_upload_path:
-            print fmt_title("Executing Duplicity to backup %s to %s" % (raw_upload_path, target.address))
+            print(fmt_title("Executing Duplicity to backup %s to %s" % (raw_upload_path, target.address)))
 
             _print("export PASSPHRASE=$(cat %s)" % conf.secretfile)
             uploader = duplicity.Uploader(True,
@@ -447,7 +447,7 @@ def main():
             if dump_path:
                 b.dump(dump_path)
             else:
-                print "\n" + fmt_title("Executing Duplicity to backup system changes to encrypted, incremental archives")
+                print("\n" + fmt_title("Executing Duplicity to backup system changes to encrypted, incremental archives"))
                 _print("export PASSPHRASE=$(cat %s)" % conf.secretfile)
 
                 uploader = duplicity.Uploader(True,
@@ -466,14 +466,14 @@ def main():
             hooks.backup.post()
 
             if opt_simulate:
-                print "Completed --simulate: Leaving %s intact so you can manually inspect it" % b.extras_paths.path
+                print("Completed --simulate: Leaving %s intact so you can manually inspect it" % b.extras_paths.path)
             else:
                 if not dump_path:
                     shutil.rmtree(b.extras_paths.path)
 
     except:
         if trap:
-            print >> log_fh
+            print(file=log_fh)
             traceback.print_exc(file=log_fh)
 
         raise
@@ -493,7 +493,7 @@ def main():
         m = re.search(r'(^---+\[ Backup Statistics \]---+.*)', output, re.M | re.S)
         if m:
             stats = m.group(1)
-            print stats.strip()
+            print(stats.strip())
 
     registry.backup_resume_conf = None
 
@@ -504,7 +504,7 @@ def main():
             pass
 
     if not opt_simulate:
-        print "\nTIP: test your backups with a trial restore BEFORE something bad happens."
+        print("\nTIP: test your backups with a trial restore BEFORE something bad happens.")
 
 if __name__=="__main__":
     main()

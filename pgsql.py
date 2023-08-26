@@ -13,7 +13,7 @@ import os
 from os.path import *
 
 import re
-import commands
+import subprocess
 import shutil
 
 from executil import system, getoutput, getoutput_popen
@@ -27,7 +27,7 @@ class Error(Exception):
     pass
 
 def su(command):
-    return "su postgres -c" + commands.mkarg(command)
+    return "su postgres -c" + subprocess.mkarg(command)
 
 def list_databases():
     for line in getoutput(su('psql -l')).splitlines():
@@ -120,7 +120,7 @@ def cb_print(fh=None):
         fh = sys.stdout
 
     def func(val):
-        print >> fh, "database: " + val
+        print("database: " + val, file=fh)
 
     return func
 
@@ -133,7 +133,7 @@ def backup(outdir, limits=[], callback=None):
 
     try:
         pgsql2fs(outdir, limits, callback)
-    except Exception, e:
+    except Exception as e:
         if isdir(outdir):
             shutil.rmtree(outdir)
         raise Error("pgsql backup failed: " + str(e))
@@ -141,7 +141,7 @@ def backup(outdir, limits=[], callback=None):
 def restore(path, limits=[], callback=None):
     try:
         fs2pgsql(path, limits, callback=callback)
-    except Exception, e:
+    except Exception as e:
         raise Error("pgsql restore failed: " + str(e))
 
 class PgsqlService:

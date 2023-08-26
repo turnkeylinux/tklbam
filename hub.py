@@ -115,7 +115,7 @@ class API(_API):
     def request(self, method, url, attrs={}, headers={}):
         try:
             return _API.request(self, method, url, attrs, headers)
-        except self.Error, e:
+        except self.Error as e:
             if e.name == "BackupRecord.NotFound":
                 raise InvalidBackupError(e.description)
 
@@ -188,7 +188,7 @@ class Credentials:
     def from_dict(cls, d):
 
         creds_types = dict((subcls.__name__.lower(), subcls)
-                           for subcls in cls.__dict__.values()
+                           for subcls in list(cls.__dict__.values())
                            if isinstance(subcls, type) and issubclass(subcls, BaseCredentials))
 
         creds_type = d.get('type')
@@ -290,7 +290,7 @@ class Backups:
 
     def list_backups(self):
         response = self._api('GET', 'records/')
-        return map(lambda r: BackupRecord(r), response)
+        return [BackupRecord(r) for r in response]
 
 class ProfileArchive:
     def __init__(self, profile_id, archive, timestamp):

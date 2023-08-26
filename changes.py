@@ -70,7 +70,7 @@ class Change:
         stat = property(stat)
 
         def fmt(self, *args):
-            return "\t".join([self.OP, self.path] + map(str, args))
+            return "\t".join([self.OP, self.path] + list(map(str, args)))
 
         def __str__(self):
             return self.fmt()
@@ -118,8 +118,8 @@ class Change:
 
     @classmethod
     def parse(cls, line):
-        op2class = dict((val.OP, val) for val in cls.__dict__.values()
-                        if isinstance(val, types.ClassType))
+        op2class = dict((val.OP, val) for val in list(cls.__dict__.values())
+                        if isinstance(val, type))
         op = line[0]
         if op not in op2class:
             raise Error("illegal change line: " + line)
@@ -129,7 +129,7 @@ class Change:
 def mkdir(path):
     try:
         os.makedirs(path)
-    except OSError, e:
+    except OSError as e:
         if e.errno != errno.EEXIST:
             raise
 

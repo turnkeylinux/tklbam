@@ -36,7 +36,7 @@ def _unpad(padded):
     return padded[-(2 + len) :-2]
 
 def _repeat(f, input, count):
-    for x in xrange(count):
+    for x in range(count):
         input = f(input)
     return input
 
@@ -74,7 +74,7 @@ def _parse(packet):
     try:
         packet = base64.b64decode(packet)
         version, khr, kcr = struct.unpack("!BHH", packet[:5])
-    except (TypeError, struct.error), e:
+    except (TypeError, struct.error) as e:
         raise Error("can't parse key packet: " + str(e))
 
     minimum_len = (5 + FINGERPRINT_LEN + 16)

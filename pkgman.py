@@ -11,7 +11,7 @@
 import sys
 import os
 import re
-import commands
+import subprocess
 
 from fnmatch import fnmatch
 
@@ -56,7 +56,7 @@ class Packages(set):
 
         fh = file(path, "w")
         for package in packages:
-            print >> fh, package
+            print(package, file=fh)
         fh.close()
 
     def __init__(self, packages=None):
@@ -73,7 +73,7 @@ class AptCache(set):
 
     def __init__(self, packages):
         command = "apt-cache show " + " ".join(packages)
-        status, output = commands.getstatusoutput(command)
+        status, output = subprocess.getstatusoutput(command)
         status = os.WEXITSTATUS(status)
         if status not in (0, 100):
             raise self.Error("execution failed (%d): %s\n%s" % (status, command, output))

@@ -69,28 +69,28 @@ class Restore:
 
         if exists(self.extras.myfs):
 
-            print fmt_title("DATABASE - unserializing MySQL databases from " + self.extras.myfs)
+            print(fmt_title("DATABASE - unserializing MySQL databases from " + self.extras.myfs))
 
             try:
                 mysql.restore(self.extras.myfs, self.extras.etc.mysql,
                               limits=self.limits.mydb, callback=mysql.cb_print(), simulate=self.simulate)
 
-            except mysql.Error, e:
-                print "SKIPPING MYSQL DATABASE RESTORE: " + str(e)
+            except mysql.Error as e:
+                print("SKIPPING MYSQL DATABASE RESTORE: " + str(e))
 
         if exists(self.extras.pgfs):
         
-            print "\n" + fmt_title("DATABASE - Unserializing PgSQL databases from " + self.extras.pgfs)
+            print("\n" + fmt_title("DATABASE - Unserializing PgSQL databases from " + self.extras.pgfs))
 
             if self.simulate:
-                print "CAN'T SIMULATE PGSQL RESTORE, SKIPPING"
+                print("CAN'T SIMULATE PGSQL RESTORE, SKIPPING")
                 return
 
             try:
                 pgsql.restore(self.extras.pgfs, self.limits.pgdb, callback=pgsql.cb_print())
 
-            except pgsql.Error, e:
-                print "SKIPPING PGSQL DATABASE RESTORE: " + str(e)
+            except pgsql.Error as e:
+                print("SKIPPING PGSQL DATABASE RESTORE: " + str(e))
 
     def packages(self):
         newpkgs_file = self.extras.newpkgs
@@ -103,47 +103,47 @@ class Restore:
         if not packages:
             return
 
-        print fmt_title("PACKAGES - %d new packages listed in %s" % (len(packages), newpkgs_file), '-')
+        print(fmt_title("PACKAGES - %d new packages listed in %s" % (len(packages), newpkgs_file), '-'))
 
         already_installed = set(pkgman.installed()) & set(packages)
         if len(already_installed) == len(packages):
-            print "ALL NEW PACKAGES ALREADY INSTALLED\n"
+            print("ALL NEW PACKAGES ALREADY INSTALLED\n")
             return
 
         if already_installed:
-            print "// New packages not already installed: %d" % (len(packages) - len(already_installed))
+            print("// New packages not already installed: %d" % (len(packages) - len(already_installed)))
 
         # apt-get update, otherwise installer may skip everything
-        print "// Update list of available packages"
-        print
-        print "# apt-get update"
+        print("// Update list of available packages")
+        print()
+        print("# apt-get update")
         system("apt-get update")
 
         installer = pkgman.Installer(packages, self.PACKAGES_BLACKLIST)
 
-        print
-        print "// Installing new packages"
+        print()
+        print("// Installing new packages")
 
         if installer.skipping:
-            print "// Skipping uninstallable packages: " + " ".join(installer.skipping)
+            print("// Skipping uninstallable packages: " + " ".join(installer.skipping))
 
-        print
+        print()
 
         if not installer.command:
-            print "NO NEW PACKAGES TO INSTALL\n"
+            print("NO NEW PACKAGES TO INSTALL\n")
             return
 
-        print "# " + installer.command
+        print("# " + installer.command)
 
         if not self.simulate:
             exitcode = installer()
             if exitcode != 0:
-                print "# WARNING: non-zero exitcode (%d)" % exitcode
+                print("# WARNING: non-zero exitcode (%d)" % exitcode)
 
         if self.rollback:
             self.rollback.save_new_packages(installer.installed)
 
-        print
+        print()
 
     @staticmethod
     def _userdb_merge(old_etc, new_etc):
@@ -170,7 +170,7 @@ class Restore:
     def _apply_overlay(src, dst, olist):
         tmp = TempFile("fsdelta-olist-")
         for fpath in olist:
-            print >> tmp, fpath.lstrip('/')
+            print(fpath.lstrip('/'), file=tmp)
         tmp.close()
 
         apply_overlay(src, dst, tmp.path)
@@ -185,19 +185,19 @@ class Restore:
         rollback = self.rollback
         limits = self.limits.fs
 
-        print fmt_title("FILES - restoring files, ownership and permissions", '-')
+        print(fmt_title("FILES - restoring files, ownership and permissions", '-'))
 
         passwd, group, uidmap, gidmap = self._userdb_merge(extras.etc, "/etc")
 
         if uidmap or gidmap:
-            print "MERGING USERS AND GROUPS:\n"
+            print("MERGING USERS AND GROUPS:\n")
 
             for olduid in uidmap:
-                print "  UID %d => %d" % (olduid, uidmap[olduid])
+                print("  UID %d => %d" % (olduid, uidmap[olduid]))
             for oldgid in gidmap:
-                print "  GID %d => %d" % (oldgid, gidmap[oldgid])
+                print("  GID %d => %d" % (oldgid, gidmap[oldgid]))
 
-            print
+            print()
 
         changes = Changes.fromfile(extras.fsdelta, limits)
         deleted = list(changes.deleted())
@@ -207,34 +207,34 @@ class Restore:
 
         fsdelta_olist = self._get_fsdelta_olist(extras.fsdelta_olist, limits)
         if fsdelta_olist:
-            print "OVERLAY:\n"
+            print("OVERLAY:\n")
             for fpath in fsdelta_olist:
-                print "  " + fpath
+                print("  " + fpath)
 
             if not simulate:
                 self._apply_overlay(overlay, '/', fsdelta_olist)
 
-            print
+            print()
 
         statfixes = list(changes.statfixes(uidmap, gidmap))
 
         if statfixes or deleted:
-            print "POST-OVERLAY FIXES:\n"
+            print("POST-OVERLAY FIXES:\n")
 
         for action in statfixes:
-            print "  " + str(action)
+            print("  " + str(action))
             if not simulate:
                 action()
 
         for action in deleted:
-            print "  " + str(action)
+            print("  " + str(action))
 
             # rollback moves deleted to 'originals'
             if not simulate and not rollback:
                 action()
 
         if statfixes or deleted:
-            print
+            print()
 
         def w(path, s):
             file(path, "w").write(str(s))

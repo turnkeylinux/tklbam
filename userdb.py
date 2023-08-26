@@ -48,7 +48,7 @@ class Base(OrderedDict):
                     break
 
             else:
-                names = db.keys()
+                names = list(db.keys())
                 if not names:
                     return # empty db, nothing we can do.
 
@@ -82,7 +82,7 @@ class Base(OrderedDict):
             OrderedDict.__init__(self, arg)
 
     def __str__(self):
-        ents = self.values()
+        ents = list(self.values())
         ents.sort(lambda a,b: cmp(a.id, b.id))
 
         return "\n".join([ ':'.join(ent) for ent in ents ]) + "\n"
