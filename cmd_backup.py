@@ -392,11 +392,12 @@ def main():
     if not opt_simulate:
         registry.backup_resume_conf = conf
 
-    secret = file(conf.secretfile).readline().strip()
+    with open(conf.secretfile) as fob:
+        secret = fob.readline().strip()
     target = duplicity.Target(conf.address, credentials, secret)
 
     if not (opt_simulate or opt_debug or dump_path):
-        log_fh = file(opt_logfile, "a")
+        log_fh = open(opt_logfile, "a")
 
         print(file=log_fh)
         print("\n" + fmt_timestamp(), file=log_fh)

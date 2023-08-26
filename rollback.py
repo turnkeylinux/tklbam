@@ -177,10 +177,9 @@ class Rollback:
         packages = list(packages)
         packages.sort()
 
-        fh = file(self.paths.newpkgs, "w")
-        for package in packages:
-            print(package, file=fh)
-        fh.close()
+        with open(self.paths.newpkgs, "w") as fob:
+            for package in packages:
+                print(package, file=fob)
 
     def save_database(self):
         try:
