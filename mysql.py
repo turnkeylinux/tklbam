@@ -38,8 +38,8 @@ PATH_DEBIAN_CNF = "/etc/mysql/debian.cnf"
 def _mysql_opts(opts=[], defaults_file=None, **conf):
     def isreadable(path):
         try:
-            file(path)
-            return True
+            with open(path):
+                return True
         except:
             return False
 
@@ -97,7 +97,7 @@ def _match_name(sql):
     m = re.search(r'`(.*?)`', sql)
     if m:
         return m.group(1)
-    
+
 def _parse_statements(fh, delimiter=';'):
     statement = ""
     for line in fh:
@@ -127,16 +127,19 @@ class MyFS_Writer(MyFS):
             if not exists(self.paths):
                 os.mkdir(self.paths)
 
-            print(sql, file=file(self.paths.init, "w"))
+            with open(self.paths.init, "w") as fob:
+                fob.write(sql)
             self.name = name
 
         def add_view_pre(self, name, sql):
             view = self.View(self.paths.views, name)
-            print(sql, file=file(view.paths.pre, "w"))
+            with open(view.paths.pre, "w") as fob:
+                fob.write(sql)
 
         def add_view_post(self, name, sql):
             view = self.View(self.paths.views, name)
-            print(sql, file=file(view.paths.post, "w"))
+            with open(view.paths.post, "w") as fob:
+                fob.write(sql)
 
     class Table(MyFS.Table):
         def __init__(self, database, name, sql):
@@ -144,11 +147,13 @@ class MyFS_Writer(MyFS):
             if not exists(self.paths):
                 os.makedirs(self.paths)
 
-            print(sql, file=file(self.paths.init, "w"))
+            with open(self.paths.init, "w") as fob:
+                fob.write(sql)
             if exists(self.paths.triggers):
                 os.remove(self.paths.triggers)
 
-            self.rows_fh = file(self.paths.rows, "w")
+            # TODO this use of open could be better...
+            self.rows_fh = open(self.paths.rows, "w")
             self.name = name
             self.database = database
 
@@ -156,7 +161,7 @@ class MyFS_Writer(MyFS):
             print(re.sub(r'.*?VALUES \((.*)\);', '\\1', sql), file=self.rows_fh)
 
         def add_trigger(self, sql):
-            print(sql + "\n", file=file(self.paths.triggers, "a"))
+            print(sql + "\n", file=open(self.paths.triggers, "a"))
 
     def __init__(self, outdir, limits=[]):
         self.limits = DBLimits(limits)
@@ -274,7 +279,7 @@ SET character_set_client = @saved_cs_client;
 /*!50001 SET @saved_col_connection     = @@collation_connection */;
 /*!50001 SET character_set_client      = utf8 */;
 /*!50001 SET character_set_results     = utf8 */;
-$sql    
+$sql
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -292,20 +297,23 @@ $sql
             def pre(self):
                 if not exists(self.paths.pre):
                     return
-                sql = file(self.paths.pre).read().strip()
+                with open(self.paths.pre) as fob:
+                    sql = fob.read().strip()
                 return Template(self.TPL_PRE).substitute(name=self.name, sql=sql)
             pre = property(pre)
 
             def post(self):
                 if not exists(self.paths.post):
                     return
-                sql = file(self.paths.post).read().strip()
+                with open(self.paths.post) as fob:
+                    sql = fob.read().strip()
                 return Template(self.TPL_POST).substitute(name=self.name, sql=sql)
             post = property(post)
-            
+
         def __init__(self, myfs, fname):
             self.paths = self.Paths(join(myfs.path, fname))
-            self.sql_init = file(self.paths.init).read()
+            with open(self.paths.init) as fob:
+                self.sql_init = fob.read()
             self.name = _match_name(self.sql_init)
             self.myfs = myfs
 
@@ -392,7 +400,8 @@ DELIMITER ;
 
         def __init__(self, database, fname):
             self.paths = self.Paths(join(database.paths.tables, fname))
-            self.sql_init = file(self.paths.init).read()
+            with open(self.paths.init) as fob:
+                self.sql_init = fob.read()
             self.name = _match_name(self.sql_init)
             self.database = database
 
@@ -400,8 +409,9 @@ DELIMITER ;
             return "Table(%s)" % repr(self.paths.path)
 
         def rows(self):
-            for line in file(self.paths.rows):
-                yield line.strip()
+            with open(self.paths.rows) as fob:
+                for line in fob:
+                    yield line.strip()
 
         def has_rows(self):
             if exists(self.paths.rows) and os.lstat(self.paths.rows).st_size != 0:
@@ -414,7 +424,9 @@ DELIMITER ;
             if not exists(self.paths.triggers):
                 return []
 
-            return list(_parse_statements(file(self.paths.triggers), ';;'))
+            with open(self.paths.triggers) as fob:
+                return list(_parse_statements(fob, ';;'))
+
         triggers = property(triggers)
 
         def tofile(self, fh):
@@ -436,7 +448,7 @@ DELIMITER ;
                 if skip_extended_insert:
                     for  row in self.rows:
                         print(insert_prefix + "(%s);" % row, file=fh)
-                        
+
                 else:
                     rows = ( "(%s)" % row for row in self.rows )
                     row_chunks = chunkify(rows, ",\n", max_extended_insert - len(insert_prefix + ";"))
@@ -484,7 +496,7 @@ DELIMITER ;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 """
 
-    def __init__(self, path, limits=[], 
+    def __init__(self, path, limits=[],
                  skip_extended_insert=False,
                  add_drop_database=False,
                  max_extended_insert=None):
@@ -582,7 +594,7 @@ def restore(myfs, etc, **kws):
     else:
         if not MysqlService.is_running():
             raise Error("MySQL service not running")
-            
+
         if not MysqlService.is_accessible():
             mna = MysqlNoAuth()
 
@@ -598,7 +610,7 @@ def restore(myfs, etc, **kws):
     if not simulate:
         shutil.copy(join(etc, basename(PATH_DEBIAN_CNF)), PATH_DEBIAN_CNF)
         MysqlService.reload()
-    
+
 class MysqlService:
     INIT_SCRIPT = "/etc/init.d/mysql"
     PID_FILE = '/var/run/mysqld/mysqld.pid'
@@ -729,7 +741,7 @@ class MysqlNoAuth:
             os.kill(self.command.pid, signal.SIGINT)
             self.command.wait()
             self.command = None
-            
+
         os.chmod(self.PATH_VARRUN, self.orig_varrun_mode)
 
         if self.was_running:
