@@ -20,7 +20,7 @@ Depends:
  py3curl-wrapper,
  gpg (>= 2.2.12),
  ${python:Depends},
- python3-crypto,
+ python3-pycryptodome,
 # python-simplejson,
  tklbam-duplicity (>=  0.6.18),
  tklbam-python-boto (>= 2.3.0-2turnkey),
