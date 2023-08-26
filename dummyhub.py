@@ -173,7 +173,8 @@ class _DummyDB(AttrDict):
 
     @staticmethod
     def _save(path, obj):
-        pickle.dump(obj, file(path, "w"))
+        with open(path, "w") as fob:
+            pickle.dump(obj, fob)
 
     @staticmethod
     def _load(path, default=None):
@@ -181,7 +182,8 @@ class _DummyDB(AttrDict):
             return default
 
         try:
-            return pickle.load(file(path))
+            with open(path) as fob:
+                return pickle.load(fob)
         except:
             return default
 

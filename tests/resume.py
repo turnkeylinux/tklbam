@@ -17,7 +17,8 @@ class Session:
 
     @classmethod 
     def load(cls):
-        return json.loads(file(cls.SESSION_FILE).read())
+        with open(cls.SESSION_FILE) as fob:
+            return json.loads(fob.read())
 
     @classmethod 
     def save(cls, conf):

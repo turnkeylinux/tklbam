@@ -100,7 +100,7 @@ def main():
         if opt_fromfile == '-':
             mysqldump_fh = sys.stdin
         else:
-            mysqldump_fh = file(opt_fromfile)
+            mysqldump_fh = open(opt_fromfile)
     else:
         mysqldump_fh = mysql.mysqldump(**myconf)
 

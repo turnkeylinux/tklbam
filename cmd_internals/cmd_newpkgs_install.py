@@ -40,7 +40,7 @@ def parse_input(inputfile):
     if inputfile == '-':
         fh = sys.stdin
     else:
-        fh = file(inputfile)
+        fh = open(inputfile)
 
     for line in fh.readlines():
         line = re.sub(r'#.*', '', line).strip()
@@ -48,6 +48,7 @@ def parse_input(inputfile):
             continue
 
         packages.append(line)
+    fh.close()
 
     return packages
 

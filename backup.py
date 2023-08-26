@@ -74,12 +74,14 @@ class BackupConf(AttrDict):
         if not exists(path):
             return None
 
-        d = json.load(file(path))
+        with open(path) as fob:
+            d = json.load(fob)
         return cls(*(d[attr]
                      for attr in ('profile_id', 'overrides', 'skip_files', 'skip_packages', 'skip_database')))
 
     def tofile(self, path):
-        json.dump(dict(self), file(path, "w"))
+        with open(path, "w") as fob:
+            json.dump(dict(self), fob)
 
 class Backup:
     class Error(Exception):
@@ -98,7 +100,7 @@ class Backup:
             self._log("  " + " ".join(new_packages))
             self._log("  EOF\n")
 
-        fh = file(dest, "w")
+        fh = open(dest, "w")
         for package in new_packages:
             print(package, file=fh)
 
@@ -106,7 +108,7 @@ class Backup:
 
     def _write_whatchanged(self, dest, dest_olist, dirindex, dirindex_conf,
                            overrides=[]):
-        paths = read_paths(file(dirindex_conf))
+        paths = read_paths(open(dirindex_conf))
         paths += overrides
 
         changes = whatchanged(dirindex, paths)
@@ -114,7 +116,8 @@ class Backup:
 
         changes.tofile(dest)
         olist = [ change.path for change in changes if change.OP == 'o' ]
-        file(dest_olist, "w").writelines((path + "\n" for path in olist))
+        with open(dest_olist, "w") as fob:
+            fob.writelines((path + "\n" for path in olist))
 
         if self.verbose:
             if changes:
@@ -249,7 +252,8 @@ class Backup:
             fpaths= _fpaths(extras_paths.path)
 
             if not skip_files:
-                fsdelta_olist = file(extras_paths.fsdelta_olist).read().splitlines()
+                with open(extras_paths.fsdelta_olist) as fob:
+                    fsdelta_olist = fob.read().splitlines()
                 fpaths += _filter_deleted(fsdelta_olist)
 
             size = sum([ os.lstat(fpath).st_size
