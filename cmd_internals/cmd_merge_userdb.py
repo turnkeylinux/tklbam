@@ -16,10 +16,10 @@ import userdb
 
 def usage(e=None):
     if e:
-        print >> sys.stderr, "error: " + str(e)
+        print("error: " + str(e), file=sys.stderr)
 
-    print >> sys.stderr, "Syntax: %s old-passwd old-group new-passwd new-group merged-passwd merged-group" % sys.argv[0]
-    print >> sys.stderr, __doc__.strip()
+    print("Syntax: %s old-passwd old-group new-passwd new-group merged-passwd merged-group" % sys.argv[0], file=sys.stderr)
+    print(__doc__.strip(), file=sys.stderr)
     sys.exit(1)
 
 def main():
@@ -37,14 +37,14 @@ def main():
     passwd, group, uidmap, gidmap = userdb.merge(r(old_passwd), r(old_group),
                                                  r(new_passwd), r(new_group))
 
-    print >> file(merged_passwd, "w"), passwd
-    print >> file(merged_group, "w"), group
+    print(passwd, file=file(merged_passwd, "w"))
+    print(group, file=file(merged_group, "w"))
 
     def fmt_map(m):
-         return ":".join([ "%d,%d" % (key, val) for key,val in m.items() ])
+         return ":".join([ "%d,%d" % (key, val) for key,val in list(m.items()) ])
 
-    print fmt_map(uidmap)
-    print fmt_map(gidmap)
+    print(fmt_map(uidmap))
+    print(fmt_map(gidmap))
 
 if __name__=="__main__":
     main()

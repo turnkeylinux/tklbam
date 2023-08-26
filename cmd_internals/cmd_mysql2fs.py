@@ -40,15 +40,15 @@ import shutil
 import mysql
 
 def fatal(e):
-    print >> sys.stderr, "fatal: " + str(e)
+    print("fatal: " + str(e), file=sys.stderr)
     sys.exit(1)
 
 def usage(e=None):
     if e:
-        print >> sys.stderr, "error: " + str(e)
+        print("error: " + str(e), file=sys.stderr)
 
-    print >> sys.stderr, "Syntax: %s [-options] path/to/output [ -?database/table ... ] " % sys.argv[0]
-    print >> sys.stderr, __doc__.strip()
+    print("Syntax: %s [-options] path/to/output [ -?database/table ... ] " % sys.argv[0], file=sys.stderr)
+    print(__doc__.strip(), file=sys.stderr)
     sys.exit(1)
 
 def main():
@@ -56,7 +56,7 @@ def main():
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'Du:p:v', 
                                        ['verbose', 'delete', 'fromfile=',
                                         'user=', 'password=', 'defaults-file=', 'host='])
-    except getopt.GetoptError, e:
+    except getopt.GetoptError as e:
         usage(e)
 
     opt_verbose = False
@@ -106,7 +106,7 @@ def main():
 
     callback = None
     if opt_verbose:
-        print "source: " + mysqldump_fh.name
+        print("source: " + mysqldump_fh.name)
         callback = mysql.cb_print()
 
     mysql.mysql2fs(mysqldump_fh, outdir, limits, callback)

@@ -19,10 +19,10 @@ import pgsql
 
 def usage(e=None):
     if e:
-        print >> sys.stderr, "error: " + str(e)
+        print("error: " + str(e), file=sys.stderr)
 
-    print >> sys.stderr, "Syntax: %s path/to/pgfs [ -?database/table ... ] " % sys.argv[0]
-    print >> sys.stderr, __doc__.strip()
+    print("Syntax: %s path/to/pgfs [ -?database/table ... ] " % sys.argv[0], file=sys.stderr)
+    print(__doc__.strip(), file=sys.stderr)
     sys.exit(1)
 
 def main():

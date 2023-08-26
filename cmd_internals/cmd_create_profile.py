@@ -104,14 +104,14 @@ def usage(e=None):
     from paged import stdout
 
     if e:
-        print >> stdout, "error: " + str(e)
+        print("error: " + str(e), file=stdout)
 
-    print >> stdout, "Syntax: %s [ -options ] output/profile/ <conf>" % sys.argv[0]
-    print >> stdout, __doc__.strip()
+    print("Syntax: %s [ -options ] output/profile/ <conf>" % sys.argv[0], file=stdout)
+    print(__doc__.strip(), file=stdout)
     sys.exit(1)
 
 def fatal(e):
-    print >> sys.stderr, "error: " + str(e)
+    print("error: " + str(e), file=sys.stderr)
     sys.exit(1)
 
 class ProfileGenerator:
@@ -194,7 +194,7 @@ def parse_conf(fh):
         for path in _paths:
             # only accept absolute paths
             if not re.match(r'^-?/', path):
-                raise Error("%s is not an absolute path, try %s instead" % (`path`, os.path.abspath(path)))
+                raise Error("%s is not an absolute path, try %s instead" % (repr(path), os.path.abspath(path)))
 
         paths += _paths
 
@@ -207,7 +207,7 @@ def main():
                                                             'root=',
                                                             'no-dirindex', 
                                                             'no-packages'])
-    except getopt.GetoptError, e:
+    except getopt.GetoptError as e:
         usage(e)
 
     opt_force = False
@@ -251,28 +251,28 @@ def main():
 
     try:
         conf_paths = parse_conf(sys.stdin if path_conf == '-' else open(path_conf))
-    except Error, e:
+    except Error as e:
         fatal(e)
 
     profile = ProfileGenerator(conf_paths, path_output, opt_root, packages=opt_packages, dirindex=opt_dirindex)
 
     title = "Custom profile written to %s" % profile.paths.path
-    print title
-    print "=" * len(title)
+    print(title)
+    print("=" * len(title))
 
-    print
-    print "# List of backup includes and exclude paths"
-    print profile.paths.dirindex_conf
+    print()
+    print("# List of backup includes and exclude paths")
+    print(profile.paths.dirindex_conf)
 
     if exists(profile.paths.dirindex):
-        print
-        print "# Index of file timestamps, ownerships and permissions for paths in dirindex.conf"
-        print profile.paths.dirindex
+        print()
+        print("# Index of file timestamps, ownerships and permissions for paths in dirindex.conf")
+        print(profile.paths.dirindex)
 
     if exists(profile.paths.packages):
-        print
-        print "# List of currently installed packages"
-        print profile.paths.packages
+        print()
+        print("# List of currently installed packages")
+        print(profile.paths.packages)
 
 if __name__=="__main__":
     main()

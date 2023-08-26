@@ -36,10 +36,10 @@ import mysql
 
 def usage(e=None):
     if e:
-        print >> sys.stderr, "error: " + str(e)
+        print("error: " + str(e), file=sys.stderr)
 
-    print >> sys.stderr, "Syntax: %s [-options] path/to/myfs [ -?database/table ... ] " % sys.argv[0]
-    print >> sys.stderr, __doc__.strip()
+    print("Syntax: %s [-options] path/to/myfs [ -?database/table ... ] " % sys.argv[0], file=sys.stderr)
+    print(__doc__.strip(), file=sys.stderr)
     sys.exit(1)
 
 def main():
@@ -49,7 +49,7 @@ def main():
                                         'skip-extended-insert',
                                         'add-drop-database',
                                         'user=', 'password=', 'defaults-file=', 'host='])
-    except getopt.GetoptError, e:
+    except getopt.GetoptError as e:
         usage(e)
 
     opt_verbose = False
@@ -93,7 +93,7 @@ def main():
 
     callback = None
     if opt_verbose:
-        print "destination: " + fh.name
+        print("destination: " + fh.name)
         callback = mysql.cb_print()
 
     if opt_verbose:

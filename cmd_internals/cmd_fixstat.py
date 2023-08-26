@@ -31,17 +31,17 @@ from changes import Changes
 
 def usage(e=None):
     if e:
-        print >> sys.stderr, "error: " + str(e)
+        print("error: " + str(e), file=sys.stderr)
 
-    print >> sys.stderr, "Syntax: %s [-options] delta|- [path ...]" % sys.argv[0]
-    print >> sys.stderr, __doc__.strip()
+    print("Syntax: %s [-options] delta|- [path ...]" % sys.argv[0], file=sys.stderr)
+    print(__doc__.strip(), file=sys.stderr)
     sys.exit(1)
 
 def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'u:g:svh', 
                                        ['uid-map=', 'gid-map=', 'simulate', 'verbose'])
-    except getopt.GetoptError, e:
+    except getopt.GetoptError as e:
         usage(e)
 
     verbose = False
@@ -51,7 +51,7 @@ def main():
     gidmap = {}
 
     def parse_idmap(line):
-        return dict([ map(int, val.split(',', 1)) for val in line.split(':') ])
+        return dict([ list(map(int, val.split(',', 1))) for val in line.split(':') ])
 
     for opt, val in opts:
         if opt in ('-u', '--uid-map'):
@@ -77,7 +77,7 @@ def main():
 
     for action in changes.statfixes(uidmap, gidmap):
         if verbose:
-            print action
+            print(action)
 
         if not simulate:
             action()

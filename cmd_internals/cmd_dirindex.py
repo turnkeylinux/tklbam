@@ -26,17 +26,17 @@ import changes
 
 def usage(e=None):
     if e:
-        print >> sys.stderr, "error: " + str(e)
+        print("error: " + str(e), file=sys.stderr)
 
-    print >> sys.stderr, "Syntax: %s [-options] index path1 ... pathN" % sys.argv[0]
-    print >> sys.stderr, __doc__.strip()
+    print("Syntax: %s [-options] index path1 ... pathN" % sys.argv[0], file=sys.stderr)
+    print(__doc__.strip(), file=sys.stderr)
     sys.exit(1)
 
 def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'i:ch', 
                                        ['create', 'input='])
-    except getopt.GetoptError, e:
+    except getopt.GetoptError as e:
         usage(e)
 
     opt_create = False
@@ -67,7 +67,7 @@ def main():
         return
 
     for change in changes.whatchanged(path_index, paths):
-        print change
+        print(change)
 
 if __name__=="__main__":
     main()
