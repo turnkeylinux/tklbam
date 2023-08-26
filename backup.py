@@ -16,7 +16,7 @@ from os.path import exists, join, isdir
 import stat
 
 import shutil
-import simplejson
+import json
 
 from paths import Paths
 
@@ -74,12 +74,12 @@ class BackupConf(AttrDict):
         if not exists(path):
             return None
 
-        d = simplejson.load(file(path))
+        d = json.load(file(path))
         return cls(*(d[attr]
                      for attr in ('profile_id', 'overrides', 'skip_files', 'skip_packages', 'skip_database')))
 
     def tofile(self, path):
-        simplejson.dump(dict(self), file(path, "w"))
+        json.dump(dict(self), file(path, "w"))
 
 class Backup:
     class Error(Exception):

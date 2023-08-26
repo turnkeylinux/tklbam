@@ -16,7 +16,7 @@ import os
 import re
 from os.path import *
 from paths import Paths as _Paths
-import simplejson
+import json
 
 from datetime import datetime
 
@@ -205,12 +205,12 @@ Run "tklbam-init --help" for further details.
                 return
 
             try:
-                return BackupSessionConf(simplejson.loads(s))
+                return BackupSessionConf(json.loads(s))
             except:
                 return
 
         else:
-            s = simplejson.dumps(val)
+            s = json.dumps(val)
             self._file_str(self.path.backup_resume, s)
 
     backup_resume_conf = property(backup_resume_conf, backup_resume_conf)

@@ -5,7 +5,7 @@ import time
 import getopt
 from os.path import *
 
-import simplejson
+import json
 
 SESSION_FILE = "/tmp/session"
 
@@ -17,11 +17,11 @@ class Session:
 
     @classmethod 
     def load(cls):
-        return simplejson.loads(file(cls.SESSION_FILE).read())
+        return json.loads(file(cls.SESSION_FILE).read())
 
     @classmethod 
     def save(cls, conf):
-        file(cls.SESSION_FILE, "w").write(simplejson.dumps(conf))
+        file(cls.SESSION_FILE, "w").write(json.dumps(conf))
 
     @classmethod 
     def remove(cls):

@@ -28,7 +28,7 @@ import conf
 import mysql
 import pgsql
 
-import simplejson
+import json
 
 from temp import TempFile
 
@@ -53,7 +53,7 @@ class Restore:
         if simulate:
             rollback = False
 
-        self.conf = AttrDict(simplejson.loads(file(self.extras.backup_conf).read())) \
+        self.conf = AttrDict(json.loads(file(self.extras.backup_conf).read())) \
                     if exists(self.extras.backup_conf) else None
 
         self.simulate = simulate
