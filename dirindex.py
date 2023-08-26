@@ -83,12 +83,13 @@ class DirIndex(dict):
 
     def __init__(self, fromfile=None):
         if fromfile:
-            for line in file(fromfile).readlines():
-                if not line.strip():
-                    continue
+            with open(fromfile) as fob:
+                for line in fob.readlines():
+                    if not line.strip():
+                        continue
 
-                rec = DirIndex.Record.fromline(line)
-                self[rec.path] = rec
+                    rec = DirIndex.Record.fromline(line)
+                    self[rec.path] = rec
 
     def add_path(self, path):
         """add a single path to the DirIndex"""
@@ -141,8 +142,9 @@ class DirIndex(dict):
         fh = file(tofile, "w")
         paths = list(self.keys())
         paths.sort()
-        for path in paths:
-            print(self[path].fmt(), file=fh)
+        with open(tofile, "w") as fh:
+            for path in paths:
+                print(self[path].fmt(), file=fh)
 
     def diff(self, other):
         a = set(self)
