@@ -2,6 +2,7 @@
 # mapped directly to files.
 #
 # Copyright (c) 2010-2013 Liraz Siri <liraz@turnkeylinux.org>
+# Copyright (c) 2023 TurnKey GNU/Linux <admin@turnkeylinux.org>
 #
 # This file is part of TKLBAM (TurnKey GNU/Linux BAckup and Migration).
 #
