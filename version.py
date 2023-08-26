@@ -71,20 +71,22 @@ def _get_turnkey_version(root):
     if not exists(path):
         return
 
-    return file(path).read().strip()
+    with open(path) as fob:
+        return fob.read().strip()
 
 def _parse_keyvals(path):
     if not exists(path):
         return
     d = {}
-    for line in file(path).readlines():
-        line = line.strip()
-        if not line:
-            continue
+    with open(path) as fob:
+        for line in fob.readlines():
+            line = line.strip()
+            if not line:
+                continue
 
-        m = re.match(r'(.*?)="?(.*?)"?$', line)
-        key, val = m.groups()
-        d[key] = val
+            m = re.match(r'(.*?)="?(.*?)"?$', line)
+            key, val = m.groups()
+            d[key] = val
     return d
 
 def _get_os_release(root):
@@ -100,7 +102,8 @@ def _get_debian_version(root):
     if not exists(path):
         return
 
-    s = file(path).read().strip()
+    with open(path) as fob:
+        s = fob.read().strip()
     m = re.match(r'^(\d+)\.', s)
     if m:
         return m.group(1)

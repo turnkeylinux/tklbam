@@ -44,8 +44,8 @@ class AttrDict(dict):
 
 def is_writeable(fpath):
     try:
-        file(fpath, "w+")
-        return True
+        with open(fpath, "w+")
+            return True
     except IOError:
         return False
 
