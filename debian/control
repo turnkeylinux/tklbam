@@ -21,8 +21,8 @@ Depends:
  gpg (>= 2.2.12),
  ${python:Depends},
  python3-pycryptodome,
- tklbam-duplicity (>=  0.6.18),
- tklbam-python-boto (>= 2.3.0-2turnkey),
- tklbam-squid (>= 2.7.STABLE9-2.1turnkey+25),
+ duplicity,
+ python3-boto,
+ squid,
 # turnkey-pylib (>= 0.5),
 Description: TurnKey GNU/Linux Backup and Migration agent
