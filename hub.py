@@ -84,8 +84,8 @@ import os
 import base64
 import tempfile
 from datetime import datetime
+import subprocess
 
-import executil
 from pycurl_wrapper import API as _API
 from utils import AttrDict
 
@@ -300,7 +300,7 @@ class ProfileArchive:
         self.profile_id = profile_id
 
     def extract(self, path):
-        executil.system("tar -zxf %s -C %s" % (self.path_archive, path))
+        subprocess.run(["tar", f"-zxf {self.path_archive}", f"-C {path}"])
 
     def __del__(self):
         if os.path.exists(self.path_archive):

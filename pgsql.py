@@ -11,13 +11,11 @@
 #
 import sys
 import os
-from os.path import *
+from os.path import * # join
 
 import re
 import subprocess
 import shutil
-
-from executil import system, getoutput, getoutput_popen
 
 from dblimits import DBLimits
 
@@ -28,10 +26,11 @@ class Error(Exception):
     pass
 
 def su(command):
-    return "su postgres -c" + subprocess.mkarg(command)
+    return ["su", "postgres", "-c", command]
 
 def list_databases():
-    for line in getoutput(su('psql -l')).splitlines():
+    p = subprocess.run(su('psql -l'), capture_output=True, text=True)
+    for line in p.stdout.splitlines():
         m = re.match(r'^ (\S+?)\s', line)
         if not m:
             continue
@@ -54,7 +53,8 @@ def dumpdb(outdir, name, tlimits=[]):
             pg_dump += " --exclude-table=" + table
     pg_dump += " " + name
 
-    manifest = getoutput(su(pg_dump) + " | tar xvC %s" % path)
+    p1 = subprocess.run(su(pg_dump), capture_output=True, text=True)
+    manifest = subprocess.run(["tar", "xvC", path], stdin=p1.stdout)
     with open(join(path, FNAME_MANIFEST), "w") as fob:
         fob.write(manifest + "\n")
 
@@ -62,22 +62,20 @@ def restoredb(dbdump, dbname, tlimits=[]):
     with open(join(dbdump, FNAME_MANIFEST)) as fob:
         manifest = fob.read().splitlines()
 
-    try:
-        getoutput(su("dropdb " + dbname))
-    except:
-        pass
+    subprocess.run(su("dropdb " + dbname))
 
     orig_cwd = os.getcwd()
     os.chdir(dbdump)
 
     try:
         command = "tar c %s 2>/dev/null" % " ".join(manifest)
-        command += " | pg_restore --create --format=tar"
+        pg_restore_com = ["pg_restore", "--create", "--format=tar"]
         for (table, sign) in tlimits:
             if sign:
-                command += " --table=" + table
-        command += " | " + su("cd $HOME; psql")
-        system(command)
+                pg_restore_com.append(f"--table={table}")
+        p1 = subprocess.run(["tar", "c", *manifest], capture_output=True)
+        p2 = subprocess.run(pg_restore_com, stdin=p1.stdout, capture_output=True)
+        p3 = subprocess.run(su("cd $HOME; psql"), stdin=p2.stdout)
         
     finally:
         os.chdir(orig_cwd)
@@ -94,7 +92,7 @@ def pgsql2fs(outdir, limits=[], callback=None):
 
         dumpdb(outdir, dbname, limits[dbname])
 
-    globals = getoutput(su("pg_dumpall --globals"))
+    globals = subprocess.run(su("pg_dumpall --globals"), capture_output=True, text=True).stdout
     with open(join(outdir, FNAME_GLOBALS), "w") as fob:
         fob.write(globals)
 
@@ -107,7 +105,7 @@ def fs2pgsql(outdir, limits=[], callback=None):
     # load globals first, suppress noise (e.g., "ERROR: role "postgres" already exists)
     with open(join(outdir, FNAME_GLOBALS)) as fob:
         globals = fob.read()
-    getoutput_popen(su("psql -q -o /dev/null"), globals)
+    subprocess.run([su("psql -q -o /dev/null"), globals], check_output=True)
 
     for dbname in os.listdir(outdir):
 
@@ -154,9 +152,9 @@ class PgsqlService:
 
     @classmethod
     def is_running(cls):
-        try:
-            getoutput(cls.INIT_SCRIPT, "status")
+        p = subprocess.run([cls.INIT_SCRIPT, "status"])
+        if p.returncode == 0:
             return True
-        except:
+        else:
             return False
 

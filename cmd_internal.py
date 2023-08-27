@@ -18,7 +18,6 @@ from os.path import realpath
 from cliwrapper import CliWrapper
 
 import cmd_internals
-from executil import fmt_command
 
 class CliWrapper(CliWrapper):
     DESCRIPTION = __doc__
@@ -28,7 +27,7 @@ main = CliWrapper.main
 
 def fmt_internal_command(command, *args):
     internal_command = [ realpath(__file__), command ] + list(args)
-    return fmt_command("python2", *internal_command)
+    return ("python3", *internal_command)
 
 if __name__ == "__main__":
     CliWrapper.main()

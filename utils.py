@@ -11,8 +11,8 @@
 #
 import os
 from os.path import *
+import subprocess
 
-import executil
 import shutil
 import stat
 import datetime
@@ -67,12 +67,12 @@ def move(src, dst):
         os.lchown(dst, st.st_uid, st.st_gid)
 
 def apply_overlay(src, dst, olist_path):
-    orig_cwd = os.getcwd()
-    os.chdir(src)
-    executil.getoutput("tar --create --files-from=%s | tar --extract --directory %s" %
-                       (olist_path, executil.mkarg(dst)))
-
-    os.chdir(orig_cwd)
+    # rewrite using rsync - should be doing the same...
+    subprocess.run(['rsync', '-avz', '--min-size=1', f'--files-from={olist_path}', src, dst])
+    # old code:
+    # cd src
+    # executil.getoutput("tar --create --files-from=%s | tar --extract --directory %s" %
+    #                   (olist_path, executil.mkarg(dst)))
 
 def fmt_title(title, c='='):
     return title + "\n" + c * len(title) + "\n"

@@ -139,12 +139,12 @@ import re
 import shlex
 
 from os.path import *
+import subprocess
 from restore import Restore
 import duplicity
 
 from stdtrap import UnitedStdTrap
 from temp import TempDir
-import executil
 
 import hub
 import keypacket
@@ -518,7 +518,7 @@ def main():
   To exit from the shell and abort the restore run "exit 1".
 """)
             os.chdir(backup_extract_path)
-            executil.system(os.environ.get("SHELL", "/bin/bash"))
+            subprocess.run([os.environ.get("SHELL", "/bin/bash")])
             os.chdir('/')
 
         if not skip_packages:

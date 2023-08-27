@@ -22,10 +22,10 @@ from paths import Paths as _Paths
 
 import shutil
 from string import Template
-from subprocess import Popen, PIPE
+import subprocess
+from subprocess import Popen, PIPE, STDOUT
 
 from dblimits import DBLimits
-import executil
 
 import stat
 from command import Command
@@ -638,10 +638,10 @@ class MysqlService:
 
     @classmethod
     def is_running(cls):
-        try:
-            executil.getoutput('mysqladmin -s ping')
+        p = subprocess.run(['mysqladmin', '-s', 'ping'])
+        if p.returncode == 0:
             return True
-        except executil.ExecError:
+        else:
             return False
 
     @classmethod
@@ -651,13 +651,11 @@ class MysqlService:
 
         retries = 2
         for i in range(retries):
-            try:
-                executil.getoutput(cls.INIT_SCRIPT, "start")
+            p = subprocess.run([cls.INIT_SCRIPT, "start"],
+                               stdout=PIPE, stderr=STDOUT)
+            if p.returncode == 0:
                 return
-            except executil.ExecError as e:
-                pass
-
-        raise e
+        raise Error(p.stdout)
 
     @classmethod
     def stop(cls):
@@ -685,16 +683,15 @@ class MysqlService:
 
     @classmethod
     def is_accessible(cls):
-        try:
-            executil.getoutput_popen("mysql --defaults-file=/etc/mysql/debian.cnf", "select 1")
+        p = subprocess.run(["mysql", "--defaults-file=/etc/mysql/debian.cnf", "select 1"])
+        if p.returncode == 0:
             return True
-
-        except executil.ExecError:
+        else:
             return False
 
 class MysqlNoAuth:
     PATH_VARRUN = '/var/run/mysqld'
-    COMMAND = "mysqld_safe --skip-grant-tables --skip-networking"
+    COMMAND = ["mysqld_safe", "--skip-grant-tables", "--skip-networking"]
 
     def __init__(self):
         self.stopped = False

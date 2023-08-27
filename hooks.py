@@ -1,7 +1,7 @@
 import os
 from os.path import *
+import subprocess
 
-import executil
 from registry import registry
 
 from conf import Conf
@@ -14,10 +14,10 @@ def _is_signed(fpath, keyring):
     if not exists(fpath_sig):
         return False
 
-    try:
-        executil.getoutput("gpg --keyring=%s --verify" % keyring, fpath_sig)
+    p = subprocess.run(["gpg", f"--keyring={keyring}", "--verify", fpath_sig])
+    if p.returncode == 0:
         return True
-    except:
+    else:
         return False
 
 def _run_hooks(path, args, keyring=None):
@@ -35,11 +35,10 @@ def _run_hooks(path, args, keyring=None):
         if keyring and not _is_signed(fpath, keyring):
             continue
 
-        try:
-            executil.system(fpath, *args)
-        except executil.ExecError as e:
+        p = subprocess.run([fpath, *args])
+        if p.returncode != 0:
             raise HookError("`%s %s` non-zero exitcode (%d)" % \
-                            (fpath, " ".join(args), e.exitcode))
+                            (fpath, " ".join(args), p.returncode))
 
 class Hooks:
     """
