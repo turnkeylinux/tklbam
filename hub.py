@@ -86,7 +86,7 @@ import tempfile
 from datetime import datetime
 import subprocess
 
-from pycurl_wrapper import API as _API
+from py3curl_wrapper import API as _API
 from utils import AttrDict
 
 class Error(Exception):
