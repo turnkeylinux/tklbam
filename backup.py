@@ -112,7 +112,7 @@ class Backup:
         paths += overrides
 
         changes = whatchanged(dirindex, paths)
-        changes.sort(lambda a,b: cmp(a.path, b.path))
+        changes.sort(key=lambda a: a.path)
 
         changes.tofile(dest)
         olist = [ change.path for change in changes if change.OP == 'o' ]
@@ -124,7 +124,7 @@ class Backup:
                 self._log("Save list of filesystem changes to %s:\n" % dest)
 
             actions = list(changes.deleted(optimized=False)) + list(changes.statfixes(optimized=False))
-            actions.sort(lambda a,b: cmp(a.args[0], b.args[0]))
+            actions.sort(key=lambda a: a.args[0])
 
             umask = os.umask(0)
             os.umask(umask)
