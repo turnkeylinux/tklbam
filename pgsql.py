@@ -152,9 +152,11 @@ class PgsqlService:
 
     @classmethod
     def is_running(cls):
-        p = subprocess.run([cls.INIT_SCRIPT, "status"])
-        if p.returncode == 0:
-            return True
-        else:
+        try:
+            p = subprocess.run([cls.INIT_SCRIPT, "status"])
+            if p.returncode == 0:
+                return True
+            else:
+                return False
+        except FileNotFoundError:
             return False
-

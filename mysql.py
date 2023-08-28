@@ -638,10 +638,13 @@ class MysqlService:
 
     @classmethod
     def is_running(cls):
-        p = subprocess.run(['mysqladmin', '-s', 'ping'])
-        if p.returncode == 0:
-            return True
-        else:
+        try:
+            p = subprocess.run(['mysqladmin', '-s', 'ping'])
+            if p.returncode == 0:
+                return True
+            else:
+                return False
+        except FileNotFoundError:
             return False
 
     @classmethod
