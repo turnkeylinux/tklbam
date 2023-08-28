@@ -38,7 +38,7 @@ def _unpad(padded):
 
 def _repeat(f, input, count):
     for x in range(count):
-        input = f(input)
+        input = f(input.encode())
     return input
 
 def _cipher_key(passphrase, repeats):

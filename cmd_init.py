@@ -99,7 +99,7 @@ def generate_secret():
     # effective is key size: 160-bits (SHA1)
     # base64 encoding to ensure cli safeness
     # urandom guarantees we won't block. Redundant randomness just in case.
-    return base64.b64encode(hashlib.sha1(os.urandom(32)).digest()).rstrip("=")
+    return base64.b64encode(hashlib.sha1(os.urandom(32)).digest()).rstrip(b"=")
 
 def fatal(e):
     print("error: " + str(e), file=sys.stderr)
