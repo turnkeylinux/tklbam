@@ -16,7 +16,7 @@ Depends:
  ca-certificates,
  ${misc:Depends},
  gnupg,
- ntpdate,
+ ntpsec-ntpdate,
  py3curl-wrapper,
  gpg (>= 2.2.12),
  ${python3:Depends},
@@ -24,5 +24,6 @@ Depends:
  duplicity,
  python3-boto,
  squid,
+ turnkey-conffile,
 # turnkey-pylib (>= 0.5),
 Description: TurnKey GNU/Linux Backup and Migration agent
