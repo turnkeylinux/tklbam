@@ -47,12 +47,13 @@ print paths.make_relative(paths.sub_dir, paths.sub_dir.sub_file)
 """
 import re
 import os
-from os.path import *
+from os.path import join, realpath, dirname
+from typing import Self
 
 __all__ = ['make_relative', 'Paths', 'subdir']
 
 
-def make_relative(base, path):
+def make_relative(base: str, path: str) -> str:
     """Return <path> relative to <base>.
 
     For example:
@@ -78,16 +79,16 @@ def make_relative(base, path):
 class Paths(str):
     make_relative = staticmethod(make_relative)
 
-    files = []
+    files: list[str] = []
 
-    def __new__(cls, path, files=[]):
+    def __new__(cls, path: str, files: list[str] = []) -> Self:
         return str.__new__(cls, path)
 
-    def __init__(self, path, files=[]):
+    def __init__(self, path: str, files: list[str] = []):
         self.path = path
-        self.files = {}
+        self.filesd: dict[str, str] = {}
 
-        def classfiles(cls):
+        def classfiles(cls) -> list[str]:
             files = cls.files
             for base in cls.__bases__:
                 if issubclass(base, Paths):
@@ -98,21 +99,21 @@ class Paths(str):
         for file in files + classfiles(self.__class__):
             self.register(file)
 
-    def __getattr__(self, name):
-        if name in self.files:
-            return join(self.path, self.files[name])
+    def __getattr__(self, name: str) -> str:
+        if name in self.filesd.keys():
+            return join(self.path, self.filesd[name])
 
         raise AttributeError("no such attribute: " + name)
 
     @staticmethod
-    def _fname2attr(fname):
+    def _fname2attr(fname: str) -> str:
         return re.sub(r'[\.-]', '_', fname)
 
-    def listdir(self):
+    def listdir(self) -> list[str]:
         "Return a list containing the names of the entries in directory"""
-        return list(self.files.values())
+        return list(self.files)
 
-    def register(self, filename):
+    def register(self, filename: str) -> None:
         if '/' in filename:
             subdir, filename = filename.split('/', 1)
             attr = self._fname2attr(subdir)
@@ -124,10 +125,10 @@ class Paths(str):
             subpaths.register(filename)
         else:
             attr = self._fname2attr(filename)
-            self.files[attr] = filename
+            self.filesd[attr] = filename
 
 
-def subdir(dir, files):
+def subdir(dir: str, files: list[str]) -> list[str]:
     return [os.path.join(dir, file) for file in files]
 
 
