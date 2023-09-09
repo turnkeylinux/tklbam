@@ -77,13 +77,16 @@ class CliWrapper:
     def main(cls):
         commands = _Commands(cls.PATH)
 
+        if os.geteuid() != 0:
+            cls._usage(commands, 'Must run as root, rerun with sudo')
+
         args = sys.argv[1:]
         if not args:
             cls._usage(commands)
 
         command = args[0]
         if command not in commands:
-            cls._usage(commands, "no such command")
+            cls._usage(commands, f"no such command: {command}")
 
         sys.argv = args
         commands[command].main()
