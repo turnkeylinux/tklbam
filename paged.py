@@ -18,12 +18,16 @@ import errno
 import subprocess
 import shlex
 import atexit
+from typing import Optional
 
 
 class _PagedStdout:
+
+    _pager: Optional[subprocess.Popen[bytes]]
+
     # lazy definition of pager attribute so that we
     # execute pager the first time we need it
-    def pager(self):
+    def pager_(self) -> Optional[subprocess.Popen[bytes]]:
         if hasattr(self, '_pager'):
             return self._pager
 
@@ -32,32 +36,32 @@ class _PagedStdout:
             pager_env = os.environ.get('PAGER',
                                        subprocess.getoutput('which less'))
             if pager_env:
-                pager_env = shlex.split(pager_env)
-                pager = subprocess.Popen(pager_env, stdin=subprocess.PIPE)
+                _pager_env = shlex.split(pager_env)
+                pager = subprocess.Popen(_pager_env, stdin=subprocess.PIPE)
 
         self._pager = pager
         atexit.register(self.close)
         return pager
-    pager = property(pager)
+    pager = property(pager_)
 
-    def flush(self):
+    def flush(self) -> None:
         if self.pager:
             self.pager.stdin.flush()
         else:
             sys.stdout.flush()
 
-    def write(self, text):
+    def write(self, text: str) -> None:
         if self.pager:
             try:
                 self.pager.stdin.write(bytes(text, 'utf8'))
 
             except IOError as e:
-                if e[0] != errno.EPIPE:
+                if e.errno != errno.EPIPE:
                     raise
         else:
             sys.stdout.write(text)
 
-    def close(self):
+    def close(self) -> None:
         if self.pager:
             self.pager.stdin = sys.stdin
             self.pager.communicate()
