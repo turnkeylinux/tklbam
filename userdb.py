@@ -9,40 +9,46 @@
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
 #
+import logging
+
+from collections import OrderedDict
+from typing import Optional, Self
+from functools import cmp_to_key
+
 class Error(Exception):
     pass
 
-from collections import OrderedDict
+logging.basicConfig(level=logging.DEBUG)
 
 class Base(OrderedDict):
     class Ent(list):
-        LEN = None
+        LEN: Optional[int] = None
 
-        def _field(self, index, val=None):
+        def _getter(self) -> Optional[str]:
+            return self._field(0)
+
+        def _setter(self, val: Optional[int]) -> None:
+            self._field(0, val)
+
+        def _field(self, index: int, val: Optional[int] = None) -> Optional[str]:
             if val is not None:
                 self[index] = str(val)
             else:
                 return self[index]
+            return None
 
-        def name(self, val=None):
-            return self._field(0, val)
-        name = property(name, name)
+        name = property(_getter, _setter)
+        id = property(_getter, _setter)
 
-        def id(self, val=None):
-            val = self._field(2, val)
-            if val is not None:
-                return int(val)
-        id = property(id, id)
-
-        def copy(self):
+        def copy(self) -> list:
             return type(self)(self[:])
 
-    def _fix_missing_root(self):
+    def _fix_missing_root(self) -> Optional[str]:
 
         if 'root' in self:
-            return
+            return None
 
-        def get_altroot(db):
+        def get_altroot(db: Self) -> Optional[str]:
             for name in db:
                 if db[name].id == 0:
                     altroot = db[name].copy()
@@ -51,7 +57,7 @@ class Base(OrderedDict):
             else:
                 names = list(db.keys())
                 if not names:
-                    return # empty db, nothing we can do.
+                    return None # empty db, nothing we can do.
 
                 altroot = db[names.pop()].copy()
                 altroot.id = 0
@@ -60,12 +66,13 @@ class Base(OrderedDict):
             return altroot
 
         self['root'] = get_altroot(self)
+        return None
 
-    def __init__(self, arg=None):
-        OrderedDict.__init__(self)
+    def __init__(self, arg: Optional[str|dict[str, str]] = None):
+        super().__init__()
 
         if not arg:
-            return
+            return None
 
         if isinstance(arg, str):
             for line in arg.strip().split('\n'):
@@ -80,19 +87,19 @@ class Base(OrderedDict):
             self._fix_missing_root()
 
         elif isinstance(arg, dict):
-            OrderedDict.__init__(self, arg)
+            super().__init__(arg)
 
-    def __str__(self):
+    def __str__(self) -> str:
         ents = list(self.values())
-        ents.sort(lambda a,b: cmp(a.id, b.id))
+        ents.sort(key=lambda ent: ent.id)
 
         return "\n".join([ ':'.join(ent) for ent in ents ]) + "\n"
 
-    def ids(self):
+    def ids_setter_getter(self):
         return [ self[name].id for name in self ]
-    ids = property(ids)
+    ids = property(ids_setter_getter)
 
-    def new_id(self, extra_ids=[], old_id=1000):
+    def new_id(self, extra_ids: list[int] = [], old_id: int = 1000) -> int:
         """find first new id in the same number range as old id"""
         ids = set(self.ids + extra_ids)
 
@@ -113,7 +120,7 @@ class Base(OrderedDict):
 
         raise Error("can't find slot for new id")
 
-    def aliases(self, name):
+    def aliases(self, name: str) -> list[str]:
         if name not in self:
             return []
 
@@ -129,15 +136,19 @@ class Base(OrderedDict):
         return aliases
 
     @staticmethod
-    def _merge_get_entry(name, db_old, db_new, merged_ids=[]):
+    def _merge_get_entry(name, db_old: Base, db_new: Base,
+                         merged_ids: Optional[list[str]] = None
+                         ) -> Optional[str]:
         """get merged db entry (without side effects)"""
+        if not merged_ids:
+            merged_ids = []
 
         oldent = db_old[name].copy() if name in db_old else None
         newent = db_new[name].copy() if name in db_new else None
 
         # entry exists in neither
         if oldent is None and newent is None:
-            return
+            return None
 
         # entry exists only in new db
         if newent and oldent is None:
@@ -162,7 +173,8 @@ class Base(OrderedDict):
         return ent
 
     @classmethod
-    def merge(cls, db_old, db_new):
+    def merge(cls, db_old: Base, db_new: Base) -> tuple[Base, dict[str, str]]:
+        logging.debug(f'\nmerge(cls,\n\t{db_old=}\n\t{db_new=}')
 
         db_merged = cls()
         old2newids = {}
@@ -170,10 +182,12 @@ class Base(OrderedDict):
         aliased = []
         names = set(db_old) | set(db_new)
 
-        def merge_entry(name):
+        def merge_entry(name: str) -> None:
 
             ent = cls._merge_get_entry(name, db_old, db_new, db_merged.ids)
-            if name in db_old and db_old[name].id != ent.id:
+            #if name in db_old and db_old[name].id != ent.id:
+            #if name in db_old and isinstance(db_old[name], str) and hasattr(ent, 'id') and db_old[name].id != ent.id:
+            if name in db_old and isinstance(db_old[name], str) and ent is not None and hasattr(ent, 'id') and db_old[name].id != ent.id:
                 old2newids[db_old[name].id] = ent.id
 
             db_merged[name] = ent
@@ -187,7 +201,8 @@ class Base(OrderedDict):
 
             merge_entry(name)
 
-        def aliased_sort(a, b):
+        def aliased_sort(a: str, b: str) -> int:
+            logging.debug(f'aliased_sort_key({a=}, {b=}')
             # sorting order:
 
             # 1) common entry with common uid first
@@ -197,7 +212,7 @@ class Base(OrderedDict):
             a_has_common_uid = a in db_new and db_new[a].id == db_old[a].id
             b_has_common_uid = b in db_new and db_new[b].id == db_old[b].id
 
-            comparison = cmp(b_has_common_uid, a_has_common_uid)
+            comparison = (b_has_common_uid > a_has_common_uid) - (b_has_common_uid < a_has_common_uid)
             if comparison != 0:
                 return comparison
 
@@ -207,11 +222,13 @@ class Base(OrderedDict):
             a_is_common = a in db_old and a in db_new
             b_is_common = b in db_old and b in db_new
 
-            return cmp(b_is_common, a_is_common)
+            #return cmp(b_is_common, a_is_common)
+            return (b_is_common > a_is_common) - (b_is_common < a_is_common)
 
-        aliased.sort(aliased_sort)
+        logging.info(f'Sorting aliased:\n{aliased=}\n{aliased_sort=}')
+        aliased.sort(key=cmp_to_key(aliased_sort))
 
-        def get_merged_alias_id(name):
+        def get_merged_alias_id(name: str) -> Optional[str]:
 
             for alias in db_old.aliases(name):
                 if alias not in db_merged:
@@ -252,20 +269,22 @@ class EtcPasswd(Base):
     class Ent(Base.Ent):
         LEN = 7
         uid = Base.Ent.id
-        def gid(self, val=None):
-            if val:
-                self[3] = str(val)
-            else:
-                return int(self[3])
-        gid = property(gid, gid)
 
-    def fixgids(self, gidmap):
+        def _getter(self) -> Optional[str]:
+            return self._field(0)
+        def _setter(self, val: Optional[int]) -> None:
+            self._field(0, val)
+
+        gid = property(_getter, _setter)
+
+    def fixgids(self, gidmap: dict[str, str]) -> None:
         for name in self:
             oldgid = self[name].gid
             if oldgid in gidmap:
                 self[name].gid = gidmap[oldgid]
 
-def merge(old_passwd, old_group, new_passwd, new_group):
+def merge(old_passwd: str, old_group: str, new_passwd: str, new_group: str) -> tuple[Base, Base, dict[str, str], dict[str, str]]:
+    logging.debug(f'\nmerge(\n\t{old_passwd=},\n\t{old_group=},\n\t{new_passwd=},\n\t{new_group=})')
     g1 = EtcGroup(old_group)
     g2 = EtcGroup(new_group)
 
