@@ -164,7 +164,7 @@ class Splicer:
         closed = False
         SignalEvent.send(os.getppid())
 
-        r_fh = os.fdopen(r, "rb", 0)
+        r_fh = os.fdopen(r, "rb")
 
         sinks = [Sink(outpipe.fileno())]
         if tee:
@@ -266,8 +266,8 @@ class SignalEvent:
 class Pipe:
     def __init__(self):
         r, w = os.pipe()
-        self.r = os.fdopen(r, "rb", 0)
-        self.w = os.fdopen(w, "wb", 0)
+        self.r = os.fdopen(r, "rb")
+        self.w = os.fdopen(w, "wb")
 
 
 def set_blocking(fd, block):

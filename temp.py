@@ -12,12 +12,12 @@ import shutil
 
 
 class TempFile(FileIO):
-    def __init__(self, prefix='tmp', suffix=''):
+    def __init__(self, prefix: bytes = b'tmp', suffix: bytes = b''):
         fd, path = tempfile.mkstemp(suffix, prefix)
         os.close(fd)
         self.path = path
         self.pid = os.getpid()
-        super().__init__(self, path, "w")
+        super().__init__(path, mode="wb")
 
     def __del__(self):
         # sanity check in case we use fork somewhere
@@ -26,7 +26,11 @@ class TempFile(FileIO):
 
 
 class TempDir(str):
-    def __new__(cls, prefix='tmp', suffix='', dir=None):
+
+    pid: int
+    path: bytes
+
+    def __new__(cls, prefix: bytes = b'tmp', suffix: bytes = b'', dir: bytes|None = None):
         path = tempfile.mkdtemp(suffix, prefix, dir)
         self = str.__new__(cls, path)
 
