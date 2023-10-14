@@ -12,7 +12,7 @@
 import sys
 
 import os
-from os.path import *
+from os.path import join, exists, isdir
 
 import signal
 import time
@@ -24,6 +24,7 @@ import shutil
 from string import Template
 import subprocess
 from subprocess import Popen, PIPE, STDOUT
+from typing import Optional, IO, Generator, Self, Callable
 
 from dblimits import DBLimits
 
@@ -35,7 +36,10 @@ class Error(Exception):
 
 PATH_DEBIAN_CNF = "/etc/mysql/debian.cnf"
 
-def _mysql_opts(opts=[], defaults_file=None, **conf):
+def _mysql_opts(opts: Optional[list[str]] = None,
+                defaults_file: Optional[str] = None, **conf) -> str:
+    if not opts:
+        opts = []
     def isreadable(path):
         try:
             with open(path):
@@ -55,30 +59,40 @@ def _mysql_opts(opts=[], defaults_file=None, **conf):
 
     return " ".join([ "--" + opt for opt in opts ])
 
-def mysqldump(**conf):
+def mysqldump(**conf) -> Optional[IO[str]]:
     opts = [ "all-databases", "skip-extended-insert", "single-transaction",
              "compact", "quick" ]
 
     command = "mysqldump " + _mysql_opts(opts, **conf)
-    popen = Popen(command, shell=True, stderr=PIPE, stdout=PIPE)
+    popen = Popen(command, shell=True, stderr=PIPE, stdout=PIPE, text=True)
 
-    firstline = popen.stdout.readline()
+    firstline = ''
+    stderr = ''
+    if popen.stdout:
+        firstline = popen.stdout.readline()
+    if popen.stderr:
+        stderr = popen.stderr.read()
     if not firstline:
         returncode = popen.wait()
-        raise Error("mysqldump error (%d): %s" % (returncode, popen.stderr.read()))
+        raise Error("mysqldump error (%d): %s" % (returncode, stderr))
 
     return popen.stdout
 
-def mysql(**conf):
+def mysql(**conf) -> subprocess.Popen:
     command = "mysql " + _mysql_opts(**conf)
 
-    popen = Popen(command, shell=True, stdin=PIPE, stderr=PIPE, stdout=PIPE)
-    popen.stdin.close()
+    popen = Popen(command, shell=True, stdin=PIPE, stderr=PIPE, stdout=PIPE, text=True)
+    if popen.stdin:
+        popen.stdin.close()
+    stderr = ''
+    if popen.stderr:
+        stderr = popen.stderr.read()
     returncode = popen.wait()
     if returncode != 0:
-        raise Error("mysql error (%d): %s" % (returncode, popen.stderr.read()))
+        raise Error("mysql error (%d): %s" % (returncode, stderr))
 
-    return os.popen(command, "w")
+    return subprocess.Popen(command, shell=True, text=True,
+                            stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 
 class MyFS:
     class Database:
@@ -93,12 +107,13 @@ class MyFS:
         class Paths(_Paths):
             files = [ 'pre', 'post' ]
 
-def _match_name(sql):
+def _match_name(sql: str) -> Optional[str]:
     m = re.search(r'`(.*?)`', sql)
     if m:
         return m.group(1)
+    return None
 
-def _parse_statements(fh, delimiter=';'):
+def _parse_statements(fh: str, delimiter: str = ';') -> Generator[str, None, None]:
     statement = ""
     for line in fh:
         if line.startswith("--"):
@@ -112,17 +127,18 @@ def _parse_statements(fh, delimiter=';'):
         if statement.strip().endswith(delimiter):
             yield statement.strip()
             statement = ""
+    return None
 
 class MyFS_Writer(MyFS):
     class Database(MyFS.Database):
         class View(MyFS.View):
-            def __init__(self, views_path, name):
+            def __init__(self, views_path: str, name: str):
                 paths = self.Paths(join(views_path, name))
                 if not exists(paths):
                     os.makedirs(paths)
                 self.paths = paths
 
-        def __init__(self, outdir, name, sql):
+        def __init__(self, outdir: str, name: str, sql: str):
             self.paths = self.Paths(join(outdir, name))
             if not exists(self.paths):
                 os.mkdir(self.paths)
@@ -131,19 +147,19 @@ class MyFS_Writer(MyFS):
                 fob.write(sql)
             self.name = name
 
-        def add_view_pre(self, name, sql):
+        def add_view_pre(self, name: str, sql: str) -> None:
             view = self.View(self.paths.views, name)
             with open(view.paths.pre, "w") as fob:
                 fob.write(sql)
 
-        def add_view_post(self, name, sql):
+        def add_view_post(self, name: str, sql: str) -> None:
             view = self.View(self.paths.views, name)
             with open(view.paths.post, "w") as fob:
                 fob.write(sql)
 
     class Table(MyFS.Table):
-        def __init__(self, database, name, sql):
-            self.paths = self.Paths(join(database.paths.tables, name))
+        def __init__(self, database: MyFS_Writer.Database, name: str, sql: str):
+            self.paths: _Paths = self.Paths(join(database.paths.tables, name))
             if not exists(self.paths):
                 os.makedirs(self.paths)
 
@@ -157,38 +173,42 @@ class MyFS_Writer(MyFS):
             self.name = name
             self.database = database
 
-        def add_row(self, sql):
+        def add_row(self, sql: str) -> None:
             print(re.sub(r'.*?VALUES \((.*)\);', '\\1', sql), file=self.rows_fh)
 
-        def add_trigger(self, sql):
+        def add_trigger(self, sql: str) -> None:
             print(sql + "\n", file=open(self.paths.triggers, "a"))
 
-    def __init__(self, outdir, limits=[]):
+    def __init__(self, outdir: str, limits: Optional[list[str]] = None):
+        if not limits:
+            limits = []
         self.limits = DBLimits(limits)
         self.outdir = outdir
 
-    def fromfile(self, fh, callback=None):
-        databases = {}
-        database = None
-        table = None
+    def fromfile(self, fh: str, callback: Optional[Callable] = None) -> None:
+
+        databases: dict[str, MyFS_Writer.Database] = {}
+        database: Optional[MyFS_Writer.Database] = None
+        table: Optional[MyFS_Writer.Table] = None
 
         for statement in _parse_statements(fh):
             if statement.startswith("CREATE DATABASE"):
                 database_name = _match_name(statement)
 
                 if database_name in self.limits:
-                    database = self.Database(self.outdir, database_name, statement)
+                    if database_name:
+                        database = self.Database(self.outdir, database_name, statement)
                     if callback:
                         callback(database)
-
-                    databases[database.name] = database
+                    if database:
+                        databases[database.name] = database
                 else:
                     database = None
 
             elif statement.startswith("USE "):
                 database_name = _match_name(statement)
-
-                database = databases.get(database_name)
+                if database_name:
+                    database = databases.get(database_name)
                 if not database:
                     continue
 
@@ -204,12 +224,13 @@ class MyFS_Writer(MyFS):
 
             elif re.match(r'^/\*!50001 CREATE TABLE', statement):
                 view_name = _match_name(statement)
-                database.add_view_pre(view_name, statement)
+                if view_name:
+                    database.add_view_pre(view_name, statement)
 
             elif statement.startswith("CREATE TABLE"):
                 table_name = _match_name(statement)
-
-                table = self.Table(database, table_name, statement)
+                if table_name:
+                    table = self.Table(database, table_name, statement)
                 if (database.name, table_name) in self.limits:
                     if callback:
                         callback(table)
@@ -228,10 +249,12 @@ class MyFS_Writer(MyFS):
                 assert _match_name(statement) == table.name
                 table.add_row(statement)
 
-def mysql2fs(fh, outdir, limits=[], callback=None):
+def mysql2fs(fh: str, outdir: str, limits: Optional[list[str]] = None, callback: Optional[Callable] = None) -> None:
+    if not limits:
+        limits = []
     MyFS_Writer(outdir, limits).fromfile(fh, callback)
 
-def chunkify(elements, delim, maxlen):
+def chunkify(elements: list[str], delim: str, maxlen: int) -> Generator[str, None, None]:
     chunk = ""
     for element in elements:
         if len(chunk) + len(delim) + len(element) > maxlen:
@@ -287,50 +310,51 @@ $sql
             class Error(Exception):
                 pass
 
-            def __init__(self, views_path, name):
+            def __init__(self, views_path: str, name: str):
                 paths = self.Paths(join(views_path, name))
                 if not isdir(paths):
-                    raise self.Error("not a directory '%s'" % paths)
+                    raise self.Error(f"not a directory '{paths}'")
                 self.paths = paths
                 self.name = name
 
-            def pre(self):
+            def pre_(self) -> Optional[str]:
                 if not exists(self.paths.pre):
-                    return
+                    return None
                 with open(self.paths.pre) as fob:
                     sql = fob.read().strip()
                 return Template(self.TPL_PRE).substitute(name=self.name, sql=sql)
-            pre = property(pre)
+            pre = property(pre_)
 
-            def post(self):
+            def post_(self) -> Optional[str]:
                 if not exists(self.paths.post):
-                    return
+                    return None
                 with open(self.paths.post) as fob:
                     sql = fob.read().strip()
                 return Template(self.TPL_POST).substitute(name=self.name, sql=sql)
-            post = property(post)
+            post = property(post_)
 
-        def __init__(self, myfs, fname):
+        def __init__(self, myfs: MyFS_Reader, fname: str):
             self.paths = self.Paths(join(myfs.path, fname))
             with open(self.paths.init) as fob:
                 self.sql_init = fob.read()
             self.name = _match_name(self.sql_init)
             self.myfs = myfs
 
-        def __repr__(self):
-            return "Database(%s)" % repr(self.paths.path)
+        def __repr__(self) -> str:
+            return f"Database({repr(self.paths.path)})"
 
-        def tables(self):
+        def tables_(self) -> Generator[MyFS.Table, None, None]:
             if not exists(self.paths.tables):
-                return
+                return None
 
             for fname in os.listdir(self.paths.tables):
                 table = self.myfs.Table(self, fname)
                 if (self.name, table.name) in self.myfs.limits:
                     yield table
-        tables = property(tables)
 
-        def views(self):
+        tables = property(tables_)
+
+        def views_(self) -> Generator[MyFS.View, None, None]:
             if not exists(self.paths.views):
                 return
 
@@ -341,16 +365,16 @@ $sql
                     continue
 
                 yield view
-        views = property(views)
+        views = property(views_)
 
-        def tofile(self, fh, callback=None):
+        def tofile(self, fh: str, callback: Optional[Callable] = None) -> None:
             if callback:
                 callback(self)
 
             if self.myfs.add_drop_database and self.name != 'mysql':
-                print("/*!40000 DROP DATABASE IF EXISTS `%s`*/;" % self.name, file=fh)
+                print(f"/*!40000 DROP DATABASE IF EXISTS `{self.name}`*/;", file=fh)
             print(self.sql_init, end=' ', file=fh)
-            print("USE `%s`;" % self.name, file=fh)
+            print(f"USE `{self.name}`;", file=fh)
 
             for table in self.tables:
                 if callback:
@@ -398,38 +422,38 @@ DELIMITER ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
 """
 
-        def __init__(self, database, fname):
+        def __init__(self, database: Self, fname: str):
             self.paths = self.Paths(join(database.paths.tables, fname))
             with open(self.paths.init) as fob:
                 self.sql_init = fob.read()
             self.name = _match_name(self.sql_init)
             self.database = database
 
-        def __repr__(self):
-            return "Table(%s)" % repr(self.paths.path)
+        def __repr__(self) -> str:
+            return f"Table({repr(self.paths.path)})"
 
-        def rows(self):
+        def rows_(self) -> str:
             with open(self.paths.rows) as fob:
                 for line in fob:
                     yield line.strip()
 
-        def has_rows(self):
+        def has_rows(self) -> bool:
             if exists(self.paths.rows) and os.lstat(self.paths.rows).st_size != 0:
                 return True
             return False
 
-        rows = property(rows)
+        rows = property(rows_)
 
-        def triggers(self):
+        def triggers_(self) -> list[str]:
             if not exists(self.paths.triggers):
                 return []
 
             with open(self.paths.triggers) as fob:
                 return list(_parse_statements(fob, ';;'))
 
-        triggers = property(triggers)
+        triggers = property(triggers_)
 
-        def tofile(self, fh):
+        def tofile(self, fh: str) -> None:
             skip_extended_insert = self.database.myfs.skip_extended_insert
             max_extended_insert = self.database.myfs.max_extended_insert
 
@@ -496,10 +520,12 @@ DELIMITER ;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 """
 
-    def __init__(self, path, limits=[],
-                 skip_extended_insert=False,
-                 add_drop_database=False,
-                 max_extended_insert=None):
+    def __init__(self, path: str, limits: Optional[list[str]] = None,
+                 skip_extended_insert: bool = False,
+                 add_drop_database: bool = False,
+                 max_extended_insert: int = None):
+        if not limits:
+            limits = []
         self.path = path
         self.limits = DBLimits(limits)
         self.skip_extended_insert = skip_extended_insert
@@ -509,13 +535,13 @@ DELIMITER ;
             max_extended_insert = self.MAX_EXTENDED_INSERT
         self.max_extended_insert = max_extended_insert
 
-    def __iter__(self):
+    def __iter__(self) -> str:
         for fname in os.listdir(self.path):
             database = self.Database(self, fname)
             if database.name in self.limits:
                 yield database
 
-    def tofile(self, fh, callback=None):
+    def tofile(self, fh: str, callback: Optional[str] = None) -> None:
         print(self.PRE, file=fh)
 
         for database in self:
@@ -532,11 +558,18 @@ DELIMITER ;
 
         print(self.POST, file=fh)
 
-def fs2mysql(fh, myfs, limits=[], callback=None, skip_extended_insert=False, add_drop_database=False):
-
+def fs2mysql(fh: str,
+             myfs: str,
+             limits: Optional[list[str]] = None,
+             callback: Optional[str] = None,
+             skip_extended_insert: bool = False,
+             add_drop_database: bool = False
+             ) -> None:
+    if not limits:
+        limits = []
     MyFS_Reader(myfs, limits, skip_extended_insert, add_drop_database).tofile(fh, callback)
 
-def cb_print(fh=None):
+def cb_print(fh: Optioanl[str] = None) -> str:
     if not fh:
         fh = sys.stdout
 
@@ -550,7 +583,7 @@ def cb_print(fh=None):
 
     return func
 
-def backup(myfs, etc, **kws):
+def backup(myfs: str, etc: str, **kws) -> None:
     """High level mysql backup command.
     Arguments:
 
@@ -582,7 +615,7 @@ def backup(myfs, etc, **kws):
         if mna:
             mna.stop()
 
-def restore(myfs, etc, **kws):
+def restore(myfs: str, etc: str, **kws) -> None:
     if kws.pop('simulate', False):
         simulate = True
     else:
@@ -619,7 +652,7 @@ class MysqlService:
         pass
 
     @staticmethod
-    def _pid_exists(pid):
+    def _pid_exists(pid: int) -> bool:
         try:
             os.kill(pid, 0)
             return True
@@ -627,17 +660,17 @@ class MysqlService:
             return False
 
     @classmethod
-    def get_pid(cls):
+    def get_pid(cls) -> Optional[int]:
         """Returns pid in pidfile if process is running. Otherwise returns None"""
         if not exists(cls.PID_FILE):
-            return
+            return None
 
         pid = int(file(cls.PID_FILE).read().strip())
         if cls._pid_exists(pid):
             return pid
 
     @classmethod
-    def is_running(cls):
+    def is_running(cls) -> bool:
         try:
             p = subprocess.run(['mysqladmin', '-s', 'ping'])
             if p.returncode == 0:
@@ -648,26 +681,26 @@ class MysqlService:
             return False
 
     @classmethod
-    def start(cls):
+    def start(cls) -> None:
         if cls.is_running():
-            return
+            return None
 
         retries = 2
         for i in range(retries):
             p = subprocess.run([cls.INIT_SCRIPT, "start"],
                                stdout=PIPE, stderr=STDOUT)
             if p.returncode == 0:
-                return
+                return None
         raise Error(p.stdout)
 
     @classmethod
-    def stop(cls):
+    def stop(cls) -> None:
         if not cls.is_running():
-            return
+            return None
 
         pid = cls.get_pid()
         if not pid:
-            return
+            return None
 
         os.kill(pid, signal.SIGTERM)
         while True:
@@ -677,7 +710,7 @@ class MysqlService:
             time.sleep(1)
 
     @classmethod
-    def reload(cls):
+    def reload(cls) -> None:
         pid = cls.get_pid()
         if not pid:
             raise cls.Error("can't reload, mysql not running")
@@ -685,7 +718,7 @@ class MysqlService:
         os.kill(pid, signal.SIGHUP)
 
     @classmethod
-    def is_accessible(cls):
+    def is_accessible(cls) -> bool:
         p = subprocess.run(["mysql", "--defaults-file=/etc/mysql/debian.cnf", "select 1"])
         if p.returncode == 0:
             return True
@@ -713,7 +746,7 @@ class MysqlNoAuth:
 
         command = Command(self.COMMAND)
 
-        def cb():
+        def cb() -> bool:
             if MysqlService.is_running():
                 continue_waiting = False
             else:
@@ -732,9 +765,9 @@ class MysqlNoAuth:
         self.command = command
         self.was_running = was_running
 
-    def stop(self):
+    def stop(self) -> None:
         if self.stopped:
-            return
+            return None
 
         self.stopped = True
         if self.command:
@@ -746,6 +779,7 @@ class MysqlNoAuth:
 
         if self.was_running:
             MysqlService.start()
+        return None
 
-    def __del__(self):
+    def __del__(self) -> None:
         self.stop()
