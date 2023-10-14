@@ -31,7 +31,7 @@ import conf
 class UNDEFINED:
     pass
 
-class _Registry(object):
+class _Registry:
     class CachedProfile(Exception):
         pass
 
@@ -70,7 +70,7 @@ Run "tklbam-init --help" for further details.
                  'backup-resume', 'sub_apikey', 'secret', 'key', 'credentials', 'hbr',
                  'profile', 'profile/stamp', 'profile/profile_id']
 
-    def __init__(self, path=None):
+    def __init__(self, path: str = None):
         if path is None:
             path = os.environ.get(self.ENV_VARNAME, self.DEFAULT_PATH)
 
@@ -81,7 +81,7 @@ Run "tklbam-init --help" for further details.
         self.path = self.Paths(path)
 
     @staticmethod
-    def _file_str(path, s=UNDEFINED):
+    def _file_str(path: str, s: type = UNDEFINED) -> str:
         if s is UNDEFINED:
             if not exists(path):
                 return None
@@ -99,7 +99,7 @@ Run "tklbam-init --help" for further details.
                 print(s, file=fh)
 
     @classmethod
-    def _file_tuple(cls, path, t=UNDEFINED):
+    def _file_tuple(cls, path: str, t: type = UNDEFINED) -> tuple[str, str, str]:
         if t and t is not UNDEFINED:
             t = "\n".join([ str(v) for v in t ])
 
@@ -108,7 +108,7 @@ Run "tklbam-init --help" for further details.
             return tuple(retval.split('\n'))
 
     @classmethod
-    def _file_dict(cls, path, d=UNDEFINED):
+    def _file_dict(cls, path: str, d: type = UNDEFINED) -> AttrDict:
         if d and d is not UNDEFINED:
             d = "\n".join([ "%s=%s" % (k, v) for k, v in list(d.items()) ])
 
@@ -116,25 +116,29 @@ Run "tklbam-init --help" for further details.
         if retval:
             return AttrDict([ v.split("=", 1) for v in retval.split("\n") ])
 
-    def sub_apikey(self, val=UNDEFINED):
+    def sub_apikey(self, val: type = UNDEFINED) -> str:
         return self._file_str(self.path.sub_apikey, val)
+
     sub_apikey = property(sub_apikey, sub_apikey)
 
-    def secret(self, val=UNDEFINED):
+    def secret(self, val: type = UNDEFINED) -> str:
         return self._file_str(self.path.secret, val)
+
     secret = property(secret, secret)
 
-    def key(self, val=UNDEFINED):
+    def key(self, val: type = UNDEFINED) -> str:
         return self._file_str(self.path.key, val)
+
     key = property(key, key)
 
-    def credentials(self, val=UNDEFINED):
+    def credentials(self, val: type = UNDEFINED) -> str:
         retval = self._file_dict(self.path.credentials, val)
         if retval:
             return hub.Credentials.from_dict(retval)
+
     credentials = property(credentials, credentials)
 
-    def hbr(self, val=UNDEFINED):
+    def hbr(self, val: type = UNDEFINED) -> str:
         format = "%Y-%m-%d %H:%M:%S"
         if val and val is not UNDEFINED:
             val = AttrDict({'address': val.address,
@@ -152,11 +156,11 @@ Run "tklbam-init --help" for further details.
     hbr = property(hbr, hbr)
 
     @classmethod
-    def _custom_profile_id(cls, path):
+    def _custom_profile_id(cls, path: str) -> str:
         name = basename(abspath(path))
         return "%s:%s" % (cls.CUSTOM_PROFILE, name)
 
-    def profile(self, val=UNDEFINED):
+    def profile(self, val: type = UNDEFINED) -> str:
         if val is None:
             return shutil.rmtree(self.path.profile, ignore_errors=True)
 
@@ -193,7 +197,7 @@ Run "tklbam-init --help" for further details.
 
     profile = property(profile, profile)
 
-    def backup_resume_conf(self, val=UNDEFINED):
+    def backup_resume_conf(self, val: type = UNDEFINED) -> None:
         if val is None:
             if exists(self.path.backup_resume):
                 os.remove(self.path.backup_resume)
@@ -215,7 +219,7 @@ Run "tklbam-init --help" for further details.
 
     backup_resume_conf = property(backup_resume_conf, backup_resume_conf)
 
-    def _update_profile(self, profile_id=None):
+    def _update_profile(self, profile_id: str = None) -> None:
         """Get a new profile if we don't have a profile in the registry or the Hub
         has a newer profile for this appliance. If we can't contact the Hub raise
         an error if we don't already have profile."""
@@ -256,7 +260,7 @@ Run "tklbam-init --help" for further details.
 
             raise self.CachedProfile("using cached profile because of a Hub error: " + desc)
 
-    def update_profile(self, profile_id=None):
+    def update_profile(self, profile_id:str = None) -> None:
         if profile_id is None:
             # don't attempt to update empty or custom profiles
             if self.profile and \
@@ -283,32 +287,34 @@ Run "tklbam-init --help" for further details.
 
             raise first_exception
 
-def _complete_profile_id(partial):
-    partial = TurnKeyVersion.from_string(partial)
+def _complete_profile_id(partial: str) -> str:
+    partial_ver = TurnKeyVersion.from_string(partial)
     system = TurnKeyVersion.from_system()
     if not system:
         return
 
-    if partial.arch is None:
-        partial.arch = system.arch
+    if partial_ver.arch is None:
+        partial_ver.arch = system.arch
 
-    if partial.release is None or system.release.startswith(partial.release):
-        partial.release = system.release
+    if partial_ver.release is None or system.release.startswith(partial_ver.release):
+        partial_ver.release = system.release
 
-    return str(partial)
+    return str(partial_ver)
 
 class Profile(str):
-    def __new__(cls, path, profile_id, timestamp):
+    def __new__(cls, path: str, profile_id: str, timestamp: str) -> str:
         return str.__new__(cls, path)
 
-    def __init__(self, path, profile_id, timestamp):
+    def __init__(self, path: str, profile_id: str, timestamp: str):
         str.__init__(self)
         self.path = path
         self.timestamp = timestamp
         self.profile_id = profile_id
 
 class BackupSessionConf(AttrDict):
-    def __init__(self, d={}):
+    def __init__(self, d: dict[str, str] = None):
+        if not d:
+            d = {}
         AttrDict.__init__(self, d)
         self.overrides = conf.Limits(self.overrides)
 
@@ -322,7 +328,7 @@ class NotInitialized(hub.Backups.NotInitialized):
 
         hub.Backups.NotInitialized.__init__(self, 'Hub link required, run "%s" first' % command)
 
-def update_profile(profile_id=None, strict=True):
+def update_profile(profile_id: str = None, strict: bool = True) -> None:
     import sys
     global registry
 

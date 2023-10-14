@@ -12,7 +12,8 @@
 import sys
 
 import os
-from os.path import *
+from os.path import isdir, exists, join
+import logging
 
 import userdb
 import pkgman
@@ -35,7 +36,7 @@ from temp import TempFile
 class Error(Exception):
     pass
 
-def system(command):
+def system(command: list[str]) -> None:
     sys.stdout.flush()
     sys.stderr.flush()
     return os.system(command)
@@ -45,7 +46,7 @@ class Restore:
 
     PACKAGES_BLACKLIST = ['linux-*', 'vmware-tools*']
 
-    def __init__(self, backup_extract_path, limits=[], rollback=True, simulate=False):
+    def __init__(self, backup_extract_path: bytes, limits: list = [], rollback: bool = True, simulate: bool = False):
         self.extras = backup.ExtrasPaths(backup_extract_path)
         if not isdir(self.extras.path):
             raise self.Error("illegal backup_extract_path: can't find '%s'" % self.extras.path)
@@ -62,7 +63,7 @@ class Restore:
         self.limits = conf.Limits(limits)
         self.backup_extract_path = backup_extract_path
 
-    def database(self):
+    def database(self) -> None:
         if not exists(self.extras.myfs) and not exists(self.extras.pgfs):
             return
 
@@ -94,7 +95,7 @@ class Restore:
             except pgsql.Error as e:
                 print("SKIPPING PGSQL DATABASE RESTORE: " + str(e))
 
-    def packages(self):
+    def packages(self) -> None:
         newpkgs_file = self.extras.newpkgs
         if not exists(newpkgs_file):
             return
@@ -149,7 +150,7 @@ class Restore:
         print()
 
     @staticmethod
-    def _userdb_merge(old_etc, new_etc):
+    def _userdb_merge(old_etc: list[bytes], new_etc: list[bytes]):
         old_passwd = join(old_etc, "passwd")
         new_passwd = join(new_etc, "passwd")
 
@@ -164,7 +165,7 @@ class Restore:
                             r(new_passwd), r(new_group))
 
     @staticmethod
-    def _get_fsdelta_olist(fsdelta_olist_path, limits=[]):
+    def _get_fsdelta_olist(fsdelta_olist_path: bytes, limits: list[bytes] = []) -> None:
         pathmap = PathMap(limits)
         with open(fsdelta_olist_path) as fob:
             return [ fpath
@@ -172,15 +173,19 @@ class Restore:
                  if fpath in pathmap ] 
 
     @staticmethod
-    def _apply_overlay(src, dst, olist):
+    def _apply_overlay(src: bytes, dst: bytes, olist: bytes) -> None:
+        logging.debug(f'_apply_overlay( {src=}, {dst=}, {olist=}')
         tmp = TempFile("fsdelta-olist-")
         for fpath in olist:
-            print(fpath.lstrip('/'), file=tmp)
+            logging.debug(f'1 {fpath=} (type={type(fpath)}) {tmp=} (type={type(tmp)})')
+            b_fpath = fpath.lstrip('/').encode()
+            logging.debug(f'2 {b_fpath=} (type={type(b_fpath)}) {tmp=} (type={type(tmp)})')
+            print(b_fpath, file=tmp)
         tmp.close()
 
         apply_overlay(src, dst, tmp.path)
 
-    def files(self):
+    def files(self) -> None:
         extras = self.extras
         if not exists(extras.fsdelta):
             return

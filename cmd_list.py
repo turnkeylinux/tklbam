@@ -53,7 +53,7 @@ def usage(e=None):
     sys.exit(1)
 
 class Formatter:
-    def __init__(self, format):
+    def __init__(self, format: str):
         tpl = format.replace('$', '$$')
         tpl = tpl.replace('\\n', '\n')
         tpl = tpl.replace('\\t', '\t')
@@ -63,29 +63,29 @@ class Formatter:
 
         self.tpl = string.Template(tpl)
 
-    def __call__(self, hbr):
+    def __call__(self, hbr: str) -> str:
         # backwards compat. hack
         hbr = hbr.copy()
         hbr['turnkey_version'] = hbr['profile_id']
         return self.tpl.substitute(**hbr)
 
-def key_has_passphrase(key):
+def key_has_passphrase(key: str) -> bool:
     try:
-        keypacket.parse(key, "")
+        keypacket.parse(key.encode(), b"")
         return False
     except keypacket.Error:
         return True
 
-def fmt_skpp(key):
+def fmt_skpp(key: bytes) -> str:
     return "Yes" if key_has_passphrase(key) else "No"
 
-def fmt_size(bytes):
-    if bytes < (10 * 1024):
+def fmt_size(bytes_: int) -> str:
+    if bytes_ < (10 * 1024):
         return "0.01"
-    if bytes > (1024 * 1024 * 1000 * 99.99):
-        return "%d" % (bytes / (1024 * 1024))
+    if bytes_ > (1024 * 1024 * 1000 * 99.99):
+        return "%d" % (bytes_ / (1024 * 1024))
     else:
-        return "%-.2f" % (bytes / (1024 * 1024.0))
+        return "%-.2f" % (bytes_ / (1024 * 1024.0))
 
 def main():
     try:

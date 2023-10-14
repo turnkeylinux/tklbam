@@ -10,6 +10,7 @@
 
 import os
 import signal
+from signal import Signals
 import time
 import select
 import re
@@ -17,15 +18,16 @@ import sys
 import errno
 import termios
 
+from typing import Optional, Callable
+from shlex import quote
+from io import StringIO, TextIOWrapper
+
 import popen4
 from fifobuffer import FIFOBuffer
 from fileevent import *
 
-from shlex import quote
-from io import StringIO
 
-
-def fmt_argv(argv):
+def fmt_argv(argv: list[str]) -> str:
     if not argv:
         return ""
 
@@ -33,14 +35,14 @@ def fmt_argv(argv):
 
     for i, arg in enumerate(args):
         if re.search(r"[\s'\"]", arg):
-            args[i] = shlex(arg)
+            args[i] = quote(arg)
         else:
             args[i] = " " + arg
 
     return argv[0] + " " + " ".join(args)
 
 
-def get_blocking(fd):
+def get_blocking(fd: int|TextIOWrapper) -> bool:
     import fcntl
     flags = fcntl.fcntl(fd, fcntl.F_GETFL, 0)
     if flags & os.O_NONBLOCK:
@@ -49,7 +51,7 @@ def get_blocking(fd):
         return True
 
 
-def set_blocking(fd, blocking):
+def set_blocking(fd: int|TextIOWrapper, blocking: bool) -> None:
     import fcntl
     flags = fcntl.fcntl(fd, fcntl.F_GETFL, 0)
     if flags == -1:
@@ -62,13 +64,13 @@ def set_blocking(fd, blocking):
 
 
 class FileEnhancedRead:
-    def __init__(self, fh):
+    def __init__(self, fh: TextIOWrapper|FileEventAdaptor):
         self.fh = fh
 
-    def __getattr__(self, attr):
+    def __getattr__(self, attr: str) -> str:
         return getattr(self.fh, attr)
 
-    def read(self, size=-1, timeout=None):
+    def read(self, size: int = -1, timeout: Optional[float] = None) -> Optional[str]:
         """A better read where you can (optionally) configure how long to wait
         for data.
 
@@ -104,25 +106,27 @@ class FileEnhancedRead:
         mask = events[0][1]
         if mask & select.POLLIN:
 
-            bytes = None
+            bytes_ = None
 
             orig_blocking = get_blocking(fd)
             set_blocking(fd, False)
             try:
-                bytes = self.fh.read(size)
+                bytes_ = self.fh.read(size)
             except IOError as e:
                 if e.errno != errno.EAGAIN:
                     raise
             finally:
                 set_blocking(fd, orig_blocking)
 
-            return bytes
+            return bytes_
 
         if mask & select.POLLHUP:
             return ''
 
+        return None
 
-class Command(object):
+
+class Command:
     """Convenience module for executing a command
 
     attribute notes::
@@ -166,15 +170,15 @@ class Command(object):
         pass
 
     class _ChildObserver(Observer):
-        def __init__(self, outputbuf, debug=False):
+        def __init__(self, outputbuf: FIFOBuffer, debug: bool = False):
             self.debug = debug
             self.outputbuf = outputbuf
 
-        def _dprint(self, event, msg):
+        def _dprint(self, event: str, msg: str) -> None:
             if self.debug:
                 print("# EVENT '%s':\n%s" % (event, msg), file=sys.stderr)
 
-        def notify(self, subject, event, val):
+        def notify(self, subject: str, event: str, val: str) -> None:
             if event in ('read', 'readline'):
                 self._dprint(event, val)
                 self.outputbuf.write(val)
@@ -182,7 +186,9 @@ class Command(object):
                 self._dprint(event, "".join(val))
                 self.outputbuf.write("".join(val))
 
-    def __init__(self, cmd, runas=None, pty=False, setpgrp=None, debug=False):
+    def __init__(self, cmd: str|list[str], runas: Optional[str] = None,
+                 pty: bool = False, setpgrp: Optional[bool] = None, debug: bool = False
+                 ):
         """Args:
         'cmd' what command to execute
             Can be a list ("/bin/ls", "-la")
@@ -198,7 +204,7 @@ class Command(object):
         self._child = None
         self._child = popen4.Popen4(cmd, 0, pty, runas, setpgrp)
         self.tochild = self._child.tochild
-        self._fromchild = None
+        self._fromchild: FileEventAdaptor|FileEnhancedRead|None = None
 
         self.pid = self._child.pid
 
@@ -210,7 +216,7 @@ class Command(object):
         self._dprint(("# command started (pid=%d, pty=%s): %s"
                       ) % (self._child.pid, repr(pty), cmd))
 
-    def __del__(self):
+    def __del__(self) -> None:
         if not self._child:
             return
 
@@ -218,16 +224,17 @@ class Command(object):
         if os.getpid() == self.ppid:
             self.terminate()
 
-    def _dprint(self, msg):
+    def _dprint(self, msg: str) -> None:
         if self._debug:
             print(msg, file=sys.stderr)
 
-    def terminate(self, gracetime=0, sig=signal.SIGTERM):
+    def terminate(self, gracetime: int = 0, sig: Signals = signal.SIGTERM) -> None:
         """terminate command. kills command with 'sig', then sleeps for
         'gracetime', before sending SIGKILL
         """
 
         if self.running:
+            assert self._child is not None
             if self._child.pty:
                 cc_magic = termios.tcgetattr(self._child.tochild.fileno())[-1]
                 ctrl_c = cc_magic[termios.VINTR]
@@ -240,7 +247,7 @@ class Command(object):
             try:
                 os.kill(pid, sig)
             except OSError as e:
-                if e[0] != errno.EPERM or \
+                if e.errno != errno.EPERM or \
                    not self._child.pty or \
                    not self.wait(timeout=6, poll_interval=0.1):
                     raise
@@ -260,35 +267,40 @@ class Command(object):
 
                 self._dprint("# command (pid %d) terminated" % self._child.pid)
 
-    def terminated(self):
+    def terminated_(self) -> Optional[str]:
+        assert self._child is not None
         status = self._child.poll()
 
         if not os.WIFSIGNALED(status):
             return None
 
-        return os.WTERMSIG(status)
-    terminated = property(terminated)
+        return str(os.WTERMSIG(status))
+    terminated = property(terminated_)
 
-    def running(self):
+    def running_(self) -> bool:
+        assert self._child is not None
         if self._child.poll() == -1:
             return True
 
         return False
-    running = property(running)
 
-    def exitcode(self):
+    running = property(running_)
+
+    def exitcode_(self) -> Optional[int]:
         if self.running:
             return None
 
+        assert self._child is not None
         status = self._child.poll()
 
         if not os.WIFEXITED(status):
             return None
 
         return os.WEXITSTATUS(status)
-    exitcode = property(exitcode)
 
-    def wait(self, timeout=None, poll_interval=0.2, callback=None):
+    exitcode = property(exitcode_)
+
+    def wait(self, timeout: Optional[int] = None, poll_interval: float = 0.2, callback: Optional[Callable] = None) -> bool:
         """wait for process to finish executing.
         'timeout': how long we wait in seconds (None is forever)
         'poll_interval': how long we sleep between checks to see if process has
@@ -303,6 +315,7 @@ class Command(object):
             return True
 
         if timeout is None:
+            assert self._child is not None
             self._child.wait()
             return True
         else:
@@ -317,7 +330,7 @@ class Command(object):
 
             return False
 
-    def output(self):
+    def output_(self) -> str|None:
         if len(self._output):
             return self._output.getvalue()
 
@@ -329,28 +342,30 @@ class Command(object):
 
         return self._output.getvalue()
 
-    output = property(output)
+    output = property(output_)
 
-    def fromchild(self):
+    def fromchild_(self) -> Optional[FileEventAdaptor|FileEnhancedRead]:
         """return the command's filehandler.
 
         NOTE: this file handler magically updates self._output"""
 
         if self._fromchild:
             return self._fromchild
-
+        assert self._child is not None
         fh = FileEventAdaptor(self._child.fromchild)
         fh.addObserver(self._ChildObserver(self._output,
                                            self._debug))
 
-        fh = FileEnhancedRead(fh)
-
-        self._fromchild = fh
+        self._fromchild = FileEnhancedRead(fh)
         return self._fromchild
 
-    fromchild = property(fromchild)
+    fromchild = property(fromchild_)
 
-    def outputsearch(self, p, timeout=None, linemode=False):
+    def outputsearch(self,
+                     p: re.Pattern|str|list[re.Pattern|str],
+                     timeout: Optional[int] = None,
+                     linemode: bool = False
+                     ) -> Optional[tuple[re.Pattern|str, re.Match]]:
         """Search for 'p' in the command's output, while listening for more
         output from command, within 'timeout'
 
@@ -373,29 +388,30 @@ class Command(object):
         - Output is collected and can be accessed by the output attribute [*]
         """
 
-        patterns = []
-        if not type(p) in (tuple, list):
+        patterns: list[str|re.Pattern] = []
+        if isinstance(p, (tuple, list)):
+            patterns.extend(p)
+        elif isinstance(p, (re.Pattern, str)):
             patterns.append(p)
         else:
-            patterns += p
+            raise self.Error(f"P is wrong type")
 
         # compile all patterns into re objects, but keep the original pattern
         # object so we can return it to user when matched (friendy interface)
-        re_type = type(re.compile(""))
+        ret_patterns: list[tuple[str|re.Pattern, re.Pattern]] = []
         for i in range(len(patterns)):
-            if type(patterns[i]) is not re_type:
-                patterns[i] = (re.compile(patterns[i]), patterns[i])
-            else:
-                patterns[i] = (patterns[i], patterns[i])
+            pattern_orig = patterns[i]
+            pattern_re = re.compile(patterns[i])
+            ret_patterns.append((pattern_orig, pattern_re))
 
-        def check_match():
+        def check_match() -> Optional[tuple[re.Pattern|str, re.Match]]:
             if linemode:
                 while 1:
                     line = self._output.readline(True)
                     if not line:
                         return None
 
-                    for pattern_re, pattern_orig in patterns:
+                    for pattern_orig, pattern_re in ret_patterns:
                         match = pattern_re.search(line)
                         if match:
                             return pattern_orig, match
@@ -405,20 +421,21 @@ class Command(object):
 
             else:
                 # match against the entire buffered output
-                for pattern_re, pattern_orig in patterns:
+                for pattern_orig, pattern_re in ret_patterns:
                     match = pattern_re.search(self._output.getvalue())
                     if match:
                         return pattern_orig, match
+                return None
 
         # maybe we already match? (in buffered output)
         m = check_match()
         if m:
             return m
 
-        ref = [()]
+        ref: list[tuple[re.Pattern|str, re.Match]]
         started = time.time()
 
-        def callback(self, buf):
+        def callback(self, buf: str) -> bool:
             if buf:
                 m = check_match()
                 if m:
@@ -438,7 +455,7 @@ class Command(object):
         fh = self.read(callback)
         return ref[0]
 
-    def read(self, callback=None, callback_interval=0.1):
+    def read(self, callback: Optional[Callable] = None, callback_interval: float = 0.1) -> str:
         """Read output from child.
 
         Args:
@@ -485,10 +502,10 @@ class Command(object):
 
         return sio.getvalue()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "Command(%s)" % repr(self._cmd)
 
-    def __str__(self):
+    def __str__(self) -> str:
         if isinstance(self._cmd, str):
             return self._cmd
 
@@ -501,21 +518,24 @@ class CommandTrue:
 
     A command istrue() if its exitcode == 0
     """
-    def __init__(self, cmd):
+    def __init__(self, cmd: str):
         self._c = Command(cmd)
 
-    def wait(self, timeout=None):
-        return self._c.wait(timeout)
+    def wait(self, timeout: Optional[int] = None) -> int:
+        if timeout:
+            return self._c.wait(timeout)
+        else:
+            return 0
 
-    def terminate(self):
+    def terminate(self) -> None:
         self._c.terminate()
 
-    def istrue(self):
+    def istrue(self) -> Optional[bool]:
         exitcode = self._c.exitcode
         if exitcode is None:
             return None
 
-        if exitcode:
+        if exitcode != 0:
             return False
         else:
             return True
@@ -525,7 +545,7 @@ last_exitcode = None
 last_output = None
 
 
-def eval(cmd, setpgrp=False):
+def eval(cmd, setpgrp: bool = False) -> bool:
     """convenience function
     execute 'cmd' and return True/False is exitcode == 0
 
@@ -541,7 +561,7 @@ def eval(cmd, setpgrp=False):
     return last_exitcode == 0
 
 
-def output(cmd):
+def output(cmd: str) -> Callable[[], str]:
     """convenience function
     execute 'cmd' and return it's output
 
