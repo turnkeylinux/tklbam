@@ -138,10 +138,12 @@ from string import Template
 import re
 import shlex
 
-from os.path import *
+from os.path import *  # FIXME - import specific modules
 import subprocess
 from restore import Restore
 import duplicity
+
+import logging
 
 from stdtrap import UnitedStdTrap
 from temp import TempDir
@@ -161,6 +163,8 @@ from conf import Conf
 import backup
 import traceback
 
+logging.basicConfig(level=logging.DEBUG)
+
 PATH_LOGFILE = path_global_or_local("/var/log/tklbam-restore", registry.path.restore_log)
 
 class Error(Exception):
@@ -173,6 +177,7 @@ class ExitCode:
 
 def do_compatibility_check(backup_profile_id, interactive=True):
     # unless both backup and restore are TurnKey skip compatibility check
+    logging.info(f"do_compatibility_check({backup_profile_id=}, {interactive=})")
     try:
         backup_codename = TurnKeyVersion.from_string(backup_profile_id).codename
     except TurnKeyVersion.Error:
@@ -215,6 +220,7 @@ def do_compatibility_check(backup_profile_id, interactive=True):
         fatal("You didn't answer 'yes'. Aborting!")
 
 def get_backup_record(arg):
+    logging.info(f"get_backup_record({arg=})")
     hb = hub_backups()
     if re.match(r'^\d+$', arg):
         backup_id = arg
@@ -237,6 +243,7 @@ def get_backup_record(arg):
     return matches[0]
 
 def decrypt_key(key, interactive=True):
+    logging.info(f"decrypt_key({key=}, {interactive=})")
     try:
         return keypacket.parse(key, "")
     except keypacket.Error:
@@ -284,6 +291,7 @@ def usage(e=None):
     sys.exit(1)
 
 def main():
+    logging.info('main()')
     backup_extract_path = None
     raw_download_path = None
 
@@ -383,6 +391,23 @@ def main():
 
         elif opt == '--debug':
             opt_debug = True
+    logging.info('vars after parsing args:\n'
+                 f'{backup_extract_path=}\n'
+                 f'{raw_download_path=}\n'
+                 f'{opt_simulate=}\n'
+                 f'{opt_force=}\n'
+                 f'{opt_time=}\n'
+                 f'{opt_limits=}\n'
+                 f'{opt_key=}\n'
+                 f'{opt_address=}\n'
+                 f'{opt_logfile=}\n'
+                 f'{skip_files=}\n'
+                 f'{skip_database=}\n'
+                 f'{skip_packages=}\n'
+                 f'{no_rollback=}\n'
+                 f'{silent=}\n'
+                 f'{interactive=}\n'
+                 f'{opt_debug=}\n')
 
     for opt, val in opts:
         for skip_opt in ('files', 'packages', 'database'):
@@ -475,14 +500,14 @@ def main():
     update_profile(conf.force_profile, strict=False)
 
     if not (opt_simulate or opt_debug):
-        log_fh = file(opt_logfile, "a")
+        with open(opt_logfile, "a") as log_fh:
 
-        print(file=log_fh)
-        print("\n" + fmt_timestamp(), file=log_fh)
+            print(file=log_fh)
+            print("\n" + fmt_timestamp(), file=log_fh)
 
-        log_fh.flush()
+            log_fh.flush()
 
-        trap = UnitedStdTrap(usepty=True, transparent=(False if silent else True), tee=log_fh)
+            trap = UnitedStdTrap(usepty=True, transparent=(False if silent else True), tee=log_fh)
     else:
         trap = None
 
