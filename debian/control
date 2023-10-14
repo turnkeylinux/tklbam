@@ -1,11 +1,10 @@
 Source: tklbam3
 Section: misc
 Priority: optional
-Maintainer: Liraz Siri <liraz@turnkeylinux.org>
+Maintainer: Jeremy Davis <jeremyturnkeylinux.org>
 Build-Depends:
  debhelper (>= 10),
  dh-exec,
-# dh-python2 (>= 4.20201102+turnkey0),
  python3-all,
 Standards-Version: 4.0.0
 X-Python-Version: >= 3.11
@@ -25,5 +24,4 @@ Depends:
  python3-boto,
  squid,
  turnkey-conffile,
-# turnkey-pylib (>= 0.5),
 Description: TurnKey GNU/Linux Backup and Migration agent
