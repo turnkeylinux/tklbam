@@ -15,6 +15,7 @@ import base64
 import struct
 
 from Cryptodome.Cipher import AES
+from Cryptodome.Cipher._mode_cbc import CbcMode
 
 KEY_VERSION = 1
 
@@ -27,29 +28,31 @@ FINGERPRINT_LEN = 6
 class Error(Exception):
     pass
 
-def _pad(s):
+def _pad(s: bytes) -> bytes:
     padded_len = ((len(s) + 2 - 1) |  0xF) + 1
     padding_len = padded_len - len(s) - 2
     return os.urandom(padding_len) + s + struct.pack("!H", len(s))
 
-def _unpad(padded):
+def _unpad(padded: bytes) -> bytes:
     len, = struct.unpack("!H", padded[-2:])
     return padded[-(2 + len) :-2]
 
-def _repeat(f, input, count):
+def _repeat(func, input_: bytes, count: int) -> bytes:
     for x in range(count):
-        input = f(input.encode())
-    return input
+        output_ = func(input_)
+    return output_
 
-def _cipher_key(passphrase, repeats):
+def _cipher_key(passphrase: bytes, repeats: int) -> bytes:
     cipher_key = _repeat(lambda k: hashlib.sha256(k).digest(),
                          passphrase, repeats)
     return cipher_key
 
-def _cipher(cipher_key):
-    return AES.new(cipher_key, mode=AES.MODE_CBC, IV='\0' * 16)
+def _cipher(cipher_key: bytes) -> CbcMode:
+    cipher = AES.new(cipher_key, mode=AES.MODE_CBC, IV=b'\0' * 16)
+    assert isinstance(cipher, CbcMode)
+    return cipher
 
-def fmt(secret, passphrase):
+def fmt(secret: bytes, passphrase: bytes) -> bytes:
     salt = os.urandom(SALT_LEN)
 
     if not passphrase:
@@ -71,7 +74,7 @@ def fmt(secret, passphrase):
 
     return base64.b64encode(packet)
 
-def _parse(packet):
+def _parse(packet: bytes) -> tuple[bytes, bytes, bytes, bytes]:
     try:
         packet = base64.b64decode(packet)
         version, khr, kcr = struct.unpack("!BHH", packet[:5])
@@ -90,7 +93,7 @@ def _parse(packet):
 
     return khr, kcr, fingerprint, ciphertext
 
-def parse(packet, passphrase):
+def parse(packet: bytes, passphrase: bytes) -> bytes:
     khr, kcr, fingerprint, ciphertext = _parse(packet)
 
     if not passphrase:
@@ -114,5 +117,5 @@ def parse(packet, passphrase):
 
     return secret
 
-def fingerprint(packet):
+def fingerprint(packet: bytes) -> bytes:
     return base64.b16encode(_parse(packet)[2])

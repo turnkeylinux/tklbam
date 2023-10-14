@@ -9,7 +9,7 @@
 # the License, or (at your option) any later version.
 #
 import glob
-from os.path import *
+from os.path import abspath
 
 class PathMap(dict):
     @staticmethod
@@ -39,13 +39,13 @@ class PathMap(dict):
             for expanded in self._expand(path):
                 self[expanded] = sign
 
-    def includes(self):
+    def _includes(self):
         return [ path for path in self if self[path] ]
-    includes = property(includes)
+    includes = property(_includes)
 
-    def excludes(self):
+    def _excludes(self):
         return [ path for path in self if not self[path] ]
-    excludes = property(excludes)
+    excludes = property(_excludes)
 
     def __contains__(self, path):
         while path not in ('', '/'):
