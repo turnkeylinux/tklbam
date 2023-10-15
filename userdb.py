@@ -136,7 +136,9 @@ class Base(OrderedDict):
         return aliases
 
     @staticmethod
-    def _merge_get_entry(name, db_old: Base, db_new: Base,
+    def _merge_get_entry(name: str, db_old, db_new,
+                         #db_old : Base,
+                         #db_new : Base,
                          merged_ids: Optional[list[str]] = None
                          ) -> Optional[str]:
         """get merged db entry (without side effects)"""
@@ -173,7 +175,10 @@ class Base(OrderedDict):
         return ent
 
     @classmethod
-    def merge(cls, db_old: Base, db_new: Base) -> tuple[Base, dict[str, str]]:
+    def merge(cls, db_old, db_new
+              #db_old: Base,
+              #db_new: Base
+              ):  # -> tuple[Base, dict[str, str]]:
         logging.debug(f'\nmerge(cls,\n\t{db_old=}\n\t{db_new=}')
 
         db_merged = cls()

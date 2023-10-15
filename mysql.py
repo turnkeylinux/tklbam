@@ -102,7 +102,7 @@ class MyFS:
     class Database:
         name: str
         path: str
-        myfs: MyFS  # reader
+        #myfs: MyFS  # reader
         tofile: Callable  # reader
         views: property  # reader
         paths: _Paths
@@ -348,7 +348,7 @@ $sql
                 return Template(self.TPL_POST).substitute(name=self.name, sql=sql)
             post = property(post_)
 
-        def __init__(self, myfs: MyFS_Reader, fname: str):
+        def __init__(self, myfs: MyFS, fname: str):
             self.paths = self.Paths(join(myfs.path, fname))
             with open(self.paths.init) as fob:
                 self.sql_init = fob.read()
