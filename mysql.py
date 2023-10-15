@@ -12,13 +12,10 @@
 import sys
 
 import os
-from os.path import join, exists, isdir
-
+from os.path import join, exists, isdir, basename
 import signal
 import time
-
 import re
-from paths import Paths as _Paths
 
 import shutil
 from string import Template
@@ -27,6 +24,7 @@ from subprocess import Popen, PIPE, STDOUT
 from typing import Optional, IO, Generator, Self, Callable
 
 from dblimits import DBLimits
+from paths import Paths as _Paths
 
 import stat
 from command import Command
@@ -91,15 +89,32 @@ def mysql(**conf) -> subprocess.Popen:
     if returncode != 0:
         raise Error("mysql error (%d): %s" % (returncode, stderr))
 
-    return subprocess.Popen(command, shell=True, text=True,
-                            stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    #return subprocess.Popen(command, shell=True, text=True,
+    #                        stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    return popen
 
 class MyFS:
+    path: str
+    limits: DBLimits  # reader
+    add_drop_database: bool  # reader
+    skip_extended_insert: bool  # reader
+    max_extended_insert: int  # reader
     class Database:
+        name: str
+        path: str
+        myfs: MyFS  # reader
+        tofile: Callable  # reader
+        views: property  # reader
+        paths: _Paths
+        add_view_post: Callable  # writer
+        add_view_pre: Callable  # writer
         class Paths(_Paths):
             files = [ 'init', 'tables', 'views' ]
 
     class Table:
+        name: str
+        add_trigger: Callable  # writer
+        add_row: Callable  # writer
         class Paths(_Paths):
             files = [ 'init', 'triggers', 'rows' ]
 
@@ -107,13 +122,13 @@ class MyFS:
         class Paths(_Paths):
             files = [ 'pre', 'post' ]
 
-def _match_name(sql: str) -> Optional[str]:
+def _match_name(sql: str) -> str:
     m = re.search(r'`(.*?)`', sql)
     if m:
         return m.group(1)
-    return None
+    return ''
 
-def _parse_statements(fh: str, delimiter: str = ';') -> Generator[str, None, None]:
+def _parse_statements(fh: IO[str], delimiter: str = ';') -> Generator[str, None, None]:
     statement = ""
     for line in fh:
         if line.startswith("--"):
@@ -158,7 +173,7 @@ class MyFS_Writer(MyFS):
                 fob.write(sql)
 
     class Table(MyFS.Table):
-        def __init__(self, database: MyFS_Writer.Database, name: str, sql: str):
+        def __init__(self, database: MyFS.Database, name: str, sql: str):
             self.paths: _Paths = self.Paths(join(database.paths.tables, name))
             if not exists(self.paths):
                 os.makedirs(self.paths)
@@ -185,11 +200,11 @@ class MyFS_Writer(MyFS):
         self.limits = DBLimits(limits)
         self.outdir = outdir
 
-    def fromfile(self, fh: str, callback: Optional[Callable] = None) -> None:
+    def fromfile(self, fh: IO[str], callback: Optional[Callable] = None) -> None:
 
-        databases: dict[str, MyFS_Writer.Database] = {}
-        database: Optional[MyFS_Writer.Database] = None
-        table: Optional[MyFS_Writer.Table] = None
+        databases: dict[str, MyFS.Database] = {}
+        database: Optional[MyFS.Database] = None
+        table: Optional[MyFS.Table] = None
 
         for statement in _parse_statements(fh):
             if statement.startswith("CREATE DATABASE"):
@@ -249,12 +264,12 @@ class MyFS_Writer(MyFS):
                 assert _match_name(statement) == table.name
                 table.add_row(statement)
 
-def mysql2fs(fh: str, outdir: str, limits: Optional[list[str]] = None, callback: Optional[Callable] = None) -> None:
+def mysql2fs(fh: IO[str], outdir: str, limits: Optional[list[str]] = None, callback: Optional[Callable] = None) -> None:
     if not limits:
         limits = []
     MyFS_Writer(outdir, limits).fromfile(fh, callback)
 
-def chunkify(elements: list[str], delim: str, maxlen: int) -> Generator[str, None, None]:
+def chunkify(elements: Generator[str, None, None], delim: str, maxlen: int) -> Generator[str, None, None]:
     chunk = ""
     for element in elements:
         if len(chunk) + len(delim) + len(element) > maxlen:
@@ -317,17 +332,17 @@ $sql
                 self.paths = paths
                 self.name = name
 
-            def pre_(self) -> Optional[str]:
+            def pre_(self) -> str:
                 if not exists(self.paths.pre):
-                    return None
+                    return ''
                 with open(self.paths.pre) as fob:
                     sql = fob.read().strip()
                 return Template(self.TPL_PRE).substitute(name=self.name, sql=sql)
             pre = property(pre_)
 
-            def post_(self) -> Optional[str]:
+            def post_(self) -> str:
                 if not exists(self.paths.post):
-                    return None
+                    return ''
                 with open(self.paths.post) as fob:
                     sql = fob.read().strip()
                 return Template(self.TPL_POST).substitute(name=self.name, sql=sql)
@@ -367,12 +382,12 @@ $sql
                 yield view
         views = property(views_)
 
-        def tofile(self, fh: str, callback: Optional[Callable] = None) -> None:
+        def tofile(self, fh: IO[str], callback: Optional[Callable] = None) -> None:
             if callback:
                 callback(self)
 
-            if self.myfs.add_drop_database and self.name != 'mysql':
-                print(f"/*!40000 DROP DATABASE IF EXISTS `{self.name}`*/;", file=fh)
+            if self.name != 'mysql':
+                print(f'/*!40000 DROP DATABASE IF EXISTS `{self.name}`*/;', file=fh)
             print(self.sql_init, end=' ', file=fh)
             print(f"USE `{self.name}`;", file=fh)
 
@@ -422,8 +437,8 @@ DELIMITER ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
 """
 
-        def __init__(self, database: Self, fname: str):
-            self.paths = self.Paths(join(database.paths.tables, fname))
+        def __init__(self, database: MyFS.Database, fname: str):
+            self.paths: _Paths = self.Paths(join(database.paths.tables, fname))
             with open(self.paths.init) as fob:
                 self.sql_init = fob.read()
             self.name = _match_name(self.sql_init)
@@ -432,7 +447,7 @@ DELIMITER ;
         def __repr__(self) -> str:
             return f"Table({repr(self.paths.path)})"
 
-        def rows_(self) -> str:
+        def rows_(self) -> Generator[str, None, None]:
             with open(self.paths.rows) as fob:
                 for line in fob:
                     yield line.strip()
@@ -453,7 +468,7 @@ DELIMITER ;
 
         triggers = property(triggers_)
 
-        def tofile(self, fh: str) -> None:
+        def tofile(self, fh: IO[str]) -> None:
             skip_extended_insert = self.database.myfs.skip_extended_insert
             max_extended_insert = self.database.myfs.max_extended_insert
 
@@ -520,14 +535,17 @@ DELIMITER ;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 """
 
-    def __init__(self, path: str, limits: Optional[list[str]] = None,
+    def __init__(self, path: str, limits: Optional[list[str]|DBLimits] = None,
                  skip_extended_insert: bool = False,
                  add_drop_database: bool = False,
-                 max_extended_insert: int = None):
+                 max_extended_insert: Optional[int] = None):
         if not limits:
             limits = []
         self.path = path
-        self.limits = DBLimits(limits)
+        if isinstance(limits, list):
+            self.limits = DBLimits(limits)
+        else:
+            self.limits = limits
         self.skip_extended_insert = skip_extended_insert
         self.add_drop_database = add_drop_database
 
@@ -535,13 +553,13 @@ DELIMITER ;
             max_extended_insert = self.MAX_EXTENDED_INSERT
         self.max_extended_insert = max_extended_insert
 
-    def __iter__(self) -> str:
+    def __iter__(self) -> Generator[MyFS.Database, None, None]:
         for fname in os.listdir(self.path):
             database = self.Database(self, fname)
             if database.name in self.limits:
                 yield database
 
-    def tofile(self, fh: str, callback: Optional[str] = None) -> None:
+    def tofile(self, fh: IO[str], callback: Optional[str] = None) -> None:
         print(self.PRE, file=fh)
 
         for database in self:
@@ -558,18 +576,16 @@ DELIMITER ;
 
         print(self.POST, file=fh)
 
-def fs2mysql(fh: str,
+def fs2mysql(fh: IO[str],
              myfs: str,
-             limits: Optional[list[str]] = None,
+             limits: Optional[DBLimits] = None,
              callback: Optional[str] = None,
              skip_extended_insert: bool = False,
              add_drop_database: bool = False
              ) -> None:
-    if not limits:
-        limits = []
     MyFS_Reader(myfs, limits, skip_extended_insert, add_drop_database).tofile(fh, callback)
 
-def cb_print(fh: Optioanl[str] = None) -> str:
+def cb_print(fh: Optional[IO[str]] = None) -> Callable:
     if not fh:
         fh = sys.stdout
 
@@ -603,7 +619,7 @@ def backup(myfs: str, etc: str, **kws) -> None:
 
         if not exists(myfs):
             os.mkdir(myfs)
-
+        assert mysqldump_fh is not None
         mysql2fs(mysqldump_fh, myfs, **kws)
 
         if not exists(etc):
@@ -620,10 +636,9 @@ def restore(myfs: str, etc: str, **kws) -> None:
         simulate = True
     else:
         simulate = False
-
     mna = None
     if simulate:
-        mysql_fh = file("/dev/null", "w")
+        mysql_fh = open("/dev/null", "w")
     else:
         if not MysqlService.is_running():
             raise Error("MySQL service not running")
@@ -665,9 +680,11 @@ class MysqlService:
         if not exists(cls.PID_FILE):
             return None
 
-        pid = int(file(cls.PID_FILE).read().strip())
+        with open(cls.PID_FILE) as fob:
+            pid = int(fob.read().strip())
         if cls._pid_exists(pid):
             return pid
+        return None
 
     @classmethod
     def is_running(cls) -> bool:
