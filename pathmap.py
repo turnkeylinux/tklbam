@@ -1,5 +1,6 @@
 #
 # Copyright (c) 2010-2012 Liraz Siri <liraz@turnkeylinux.org>
+# Copyright (c) 2023 TurnKey GNU/Linux <admin@turnkeylinux.org>
 #
 # This file is part of TKLBAM (TurnKey GNU/Linux BAckup and Migration).
 #
@@ -9,11 +10,11 @@
 # the License, or (at your option) any later version.
 #
 import glob
-from os.path import abspath
+from os.path import abspath, dirname
 
 class PathMap(dict):
     @staticmethod
-    def _expand(path):
+    def _expand(path: str) -> list[str]:
         def needsglob(path):
             for c in ('*?[]'):
                 if c in path:
@@ -24,9 +25,9 @@ class PathMap(dict):
         if needsglob(path):
             return glob.glob(path)
         else:
-            return [ path ]
+            return [path]
 
-    def __init__(self, paths):
+    def __init__(self, paths: list[str]) -> None:
         self.default = True
         for path in paths:
             if path[0] == '-':
@@ -40,17 +41,17 @@ class PathMap(dict):
                 self[expanded] = sign
 
     def _includes(self):
-        return [ path for path in self if self[path] ]
+        return [path for path in self if self[path]]
     includes = property(_includes)
 
     def _excludes(self):
-        return [ path for path in self if not self[path] ]
+        return [path for path in self if not self[path]]
     excludes = property(_excludes)
 
-    def __contains__(self, path):
+    def __contains__(self, path: object) -> bool:
         while path not in ('', '/'):
             if dict.__contains__(self, path):
                 return self[path]
-            path = dirname(path)
+            path = dirname(str(path))
 
         return self.default

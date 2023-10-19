@@ -11,7 +11,7 @@
 #
 import os
 import sys
-from os.path import *
+from os.path import exists, lexists, dirname, join
 
 import stat
 import shutil
@@ -29,6 +29,8 @@ from pkgman import Packages
 import utils
 import traceback
 
+from typing import Self
+
 class Error(Exception):
     pass
 
@@ -42,7 +44,7 @@ class Rollback:
                   'newpkgs', 'myfs', 'pgfs' ]
 
     @classmethod
-    def create(cls, path=PATH):
+    def create(cls, path: str = PATH) -> Self:
         if exists(path):
             shutil.rmtree(path)
         os.makedirs(path)
@@ -54,9 +56,8 @@ class Rollback:
         os.mkdir(self.paths.originals)
         return self
 
-    def __init__(self, path=PATH):
+    def __init__(self, path: str = PATH):
         """deletes path if it exists and creates it if it doesn't"""
-
         if not exists(path):
             raise Error("No such directory " + repr(path))
 
@@ -64,7 +65,7 @@ class Rollback:
         self.timestamp = datetime.fromtimestamp(os.stat(path).st_ctime)
 
     @staticmethod
-    def _move(source, dest):
+    def _move(source: str, dest: str) -> None:
         if not lexists(source):
             raise Error("no such file or directory " + repr(source))
 
@@ -74,17 +75,17 @@ class Rollback:
         utils.remove_any(dest)
         utils.move(source, dest)
 
-    def _move_to_originals(self, source):
+    def _move_to_originals(self, source: str) -> None:
         """Move source into originals"""
         dest = join(self.paths.originals, source.strip('/'))
         self._move(source, dest)
 
-    def _move_from_originals(self, dest):
+    def _move_from_originals(self, dest: str) -> None:
         """Move path from originals to dest"""
         source = join(self.paths.originals, dest.strip('/'))
         self._move(source, dest)
 
-    def rollback_files(self):
+    def rollback_files(self) -> None:
         if not exists(self.paths.fsdelta):
             return
 
@@ -125,7 +126,7 @@ class Rollback:
         if exceptions:
             raise Error("caught %d exceptions during rollback_files" % exceptions)
 
-    def rollback_new_packages(self):
+    def rollback_new_packages(self) -> None:
         if not exists(self.paths.newpkgs):
             return
 
@@ -136,7 +137,7 @@ class Rollback:
         if purge_packages:
             os.system("DEBIAN_FRONTEND=noninteractive dpkg --purge " + " ".join(purge_packages))
 
-    def rollback_database(self):
+    def rollback_database(self) -> None:
         if exists(self.paths.myfs):
             mysql.restore(self.paths.myfs, self.paths.etc.mysql,
                           add_drop_database=True)
@@ -144,7 +145,7 @@ class Rollback:
         if exists(self.paths.pgfs):
             pgsql.restore(self.paths.pgfs)
 
-    def rollback(self):
+    def rollback(self) -> None:
         exceptions = 0
         for method in (self.rollback_database, self.rollback_files, self.rollback_new_packages):
             try:
@@ -158,13 +159,13 @@ class Rollback:
         if exceptions:
             raise Error("caught %d exceptions during rollback" % exceptions)
 
-    def save_files(self, changes, overlay_path):
+    def save_files(self, changes: Changes, overlay_path: str) -> None:
         for fname in ("passwd", "group"):
             shutil.copy(join("/etc", fname), self.paths.etc)
-
         changes.tofile(self.paths.fsdelta)
         di = DirIndex()
         for change in changes:
+
             if lexists(change.path):
                 di.add_path(change.path)
                 if change.OP in ('o', 'd'):
@@ -173,7 +174,7 @@ class Rollback:
                     self._move_to_originals(change.path)
         di.save(self.paths.dirindex)
 
-    def save_new_packages(self, packages):
+    def save_new_packages(self, packages: list[str]) -> None:
         packages = list(packages)
         packages.sort()
 
@@ -181,7 +182,7 @@ class Rollback:
             for package in packages:
                 print(package, file=fob)
 
-    def save_database(self):
+    def save_database(self) -> None:
         try:
             mysql.backup(self.paths.myfs, self.paths.etc.mysql)
         except mysql.Error:
@@ -191,4 +192,3 @@ class Rollback:
             pgsql.backup(self.paths.pgfs)
         except pgsql.Error:
             pass
-

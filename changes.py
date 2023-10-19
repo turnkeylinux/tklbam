@@ -24,18 +24,20 @@ import errno
 import pwd
 import grp
 
+from typing import Optional, Generator, Self, Callable, Any
+
 class Error(Exception):
     pass
 
-def fmt_uid(uid):
+def fmt_uid(uid: int|str) -> str:
     try:
-        return pwd.getpwuid(uid).pw_name
+        return pwd.getpwuid(int(uid)).pw_name
     except:
         return str(uid)
 
-def fmt_gid(gid):
+def fmt_gid(gid: int|str) -> str:
     try:
-        return grp.getgrgid(gid).gr_name
+        return grp.getgrgid(int(gid)).gr_name
     except:
         return str(gid)
 
@@ -58,26 +60,32 @@ class Change:
 
     """
     class Base:
-        OP = None
-        def __init__(self, path):
+        OP: Optional[str] = None
+        def __init__(self, path: str):
             self.path = path
-            self._stat = None
+            self._stat: Optional[os.stat_result] = None
 
-        def stat(self):
+        def stat_(self) -> os.stat_result:
             if not self._stat:
                 self._stat = os.lstat(self.path)
 
             return self._stat
-        stat = property(stat)
 
-        def fmt(self, *args):
-            return "\t".join([self.OP, self.path] + list(map(str, args)))
+        stat = property(stat_)
 
-        def __str__(self):
+        def fmt(self, *args) -> str:
+            items = []
+            for item in [self.OP, self.path, *args]:
+                if item != None:
+                    items.append(item)
+
+            return "\t".join(items)
+
+        def __str__(self) -> str:
             return self.fmt()
 
         @classmethod
-        def fromline(cls, line):
+        def fromline(cls, line: str) -> Self:
             args = line.rstrip().split('\t')
             return cls(*args)
 
@@ -86,7 +94,7 @@ class Change:
 
     class Overwrite(Base):
         OP = 'o'
-        def __init__(self, path, uid=None, gid=None):
+        def __init__(self, path: str, uid: Optional[str] = None, gid: Optional[str] = None):
             Change.Base.__init__(self, path)
 
             if uid is None:
@@ -99,12 +107,12 @@ class Change:
             else:
                 self.gid = int(gid)
 
-        def __str__(self):
+        def __str__(self) -> str:
             return self.fmt(self.uid, self.gid)
 
     class Stat(Overwrite):
         OP = 's'
-        def __init__(self, path, uid=None, gid=None, mode=None):
+        def __init__(self, path: str, uid: Optional[str] = None, gid: Optional[str] = None, mode: Optional[str] = None):
             Change.Overwrite.__init__(self, path, uid, gid)
             if mode is None:
                 self.mode = self.stat.st_mode
@@ -114,12 +122,12 @@ class Change:
                 else:
                     self.mode = int(mode, 8)
 
-        def __str__(self):
+        def __str__(self) -> str:
             return self.fmt(self.uid, self.gid, oct(self.mode))
 
     @classmethod
-    def parse(cls, line):
-        op2class = dict((val.OP, val) for val in list(cls.__dict__.values())
+    def parse(cls, line: str) -> str:
+        op2class: dict[Optional[str], Self] = dict((val.OP, val) for val in list(cls.__dict__.values())
                         if isinstance(val, type))
         op = line[0]
         if op not in op2class:
@@ -127,7 +135,7 @@ class Change:
 
         return op2class[op].fromline(line[2:])
 
-def mkdir(path):
+def mkdir(path: str) -> None:
     try:
         os.makedirs(path)
     except OSError as e:
@@ -147,14 +155,14 @@ class Changes(list):
 
     """
     class Action:
-        def __init__(self, func, *args):
-            self.func = func
-            self.args = args
+        def __init__(self, func: Callable, *args: str):
+            self.func: Callable = func
+            self.args: list[str] = list(args)
 
-        def __call__(self):
+        def __call__(self) -> str:
             return self.func(*self.args)
 
-        def __str__(self):
+        def __str__(self) -> str:
             func = self.func
             args = self.args
 
@@ -163,39 +171,42 @@ class Changes(list):
                 return "chown -h %s:%s %s" % (fmt_uid(uid), fmt_gid(gid), path)
             elif func is os.chmod:
                 path, mode = args
-                return "chmod %s %s" % (oct(mode), path)
+                return "chmod %s %s" % (oct(int(mode)), path)
             elif func is os.remove:
                 path, = args
                 return "rm " + path
             elif func is mkdir:
                 path, = args
                 return "mkdir -p " + path
+            return ''
 
-    def __add__(self, other):
+    def __add__(self, other: list[Any]) -> list[Any]:
         cls = type(self)
         return cls(list.__add__(self, other))
 
     @classmethod
-    def fromfile(cls, f, paths=None):
+    def fromfile(cls, f: str, paths: Optional[str] = None): # -> Changes:
         if f == '-':
             fh = sys.stdin
         else:
             fh = open(f)
 
-        changes = [ Change.parse(line) for line in fh.readlines() ]
+        changes = [Change.parse(line) for line in fh.readlines()]
         fh.close()
         if paths:
             pathmap = PathMap(paths)
-            changes = [ change for change in changes
-                        if change.path in pathmap ]
+            changes = []
+            for change in changes:
+                if change.path in pathmap:
+                    changes.append(change)
 
         return cls(changes)
 
-    def tofile(self, f):
+    def tofile(self, f: str) -> None:
         with open(f, "w") as fob:
             fob.writelines((str(change) + "\n" for change in self))
 
-    def deleted(self, optimized=True):
+    def deleted(self, optimized: bool = True) -> Generator[Action, None, None]:
         for change in self:
             if change.OP != 'd':
                 continue
@@ -209,7 +220,11 @@ class Changes(list):
 
             yield self.Action(os.remove, change.path)
 
-    def statfixes(self, uidmap={}, gidmap={}, optimized=True):
+    def statfixes(self,
+                  uidmap: dict[str, str] = {},
+                  gidmap: dict[str, str] = {},
+                  optimized: bool = True
+                  ) -> Generator[Action, None, None]:
         class TransparentMap(dict):
             def __getitem__(self, key):
                 if key in self:
@@ -225,8 +240,8 @@ class Changes(list):
                 # backwards compat: old backups only stored IMODE in fsdelta, so we assume S_ISDIR
                 if change.OP == 's' and (stat.S_IMODE(change.mode) == change.mode or stat.S_ISDIR(change.mode)):
                     yield self.Action(mkdir, change.path)
-                    yield self.Action(os.lchown, change.path, uidmap[change.uid], gidmap[change.gid])
-                    yield self.Action(os.chmod, change.path, stat.S_IMODE(change.mode))
+                    yield self.Action(os.lchown, change.path, str(uidmap[change.uid]), gidmap[change.gid])
+                    yield self.Action(os.chmod, change.path, str(stat.S_IMODE(change.mode)))
 
                 if optimized:
                     continue
@@ -252,9 +267,9 @@ class Changes(list):
                 if not optimized or \
                     (not islink(change.path) and \
                      stat.S_IMODE(st.st_mode) != stat.S_IMODE(change.mode)):
-                    yield self.Action(os.chmod, change.path, stat.S_IMODE(change.mode))
+                    yield self.Action(os.chmod, change.path, str(stat.S_IMODE(change.mode)))
 
-def whatchanged(di_path, paths):
+def whatchanged(di_path: str, paths: str) -> Changes:
     """Compared current filesystem with a saved dirindex from before.
        Returns a Changes() list."""
 
@@ -273,4 +288,3 @@ def whatchanged(di_path, paths):
     changes += [ Change.Deleted(path) for path in deleted ]
 
     return changes
-

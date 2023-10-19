@@ -1,5 +1,6 @@
 #
 # Copyright (c) 2007-2013 Liraz Siri <liraz@turnkeylinux.org>
+# Copyright (c) 2023 TurnKey GNU/Linux <admin@turnkeylinux.org>
 #
 # This file is part of turnkey-pylib.
 #
@@ -78,9 +79,9 @@ import sys
 import pty
 import select
 from io import StringIO
-
 import signal
 
+from typing import IO, Callable, Optional
 
 class Error(Exception):
     pass
@@ -108,8 +109,14 @@ class Splicer:
        those file handles.
     """
     @staticmethod
-    def _splice(spliced_fd, usepty, transparent, tee=[]):
+    def _splice(spliced_fd: int,
+                usepty: bool, transparent: bool,
+                tee: Optional[list[str]] = None
+                ) -> tuple[int, IO[str], int]:
         """splice into spliced_fd -> (splicer_pid, splicer_reader, orig_fd_dup)"""
+
+        if not tee:
+            tee = []
 
         # duplicate the fd we want to trap for safe keeping
         orig_fd_dup = os.dup(spliced_fd)
@@ -154,7 +161,6 @@ class Splicer:
         # we don't need this copy of spliced_fd
         # keeping it open will prevent it from closing
         os.close(spliced_fd)
-
         set_blocking(r, False)
         set_blocking(outpipe.fileno(), False)
 
@@ -184,7 +190,7 @@ class Splicer:
             try:
                 events = poll.poll(1)
             except select.error:
-                events = ()
+                events = list(())
 
             for fd, mask in events:
                 if fd == r:
@@ -213,7 +219,7 @@ class Splicer:
 
         os._exit(0)
 
-    def __init__(self, spliced_fd, usepty=False, transparent=False, tee=[]):
+    def __init__(self, spliced_fd: int, usepty: bool = False, transparent: bool = False, tee: Optional[list[str]] = None):
         if tee is None:
             tee = []
 
@@ -225,7 +231,7 @@ class Splicer:
 
         self.spliced_fd = spliced_fd
 
-    def close(self):
+    def close(self) -> str:
         """closes the splice -> captured output"""
         # dupping orig_fd_dup -> spliced_fd does two things:
         # 1) it closes spliced_fd - signals our splicer process to stop reading
@@ -245,11 +251,11 @@ class SignalEvent:
     SIG = signal.SIGUSR1
 
     @classmethod
-    def send(cls, pid):
+    def send(cls, pid: int) -> None:
         """send signal event to pid"""
         os.kill(pid, cls.SIG)
 
-    def _sighandler(self, sig, frame):
+    def _sighandler(self, sig: signal.Signals, frame: bytes) -> None:
         self.value = True
 
     def __init__(self):
@@ -264,13 +270,14 @@ class SignalEvent:
 
 
 class Pipe:
+    fileno: Callable
     def __init__(self):
         r, w = os.pipe()
         self.r = os.fdopen(r, "rb")
         self.w = os.fdopen(w, "wb")
 
 
-def set_blocking(fd, block):
+def set_blocking(fd: int, block: bool) -> None:
     import fcntl
     arg = os.O_NONBLOCK
     if block:
@@ -279,17 +286,17 @@ def set_blocking(fd, block):
 
 
 class Sink:
-    def __init__(self, fd):
+    def __init__(self, fd: int):
         if hasattr(fd, 'fileno'):
             fd = fd.fileno()
 
         self.fd = fd
-        self.data = ''
+        self.data: bytes = b''
 
-    def buffer(self, data):
-        self.data += data.decode()
+    def buffer(self, data: bytes) -> None:
+        self.data += data
 
-    def write(self):
+    def write(self) -> bool:
         try:
             written = os.write(self.fd, self.data)
         except:
@@ -302,9 +309,14 @@ class Sink:
 
 
 class StdTrap:
-    def __init__(self, stdout=True, stderr=True, usepty=False,
-                 transparent=False, stdout_tee=[], stderr_tee=[]):
-
+    def __init__(self,
+                 stdout: bool = True, stderr: bool = True, usepty: bool = False,
+                 transparent: bool = False,
+                 stdout_tee: Optional[list[str]] = None, stderr_tee: Optional[list[str]] = None):
+        if not stdout_tee:
+            stdout_tee = []
+        if not stderr_tee:
+            stderr_tee = []
         self.usepty = pty
         self.transparent = transparent
 
@@ -321,10 +333,10 @@ class StdTrap:
             self.stderr_splice = Splicer(sys.stderr.fileno(), usepty,
                                          transparent, stderr_tee)
 
-        self.stdout = None
-        self.stderr = None
+        self.stdout: Optional[IO[str]] = None
+        self.stderr: Optional[IO[str]] = None
 
-    def close(self):
+    def close(self) -> None:
         if self.stdout_splice:
             sys.stdout.flush()
             self.stdout = StringIO(self.stdout_splice.close())
@@ -335,7 +347,9 @@ class StdTrap:
 
 
 class UnitedStdTrap:
-    def __init__(self, usepty=False, transparent=False, tee=[]):
+    def __init__(self, usepty: bool = False, transparent: bool = False, tee: Optional[list[str]] = None):
+        if not tee:
+            tee == []
         self.usepty = usepty
         self.transparent = transparent
 
@@ -347,23 +361,25 @@ class UnitedStdTrap:
         self.stderr_dupfd = os.dup(sys.stderr.fileno())
         os.dup2(sys.stdout.fileno(), sys.stderr.fileno())
 
-        self.std = self.stderr = self.stdout = None
+        self.std: Optional[IO[str]] = None
+        self.stderr: Optional[IO[str]] = None
+        self.stdout: Optional[IO[str]] = None
 
-    def close(self):
+    def close(self) -> None:
         sys.stdout.flush()
-        self.std = self.stderr = self.stdout = StringIO(
-                                            self.stdout_splice.close())
+        self.stderr = self.stdout = StringIO(self.stdout_splice.close())
 
         sys.stderr.flush()
         os.dup2(self.stderr_dupfd, sys.stderr.fileno())
         os.close(self.stderr_dupfd)
 
 
-def silence(callback, args=()):
+def silence(callback: Callable, args: Optional[list[str]] = None) -> str:
     """convenience function - traps stdout and stderr for callback.
     Returns (ret, trapped_output)
     """
-
+    if not args:
+        args = []
     trap = UnitedStdTrap()
     try:
         ret = callback(*args)
@@ -373,21 +389,30 @@ def silence(callback, args=()):
     return ret
 
 
-def getoutput(callback, args=()):
+def getoutput(callback: Callable, args: Optional[list[str]] = None) -> str:
+    if not args:
+        args = []
     trap = UnitedStdTrap()
     try:
         callback(*args)
     finally:
         trap.close()
 
-    return trap.std.read()
+    if trap.std:
+        return trap.std.read()
+    return ''
 
 
 def tests():
-    def test(transparent=False):
+    def test(transparent: bool = False) -> None:
         def sysprint():
             os.system("echo echo stdout")
             os.system("echo echo stderr 1>&2")
+
+        def _read(stdout) -> str:
+            if stdout:
+                return stdout.read()
+            return ''
 
         print("--- 1:")
 
@@ -396,16 +421,16 @@ def tests():
         print("printing to united stderr...", file=sys.stderr)
         sysprint()
         s.close()
-
-        print('trapped united stdout and stderr: """%s"""' % s.std.read())
+        print('trapped united stdout and stderr: """%s"""' % _read(s.stdout))
         print("printing to stderr", file=sys.stderr)
 
         print("--- 2:")
 
         s = StdTrap(transparent=transparent)
         s.close()
-        print('nothing in stdout: """%s"""' % s.stdout.read())
-        print('nothing in stderr: """%s"""' % s.stderr.read())
+
+        print('nothing in stdout: """%s"""' % _read(s.stdout))
+        print('nothing in stderr: """%s"""' % _read(s.stdout))
 
         print("--- 3:")
 
@@ -415,8 +440,8 @@ def tests():
         sysprint()
         s.close()
 
-        print('trapped stdout: """%s"""' % s.stdout.read())
-        print('trapped stderr: """%s"""' % s.stderr.read(), file=sys.stderr)
+        print('trapped stdout: """%s"""' % _read(s.stdout))
+        print('trapped stderr: """%s"""' % _read(s.stdout), file=sys.stderr)
 
     def test2():
         trap = StdTrap(stdout=True, stderr=True, transparent=False)
@@ -498,7 +523,7 @@ def tests():
     test_tee()
 
 
-def usage(e=None):
+def usage(e: Optional[str] = None):
     if e:
         print("error: " + str(e), file=sys.stderr)
 
