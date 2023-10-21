@@ -73,11 +73,11 @@ class Change:
 
         stat = property(stat_)
 
-        def fmt(self, *args) -> str:
+        def fmt(self, *args: str) -> str:
             items = []
             for item in [self.OP, self.path, *args]:
                 if item != None:
-                    items.append(item)
+                    items.append(str(item))
 
             return "\t".join(items)
 
@@ -204,7 +204,8 @@ class Changes(list):
 
     def tofile(self, f: str) -> None:
         with open(f, "w") as fob:
-            fob.writelines((str(change) + "\n" for change in self))
+            for change in self:
+                fob.writelines(str(change) + "\n")
 
     def deleted(self, optimized: bool = True) -> Generator[Action, None, None]:
         for change in self:
