@@ -15,11 +15,11 @@ Execute an internal command
 """
 import os
 from os.path import realpath
-from cliwrapper import CliWrapper
+from cliwrapper import CliWrapper as CliWrapper_
 
 import cmd_internals
 
-class CliWrapper(CliWrapper):
+class CliWrapper(CliWrapper_):
     DESCRIPTION = __doc__
     PATH = cmd_internals.__path__
 

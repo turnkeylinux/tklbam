@@ -13,7 +13,6 @@ import sys
 
 import os
 from os.path import isdir, exists, join
-import logging
 
 import userdb
 import pkgman
@@ -36,7 +35,8 @@ from temp import TempFile
 class Error(Exception):
     pass
 
-def system(command: list[str]) -> None:
+
+def system(command: str) -> int:
     sys.stdout.flush()
     sys.stderr.flush()
     return os.system(command)
@@ -46,7 +46,11 @@ class Restore:
 
     PACKAGES_BLACKLIST = ['linux-*', 'vmware-tools*']
 
-    def __init__(self, backup_extract_path: bytes, limits: list = [], rollback: bool = True, simulate: bool = False):
+    def __init__(self,
+                 backup_extract_path: bytes,
+                 limits: list = [],
+                 rollback: bool = True,
+                 simulate: bool = False):
         self.extras = backup.ExtrasPaths(backup_extract_path)
         if not isdir(self.extras.path):
             raise self.Error("illegal backup_extract_path: can't find '%s'" % self.extras.path)
@@ -173,13 +177,10 @@ class Restore:
                  if fpath in pathmap ] 
 
     @staticmethod
-    def _apply_overlay(src: bytes, dst: bytes, olist: bytes) -> None:
-        logging.debug(f'_apply_overlay( {src=}, {dst=}, {olist=}')
+    def _apply_overlay(src: str, dst: str, olist: list[str]) -> None:
         tmp = TempFile("fsdelta-olist-")
         for fpath in olist:
-            logging.debug(f'1 {fpath=} (type={type(fpath)}) {tmp=} (type={type(tmp)})')
             b_fpath = fpath.lstrip('/').encode()
-            logging.debug(f'2 {b_fpath=} (type={type(b_fpath)}) {tmp=} (type={type(tmp)})')
             print(b_fpath, file=tmp)
         tmp.close()
 
@@ -196,9 +197,7 @@ class Restore:
         limits = self.limits.fs
 
         print(fmt_title("FILES - restoring files, ownership and permissions", '-'))
-
         passwd, group, uidmap, gidmap = self._userdb_merge(extras.etc, "/etc")
-
         if uidmap or gidmap:
             print("MERGING USERS AND GROUPS:\n")
 
@@ -211,10 +210,8 @@ class Restore:
 
         changes = Changes.fromfile(extras.fsdelta, limits)
         deleted = list(changes.deleted())
-
         if rollback:
             rollback.save_files(changes, overlay)
-
         fsdelta_olist = self._get_fsdelta_olist(extras.fsdelta_olist, limits)
         if fsdelta_olist:
             print("OVERLAY:\n")

@@ -126,14 +126,22 @@ class Change:
             return self.fmt(self.uid, self.gid, oct(self.mode))
 
     @classmethod
-    def parse(cls, line: str) -> str:
-        op2class: dict[Optional[str], Self] = dict((val.OP, val) for val in list(cls.__dict__.values())
-                        if isinstance(val, type))
+    def parse(cls, line: str) -> Base:
+        #op2class: dict[Optional[str], Self] = dict((val.OP, val) for val in list(cls.__dict__.values())
+        #                if isinstance(val, type))
+        op2class: dict[Optional[str], Self]
+        for val in list(cls.__dict__.values()):
+            if isinstance(val, type):
+                op2class[val.OP] = val  # type: ignore[attr-defined,assignment]
+                # error: "type" has no attribute "OP"  [attr-defined]
+                # Incompatible types in assignment (expression has type "type", target has type "Self")  [assignment]
+
         op = line[0]
         if op not in op2class:
             raise Error("illegal change line: " + line)
 
-        return op2class[op].fromline(line[2:])
+        return op2class[op].fromline(line[2:])  # type: ignore[attr-defined]
+        # "Self" has no attribute "fromline"  [attr-defined]
 
 def mkdir(path: str) -> None:
     try:
@@ -185,7 +193,7 @@ class Changes(list):
         return cls(list.__add__(self, other))
 
     @classmethod
-    def fromfile(cls, f: str, paths: Optional[str] = None): # -> Changes:
+    def fromfile(cls, f: str, paths: Optional[list[str]] = None): # -> Changes:
         if f == '-':
             fh = sys.stdin
         else:
@@ -195,10 +203,11 @@ class Changes(list):
         fh.close()
         if paths:
             pathmap = PathMap(paths)
-            changes = []
+            changes_ = []
             for change in changes:
                 if change.path in pathmap:
-                    changes.append(change)
+                    changes_.append(change)
+            return cls(changes_)
 
         return cls(changes)
 

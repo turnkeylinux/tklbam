@@ -12,27 +12,29 @@
 import re
 import os
 import stat
-from os.path import *
+from os.path import lexists, islink, isdir, join
 
 from pathmap import PathMap
+
+from dataclasses import dataclass
+from typing import Optional, Self, Generator, IO
 
 class Error(Exception):
     pass
 
 class DirIndex(dict):
+    @dataclass
     class Record:
-        def __init__(self, path, mod, uid, gid, size, mtime,
-                     symlink=None):
-            self.path = path
-            self.mod = mod
-            self.uid = uid
-            self.gid = gid
-            self.size = size
-            self.mtime = mtime
-            self.symlink = symlink
+        path: str
+        mod: int
+        uid: int
+        gid: int
+        size: int
+        mtime: float
+        symlink: Optional[str] = None
 
         @classmethod
-        def frompath(cls, path):
+        def frompath(cls, path: str) -> Self:
             st = os.lstat(path)
 
             symlink = os.readlink(path) \
@@ -40,48 +42,52 @@ class DirIndex(dict):
 
             rec = cls(path,
                       st.st_mode,
-                      st.st_uid, st.st_gid,
-                      st.st_size, st.st_mtime,
+                      st.st_uid,
+                      st.st_gid,
+                      st.st_size,
+                      st.st_mtime,
                       symlink)
             return rec
 
         @classmethod
-        def fromline(cls, line):
-            vals = line.strip().split('\t')
-            if len(vals) not in (6, 7):
+        def fromline(cls, line: str) -> Self:
+            line_split = line.strip().split('\t')
+            if len(line_split) == 6:
+                path, mod, uid, gid, size, mtime = line_split
+                symlink = None
+            elif len(line_split) == 7:
+                path, mod, uid, gid, size, mtime, symlink = line_split
+            else:
                 raise Error("bad index record: " + line)
 
-            path = vals[0]
-            del vals[0]
+            return cls(path,
+                       int(mod, 16),
+                       int(uid, 16),
+                       int(gid, 16),
+                       int(size, 16),
+                       float(mtime),
+                       symlink)
 
-            vals = [ int(val, 16) for val in vals[:5] ] + vals[5:]
-
-            return cls(path, *vals)
-
-        def fmt(self):
-            vals = [ self.path ]
-            for val in ( self.mod, self.uid, self.gid, self.size, self.mtime ):
-                vals.append("%x" % val)
-
+        def fmt(self) -> str:
+            vals = [self.path, self.mod, self.uid,
+                    self.gid, self.size, self.mtime]
             if self.symlink:
                 vals.append(self.symlink)
+            return "\t".join(map(str, vals))
 
-            return "\t".join(vals)
-
-        def __repr__(self):
+        def __repr__(self) -> str:
             return "DirIndex.Record(%s, mod=%s, uid=%d, gid=%d, size=%d, mtime=%d)" % \
                     (repr(self.path), oct(self.mod), self.uid, self.gid, self.size, self.mtime)
 
     @classmethod
-    def create(cls, path_index, paths):
+    def create(cls, path_index: str, paths: list[str]) -> Self:
         """create index from paths"""
         di = cls()
         di.walk(*paths)
         di.save(path_index)
-
         return di
 
-    def __init__(self, fromfile=None):
+    def __init__(self, fromfile: Optional[str] = None):
         if fromfile:
             with open(fromfile) as fob:
                 for line in fob.readlines():
@@ -91,13 +97,13 @@ class DirIndex(dict):
                     rec = DirIndex.Record.fromline(line)
                     self[rec.path] = rec
 
-    def add_path(self, path):
+    def add_path(self, path: str) -> None:
         """add a single path to the DirIndex"""
         self[path] = DirIndex.Record.frompath(path)
 
-    def walk(self, *paths):
+    def walk(self, *paths: str) -> Generator[str, None, None]:
         """walk paths and add files to index"""
-        pathmap = PathMap(paths)
+        pathmap = PathMap(list(paths))
 
         def _walk(dir):
             dentries = []
@@ -129,23 +135,24 @@ class DirIndex(dict):
                     path = join(dpath, dentry)
 
                     self.add_path(path)
+        yield ''
 
-    def prune(self, *paths):
+    def prune(self, *paths: str) -> None:
         """prune index down to paths that are included AND not excluded"""
 
-        pathmap = PathMap(paths)
+        pathmap = PathMap(list(paths))
         for path in list(self.keys()):
             if not path in pathmap:
                 del self[path]
 
-    def save(self, tofile):
+    def save(self, tofile: str) -> None:
         paths = list(self.keys())
         paths.sort()
         with open(tofile, "w") as fh:
             for path in paths:
                 print(self[path].fmt(), file=fh)
 
-    def diff(self, other):
+    def diff(self, other: Self) -> tuple[list[str], list[str], list[str]]:
         a = set(self)
         b = set(other)
 
@@ -166,35 +173,38 @@ class DirIndex(dict):
 
         paths_in_both = b & a
         files_edited = []
-        def attrs_equal(attrs, a, b):
+
+        def attrs_equal(attrs: list[str], a: str, b: str) -> bool:
             for attr in attrs:
                 if getattr(a, attr) != getattr(b, attr):
                     return False
 
             return True
 
-        def symlink_equal(a, b):
+        def symlink_equal(a, #: Self,
+                          b #: Self
+                          ) -> bool:
             if a.symlink and (a.symlink == b.symlink):
                 return True
 
             return False
 
         for path in paths_in_both:
-            if not attrs_equal(('size', 'mtime'), self[path], other[path]):
+            if not attrs_equal(['size', 'mtime'], self[path], other[path]):
                 mod = other[path].mod
                 if not (stat.S_ISDIR(mod) or stat.S_ISSOCK(mod)) \
                    and not symlink_equal(self[path], other[path]):
                     files_edited.append(path)
                     continue
 
-            if not attrs_equal(('mod', 'uid', 'gid'), self[path], other[path]):
+            if not attrs_equal(['mod', 'uid', 'gid'], self[path], other[path]):
                 paths_stat.append(path)
 
         return files_new, files_edited, paths_stat
 
 create = DirIndex.create
 
-def read_paths(fh):
+def read_paths(fh: IO[str]) -> list[str]:
     paths = []
 
     for line in fh.readlines():

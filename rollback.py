@@ -31,6 +31,7 @@ import traceback
 
 from typing import Self
 
+
 class Error(Exception):
     pass
 
@@ -139,7 +140,8 @@ class Rollback:
 
     def rollback_database(self) -> None:
         if exists(self.paths.myfs):
-            mysql.restore(self.paths.myfs, self.paths.etc.mysql,
+            mysql.restore(self.paths.myfs, self.paths.etc.mysql,  # type: ignore[attr-defined]
+            # error: "str" has no attribute "mysql"  [attr-defined]
                           add_drop_database=True)
 
         if exists(self.paths.pgfs):
@@ -165,13 +167,13 @@ class Rollback:
         changes.tofile(self.paths.fsdelta)
         di = DirIndex()
         for change in changes:
-
             if lexists(change.path):
                 di.add_path(change.path)
                 if change.OP in ('o', 'd'):
                     if change.OP == 'o' and not lexists(overlay_path + change.path):
                         continue
                     self._move_to_originals(change.path)
+
         di.save(self.paths.dirindex)
 
     def save_new_packages(self, packages: list[str]) -> None:
@@ -184,7 +186,8 @@ class Rollback:
 
     def save_database(self) -> None:
         try:
-            mysql.backup(self.paths.myfs, self.paths.etc.mysql)
+            mysql.backup(self.paths.myfs, self.paths.etc.mysql)  # type: ignore[attr-defined]
+            # error: "str" has no attribute "mysql"  [attr-defined]
         except mysql.Error:
             pass
 

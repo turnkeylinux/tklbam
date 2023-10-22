@@ -1,27 +1,29 @@
 import os
-from os.path import *
+from os.path import exists
 
 import re
 
 from paths import Paths as _Paths
 import duplicity
 
+from typing import Self, Optional
+
 class Error(Exception):
     pass
 
 class Limits(list):
     @staticmethod
-    def _is_db_limit(val):
+    def _is_db_limit(val: str) -> bool:
         if re.match(r'^-?(mysql|pgsql):', val):
             return True
         else:
             return False
 
     @classmethod
-    def fromfile(cls, inputfile):
+    def fromfile(cls, inputfile: str) -> Self:
         try:
             fh = open(inputfile)
-        except:
+        except:  # FIXME no bare exceptions!
             return cls()
 
         limits = []
@@ -33,7 +35,7 @@ class Limits(list):
             limits.append(line)
         fh.close()
 
-        def is_legal(limit):
+        def is_legal(limit: str) -> bool:
             if cls._is_db_limit(limit):
                 return True
 
@@ -48,11 +50,11 @@ class Limits(list):
 
         return cls(limits)
 
-    def fs(self):
+    def fs_(self) -> list[str]:
         return [ val for val in self if not self._is_db_limit(val) ]
-    fs = property(fs)
+    fs = property(fs_)
 
-    def _db(self, namespace):
+    def _db(self, namespace: str) -> list[str]:
         db_limits = []
         for limit in self:
             m = re.match(r'^-?' + namespace + ':(.*)', limit)
@@ -64,7 +66,7 @@ class Limits(list):
 
             db_limits.append(db_limit)
 
-        def any_positives(limits):
+        def any_positives(limits: list[str]) -> bool:
             for limit in limits:
                 if limit[0] != '-':
                     return True
@@ -75,15 +77,16 @@ class Limits(list):
 
         return db_limits
 
-    def mydb(self):
+    def mydb_(self):
         return self._db('mysql')
-    mydb = property(mydb)
+    mydb = property(mydb_)
 
-    def pgdb(self):
+    def pgdb_(self):
         return self._db('pgsql')
-    pgdb = property(pgdb)
+    pgdb = property(pgdb_)
 
-    def __add__(self, b):
+    def __add__(self, b: list[str]) -> Self:  # type: ignore[override]
+    # error: Signature of "__add__" incompatible with supertype "list"  [override]
         cls = type(self)
         return cls(list.__add__(self, b))
 
@@ -97,15 +100,15 @@ class Conf(AttrDict):
     class Paths(_Paths):
         files = [ 'overrides', 'conf' ]
 
-    def _error(self, s):
+    def _error(self, s: str|Error) -> Error:
         return self.Error("%s: %s" % (self.paths.conf, s))
 
-    def __setitem__(self, name, val):
+    def __setitem__(self, name: str, val: int|str|bool) -> None:
         # sanity checking / parsing values reach us whenver someone
         # (including a method in this instance) sets an instance member
 
         if name == 'full_backup':
-            if not re.match(r'^now$|^\d+[mhDWMY]', val):
+            if not re.match(r'^now$|^\d+[mhDWMY]', str(val)):
                 raise self.Error("bad full-backup value (%s)" % val)
 
         if name == 'volsize':
@@ -121,16 +124,16 @@ class Conf(AttrDict):
                 raise self.Error("s3-parallel-uploads not a number (%s)" % val)
 
         if name == 'restore_cache_size':
-            if not re.match(r'^\d+(%|mb?|gb?)?$', val, re.IGNORECASE):
+            if not re.match(r'^\d+(%|mb?|gb?)?$', str(val), re.IGNORECASE):
                 raise self.Error("bad restore-cache value (%s)" % val)
 
         backup_skip_options = [ 'backup_skip_' + opt
                                 for opt in ('files', 'database', 'packages') ]
         if name in backup_skip_options:
             if val not in (True, False):
-                if re.match(r'^true|1|yes$', val, re.IGNORECASE):
+                if re.match(r'^true|1|yes$', str(val), re.IGNORECASE):
                     val = True
-                elif re.match(r'^false|0|no$', val, re.IGNORECASE):
+                elif re.match(r'^false|0|no$', str(val), re.IGNORECASE):
                     val = False
                 else:
                     raise self.Error("bad bool value '%s'" % val)
@@ -138,9 +141,11 @@ class Conf(AttrDict):
             if val:
                 os.environ['TKLBAM_' + name.upper()] = 'yes'
 
-        AttrDict.__setitem__(self, name, val)
+        AttrDict.__setitem__(self, name, val)  # type: ignore[assignment]
+        # Incompatible types in assignment (expression has type "str", target has type "_KT")  [assignment]
+        # Incompatible types in assignment (expression has type "Union[int, str, bool]", target has type "_VT")  [assignment]
 
-    def __init__(self, path=None):
+    def __init__(self, path: Optional[str] = None):
         AttrDict.__init__(self)
         if path is None:
             path = self.DEFAULT_PATH
@@ -148,9 +153,9 @@ class Conf(AttrDict):
         self.path = path
         self.paths = self.Paths(path)
 
-        self.secretfile = None
-        self.address = None
-        self.force_profile = None
+        self.secretfile: Optional[str] = None
+        self.address: Optional[str] = None
+        self.force_profile: Optional[str] = None
         self.overrides = Limits.fromfile(self.paths.overrides)
 
         self.volsize = duplicity.Uploader.VOLSIZE
@@ -191,4 +196,3 @@ class Conf(AttrDict):
 
                 except self.Error as e:
                     raise self._error(e)
-

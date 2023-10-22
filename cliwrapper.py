@@ -14,9 +14,12 @@ import re
 import sys
 import imp
 
+from typing import Optional
+from types import ModuleType
+
 class _Commands(dict):
     @staticmethod
-    def _list_commands(paths):
+    def _list_commands(paths: list[str]):
         commands = set()
         for path in paths:
             for file in os.listdir(path):
@@ -29,22 +32,23 @@ class _Commands(dict):
         return commands
 
     @staticmethod
-    def _get_internals_module(name, path):
+    def _get_internals_module(name: str, path: list[str]) -> ModuleType:
         modname = "cmd_" + name.replace("-", "_")
-        args = imp.find_module(modname, path)
-        return imp.load_module(modname, *args)
+        file, pathname, description = imp.find_module(modname, path)
+        return imp.load_module(modname, file, pathname, description)  # type: ignore[arg-type]
+        # error: Argument 2 to "load_module" has incompatible type "IO[Any]"; expected "Optional[_FileLike]"
 
-    def __init__(self, path):
-        for command in self._list_commands(path):
-            self[command] = self._get_internals_module(command, path)
+    def __init__(self, path: str):
+        for command in self._list_commands([path]):
+            self[command] = self._get_internals_module(command, [path])
 
 class CliWrapper:
     DESCRIPTION = ""
-    PATH = None
-    COMMANDS_USAGE_ORDER = []
+    PATH: Optional[list[str]] = None
+    COMMANDS_USAGE_ORDER: list[str] = []
 
     @classmethod
-    def _usage(cls, commands, e=None):
+    def _usage(cls, commands: dict[str, str], e: Optional[str] = None) -> None:
         if e:
             print("error: " + str(e), file=sys.stderr)
 
@@ -74,8 +78,9 @@ class CliWrapper:
         sys.exit(1)
 
     @classmethod
-    def main(cls):
-        commands = _Commands(cls.PATH)
+    def main(cls) -> None:
+        commands = _Commands(cls.PATH)  # type: ignore[arg-type]
+        # error: Argument 1 to "_Commands" has incompatible type "None"; expected "str"
 
         if os.geteuid() != 0:
             cls._usage(commands, 'Must run as root, rerun with sudo')

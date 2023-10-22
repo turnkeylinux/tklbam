@@ -363,7 +363,8 @@ $sql
                 return None
 
             for fname in os.listdir(self.paths.tables):
-                table = self.myfs.Table(self, fname)
+                table = self.myfs.Table(self, fname)  # type: ignore[call-arg]
+                # error: Too many arguments for "Table"  [call-arg]
                 if (self.name, table.name) in self.myfs.limits:
                     yield table
 
@@ -469,8 +470,10 @@ DELIMITER ;
         triggers = property(triggers_)
 
         def tofile(self, fh: IO[str]) -> None:
-            skip_extended_insert = self.database.myfs.skip_extended_insert
-            max_extended_insert = self.database.myfs.max_extended_insert
+            skip_extended_insert = self.database.myfs.skip_extended_insert  # type: ignore[attr-defined]
+            # error: "Database" has no attribute "myfs"  [attr-defined]
+            max_extended_insert = self.database.myfs.max_extended_insert  # type: ignore[attr-defined]
+            # error: "Database" has no attribute "myfs"  [attr-defined]
 
             is_log_table = (self.database.name == "mysql" and self.name in ('general_log', 'slow_log'))
 
@@ -646,7 +649,8 @@ def restore(myfs: str, etc: str, **kws) -> None:
         if not MysqlService.is_accessible():
             mna = MysqlNoAuth()
 
-        mysql_fh = mysql()
+        mysql_fh = mysql()  # type: ignore[assignment]
+        # error: Incompatible types in assignment (expression has type "Popen[Any]", variable has type "TextIOWrapper")  [assignment]
 
     try:
         fs2mysql(mysql_fh, myfs, **kws)
