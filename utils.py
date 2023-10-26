@@ -10,7 +10,7 @@
 # the License, or (at your option) any later version.
 #
 import os
-from os.path import *
+from os.path import lexists, islink, isdir
 import subprocess
 
 import shutil
@@ -19,7 +19,7 @@ import datetime
 
 from io import StringIO
 
-def remove_any(path):
+def remove_any(path: str) -> bool:
     """Remove a path whether it is a file or a directory.
        Return: True if removed, False if nothing to remove"""
 
@@ -34,15 +34,15 @@ def remove_any(path):
     return True
 
 class AttrDict(dict):
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> str:
         if name in self:
             return self[name]
         raise AttributeError("no such attribute '%s'" % name)
 
-    def __setattr__(self, name, val):
+    def __setattr__(self, name: str, val: str) -> None:
         self[name] = val
 
-def is_writeable(fpath):
+def is_writeable(fpath: str) -> bool:
     try:
         with open(fpath, "w+"):
             return True
@@ -50,7 +50,7 @@ def is_writeable(fpath):
         return False
 
 # workaround for shutil.move across-filesystem bugs
-def move(src, dst):
+def move(src: str, dst: str) -> None:
     st = os.lstat(src)
 
     is_symlink = stat.S_ISLNK(st.st_mode)
@@ -66,7 +66,7 @@ def move(src, dst):
         shutil.move(src, dst)
         os.lchown(dst, st.st_uid, st.st_gid)
 
-def apply_overlay(src, dst, olist_path):
+def apply_overlay(src: str, dst: str, olist_path: str) -> None:
     # rewrite using rsync - should be doing the same...
     subprocess.run(['rsync', '-avz', '--min-size=1', f'--files-from={olist_path}', src, dst])
     # old code:
@@ -74,10 +74,10 @@ def apply_overlay(src, dst, olist_path):
     # executil.getoutput("tar --create --files-from=%s | tar --extract --directory %s" %
     #                   (olist_path, executil.mkarg(dst)))
 
-def fmt_title(title, c='='):
+def fmt_title(title: str, c: str = '=') -> str:
     return title + "\n" + c * len(title) + "\n"
 
-def fmt_timestamp():
+def fmt_timestamp() -> str:
 
     fh = StringIO()
 
@@ -88,12 +88,12 @@ def fmt_timestamp():
 
     return fh.getvalue()
 
-def path_global_or_local(path_global, path_local):
+def path_global_or_local(path_global: str, path_local: str) -> str:
     """Return global path if writeable, otherwise return local path"""
     if os.access(os.path.dirname(path_global), os.W_OK):
         return path_global
 
     return path_local
 
-def iamroot():
+def iamroot() -> bool:
     return os.getuid() == 0

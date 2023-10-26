@@ -4,7 +4,6 @@ when the object is dereferenced (by the same process that created it,
 not a subprocess)
 """
 import os
-from os.path import *
 
 from io import FileIO
 import tempfile
@@ -12,12 +11,12 @@ import shutil
 
 
 class TempFile(FileIO):
-    def __init__(self, prefix: bytes = b'tmp', suffix: bytes = b''):
+    def __init__(self, prefix: str = 'tmp', suffix: str = ''):
         fd, path = tempfile.mkstemp(suffix, prefix)
         os.close(fd)
         self.path = path
         self.pid = os.getpid()
-        super().__init__(path, mode="wb")
+        super().__init__(path, mode="w")
 
     def __del__(self):
         # sanity check in case we use fork somewhere

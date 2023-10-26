@@ -31,6 +31,7 @@ import pgsql
 import json
 
 from temp import TempFile
+from userdb import Base
 
 class Error(Exception):
     pass
@@ -47,7 +48,7 @@ class Restore:
     PACKAGES_BLACKLIST = ['linux-*', 'vmware-tools*']
 
     def __init__(self,
-                 backup_extract_path: bytes,
+                 backup_extract_path: str,
                  limits: list = [],
                  rollback: bool = True,
                  simulate: bool = False):
@@ -79,8 +80,9 @@ class Restore:
             print(fmt_title("DATABASE - unserializing MySQL databases from " + self.extras.myfs))
 
             try:
-                mysql.restore(self.extras.myfs, self.extras.etc.mysql,
+                mysql.restore(self.extras.myfs, self.extras.etc.mysql,  # type: ignore[attr-defined]
                               limits=self.limits.mydb, callback=mysql.cb_print(), simulate=self.simulate)
+                # error: "str" has no attribute "mysql"
 
             except mysql.Error as e:
                 print("SKIPPING MYSQL DATABASE RESTORE: " + str(e))
@@ -105,8 +107,8 @@ class Restore:
             return
 
         with open(newpkgs_file) as fob:
-            packages = fob.read().strip()
-        packages = [] if not packages else packages.split('\n')
+            packages_ = fob.read().strip()
+        packages = [] if not packages_ else packages_.split('\n')
 
         if not packages:
             return
@@ -154,7 +156,7 @@ class Restore:
         print()
 
     @staticmethod
-    def _userdb_merge(old_etc: list[bytes], new_etc: list[bytes]):
+    def _userdb_merge(old_etc: str, new_etc: str) -> tuple[Base, Base, dict[str, str], dict[str, str]]:
         old_passwd = join(old_etc, "passwd")
         new_passwd = join(new_etc, "passwd")
 
@@ -169,7 +171,7 @@ class Restore:
                             r(new_passwd), r(new_group))
 
     @staticmethod
-    def _get_fsdelta_olist(fsdelta_olist_path: bytes, limits: list[bytes] = []) -> None:
+    def _get_fsdelta_olist(fsdelta_olist_path: str, limits: list[str] = []) -> list[str]:
         pathmap = PathMap(limits)
         with open(fsdelta_olist_path) as fob:
             return [ fpath
@@ -180,8 +182,8 @@ class Restore:
     def _apply_overlay(src: str, dst: str, olist: list[str]) -> None:
         tmp = TempFile("fsdelta-olist-")
         for fpath in olist:
-            b_fpath = fpath.lstrip('/').encode()
-            print(b_fpath, file=tmp)
+            fpath = fpath.lstrip('/')
+            tmp.write(f'{fpath}\n'.encode())
         tmp.close()
 
         apply_overlay(src, dst, tmp.path)
@@ -202,9 +204,9 @@ class Restore:
             print("MERGING USERS AND GROUPS:\n")
 
             for olduid in uidmap:
-                print("  UID %d => %d" % (olduid, uidmap[olduid]))
+                print(f"  UID {olduid} => {uidmap[olduid]}")
             for oldgid in gidmap:
-                print("  GID %d => %d" % (oldgid, gidmap[oldgid]))
+                print(f"  GID {oldgid} => {gidmap[oldgid]}")
 
             print()
 
