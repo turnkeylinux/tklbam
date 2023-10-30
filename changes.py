@@ -129,7 +129,7 @@ class Change:
     def parse(cls, line: str) -> Base:
         #op2class: dict[Optional[str], Self] = dict((val.OP, val) for val in list(cls.__dict__.values())
         #                if isinstance(val, type))
-        op2class: dict[Optional[str], Self]
+        op2class: dict[Optional[str], Self] = {}
         for val in list(cls.__dict__.values()):
             if isinstance(val, type):
                 op2class[val.OP] = val  # type: ignore[attr-defined,assignment]
@@ -279,7 +279,7 @@ class Changes(list):
                      stat.S_IMODE(st.st_mode) != stat.S_IMODE(change.mode)):
                     yield self.Action(os.chmod, change.path, str(stat.S_IMODE(change.mode)))
 
-def whatchanged(di_path: str, paths: str) -> Changes:
+def whatchanged(di_path: str, paths: list[str]) -> Changes:
     """Compared current filesystem with a saved dirindex from before.
        Returns a Changes() list."""
 

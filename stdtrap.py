@@ -416,29 +416,29 @@ def tests():
 
         print("--- 1:")
 
-        s = UnitedStdTrap(transparent=transparent)
+        s1 = UnitedStdTrap(transparent=transparent)
         print("printing to united stdout...")
         print("printing to united stderr...", file=sys.stderr)
         sysprint()
-        s.close()
+        s1.close()
         print('trapped united stdout and stderr: """%s"""' % _read(s.stdout))
         print("printing to stderr", file=sys.stderr)
 
         print("--- 2:")
 
-        s = StdTrap(transparent=transparent)
-        s.close()
+        s2 = StdTrap(transparent=transparent)
+        s2.close()
 
         print('nothing in stdout: """%s"""' % _read(s.stdout))
         print('nothing in stderr: """%s"""' % _read(s.stdout))
 
         print("--- 3:")
 
-        s = StdTrap(transparent=transparent)
+        s3 = StdTrap(transparent=transparent)
         print("printing to stdout...")
         print("printing to stderr...", file=sys.stderr)
         sysprint()
-        s.close()
+        s3.close()
 
         print('trapped stdout: """%s"""' % _read(s.stdout))
         print('trapped stderr: """%s"""' % _read(s.stdout), file=sys.stderr)
@@ -473,7 +473,6 @@ def tests():
         print(len(trap.stdout.read()))
 
     def test4():
-        import time
         s = StdTrap(transparent=True)
         s.close()
         print('nothing in stdout: """%s"""' % s.stdout.read())

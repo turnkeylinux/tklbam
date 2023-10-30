@@ -18,6 +18,8 @@ import stat
 import shutil
 import json
 
+from typing import Optional, Self
+
 from paths import Paths
 
 from dirindex import read_paths
@@ -40,28 +42,33 @@ class ExtrasPaths(Paths):
 
         Paths.__init__(self, join(backup_root, self.PATH))
 
-    def __new__(cls, root_path=None):
+    def __new__(cls, root_path: Optional[str] = None) -> Self:
         return str.__new__(cls, root_path)
 
     files = [ 'backup-conf', 'fsdelta', 'fsdelta-olist', 'newpkgs', 'pgfs', 'myfs', 'etc', 'etc/mysql' ]
 
-def _rmdir(path):
+def _rmdir(path: str) -> None:
     if exists(path):
         shutil.rmtree(path)
 
-def _fpaths(dpath):
+def _fpaths(dpath: str) -> list[str]:
     arr = []
     for dpath, dnames, fnames in os.walk(dpath):
         for fname in fnames:
             arr.append(join(dpath, fname))
     return arr
 
-def _filter_deleted(files):
+def _filter_deleted(files: list[str]) -> list[str]:
     return [ f for f in files if exists(f) ]
 
 
 class BackupConf(AttrDict):
-    def __init__(self, profile_id, overrides, skip_files, skip_packages, skip_database):
+    def __init__(self,
+                 profile_id: str,
+                 overrides: list[str],
+                 skip_files: bool,
+                 skip_packages: bool,
+                 skip_database: bool):
         AttrDict.__init__(self)
         self.profile_id = profile_id
         self.overrides = overrides
@@ -70,7 +77,7 @@ class BackupConf(AttrDict):
         self.skip_database = skip_database
 
     @classmethod
-    def fromfile(cls, path):
+    def fromfile(cls, path: str) -> Optional[Self]:
         if not exists(path):
             return None
 
@@ -79,7 +86,7 @@ class BackupConf(AttrDict):
         return cls(*(d[attr]
                      for attr in ('profile_id', 'overrides', 'skip_files', 'skip_packages', 'skip_database')))
 
-    def tofile(self, path):
+    def tofile(self, path: str) -> None:
         with open(path, "w") as fob:
             json.dump(dict(self), fob)
 
@@ -87,11 +94,11 @@ class Backup:
     class Error(Exception):
         pass
 
-    def _write_new_packages(self, dest, base_packages):
+    def _write_new_packages(self, dest: str, base_packages: list[str]) -> None:
         base_packages = Packages.fromfile(base_packages)
         current_packages = Packages()
 
-        new_packages = list(current_packages - base_packages)
+        new_packages = [x for x in current_packages if x not in base_packages]
         new_packages.sort()
 
         if new_packages:
@@ -106,8 +113,10 @@ class Backup:
 
         fh.close()
 
-    def _write_whatchanged(self, dest, dest_olist, dirindex, dirindex_conf,
-                           overrides=[]):
+    def _write_whatchanged(self, dest: str, dest_olist: str,
+                           dirindex: str, dirindex_conf: str,
+                           overrides: list[str] = []
+                           ) -> None:
         paths = read_paths(open(dirindex_conf))
         paths += overrides
 
@@ -133,7 +142,7 @@ class Backup:
                 if action.func is os.chmod:
                     path, mode = action.args
                     default_mode = (0o777 if isdir(path) else 0o666) ^ umask
-                    if default_mode == stat.S_IMODE(mode):
+                    if default_mode == stat.S_IMODE(int(mode)):
                         continue
                 elif action.func is os.lchown:
                     path, uid, gid = action.args
@@ -147,7 +156,7 @@ class Backup:
                 for path in olist:
                     self._log("  " + path)
 
-    def _create_extras(self, extras, profile, conf):
+    def _create_extras(self, extras: ExtrasPaths, profile: str, conf: BackupConf) -> None:
         os.mkdir(extras.path)
         os.chmod(extras.path, 0o700)
 
@@ -196,12 +205,14 @@ class Backup:
             except pgsql.Error:
                 pass
 
-    def _log(self, s=""):
+    def _log(self, s: str = "") -> None:
         if self.verbose:
             print(s)
 
-    def __init__(self, profile, overrides, 
-                 skip_files=False, skip_packages=False, skip_database=False, resume=False, verbose=True, extras_root="/"):
+    def __init__(self, profile: str, overrides: list[str],
+            skip_files: bool = False,skip_packages: bool = False,
+            skip_database: bool = False, resume: bool = False,
+            verbose: bool = True, extras_root: str = "/"):
 
         self.verbose = verbose
 
@@ -270,7 +281,7 @@ class Backup:
 
         self.extras_paths = extras_paths
 
-    def dump(self, path):
+    def dump(self, path: str) -> str:
         def r(p):
             return join(path, p.lstrip('/'))
 

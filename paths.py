@@ -37,12 +37,12 @@ class DefaultPath(Paths):
         return cls(path)
 
 paths = BarPaths("/tmp")
-print paths.foo
-print paths.sub_dir
-print paths.sub_dir.sub_file
-print paths.sub_dir2.sub_file2
+print(paths.foo)
+print(paths.sub_dir)
+print(paths.sub_dir.sub_file)
+print(paths.sub_dir2.sub_file2)
 
-print paths.make_relative(paths.sub_dir, paths.sub_dir.sub_file)
+print(paths.make_relative(paths.sub_dir, paths.sub_dir.sub_file))
 
 """
 import re

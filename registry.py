@@ -14,11 +14,12 @@
 
 import os
 import re
-from os.path import *
+from os.path import exists, basename, abspath, isdir
 from paths import Paths as _Paths
 import json
 
 from datetime import datetime
+from typing import Optional
 
 import shutil
 from utils import AttrDict
@@ -70,7 +71,7 @@ Run "tklbam-init --help" for further details.
                  'backup-resume', 'sub_apikey', 'secret', 'key', 'credentials', 'hbr',
                  'profile', 'profile/stamp', 'profile/profile_id']
 
-    def __init__(self, path: str = None):
+    def __init__(self, path: Optional[str] = None):
         if path is None:
             path = os.environ.get(self.ENV_VARNAME, self.DEFAULT_PATH)
 
@@ -81,7 +82,7 @@ Run "tklbam-init --help" for further details.
         self.path = self.Paths(path)
 
     @staticmethod
-    def _file_str(path: str, s: type = UNDEFINED) -> str:
+    def _file_str(path: str, s: str type = UNDEFINED) -> Optional[str]:
         if s is UNDEFINED:
             if not exists(path):
                 return None
@@ -98,6 +99,8 @@ Run "tklbam-init --help" for further details.
                 os.chmod(path, 0o600)
                 print(s, file=fh)
 
+        return None
+
     @classmethod
     def _file_tuple(cls, path: str, t: type = UNDEFINED) -> tuple[str, str, str]:
         if t and t is not UNDEFINED:
@@ -106,6 +109,7 @@ Run "tklbam-init --help" for further details.
         retval = cls._file_str(path, t)
         if retval:
             return tuple(retval.split('\n'))
+        return None
 
     @classmethod
     def _file_dict(cls, path: str, d: type = UNDEFINED) -> AttrDict:
@@ -115,6 +119,7 @@ Run "tklbam-init --help" for further details.
         retval = cls._file_str(path, d)
         if retval:
             return AttrDict([ v.split("=", 1) for v in retval.split("\n") ])
+        return None
 
     def sub_apikey(self, val: type = UNDEFINED) -> str:
         return self._file_str(self.path.sub_apikey, val)
