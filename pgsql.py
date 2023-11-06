@@ -58,7 +58,8 @@ def dumpdb(outdir, name, tlimits=[]):
 
 def restoredb(dbdump, dbname, tlimits=[]):
     manifest = file(join(dbdump, FNAME_MANIFEST)).read().splitlines()
-
+    # remove any malformed entries
+    manifest = [i for i in manifest if not i.endswith('Permission denied')]
     try:
         getoutput(su("dropdb " + dbname))
     except:
@@ -69,13 +70,13 @@ def restoredb(dbdump, dbname, tlimits=[]):
 
     try:
         command = "tar c %s 2>/dev/null" % " ".join(manifest)
-        command += " | pg_restore --create --format=tar"
+        command += " | pg_restore --create --dbname=postgres --format=tar"
         for (table, sign) in tlimits:
             if sign:
                 command += " --table=" + table
         command += " | " + su("cd $HOME; psql")
         system(command)
-        
+
     finally:
         os.chdir(orig_cwd)
 
