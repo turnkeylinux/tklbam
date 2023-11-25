@@ -10,19 +10,21 @@
 # the License, or (at your option) any later version.
 #
 import sys
-import os
 import re
 import subprocess
+from typing import Generator, Self, Optional
 
 from fnmatch import fnmatch
+
 
 class Error(Exception):
     pass
 
-def installed():
+
+def installed() -> list[str]:
     """Return list of installed packages"""
 
-    def parse_status(path):
+    def parse_status(path: str) -> Generator[str, None, None]:
         control = ""
         with open(path) as fob:
             for line in fob.readlines():
@@ -37,70 +39,74 @@ def installed():
 
     packages = []
     for control in parse_status("/var/lib/dpkg/status"):
-        d = dict([ re.split(':\s*', line, 1)
-                   for line in control.split('\n')
-                   if line and (':' in line) and (line[0] != ' ') ])
+        d = dict([re.split(r':\s*', line, 1)
+                  for line in control.split('\n')
+                  if line and (':' in line) and (line[0] != ' ')])
 
         if "ok installed" in d['Status']:
             packages.append(d['Package'])
 
     return packages
 
+
 class Packages(set):
     @classmethod
-    def fromfile(cls, path):
+    def fromfile(cls, path: str) -> Self:
         with open(path) as fob:
             packages = fob.read().strip().split('\n')
         return cls(packages)
 
-    def tofile(self, path):
+    def tofile(self, path: str) -> None:
         packages = list(self)
         packages.sort()
-
         with open(path, "w") as fob:
-            for package in packages:
-                print(package, file=fob)
+            fob.write('\n'.join(packages) + '\n')
 
-    def __init__(self, packages=None):
+    def __init__(self, packages: Optional[list[str]] = None) -> None:
         """If <packages> is None we get list of packages from the package
         manager.
         """
         if packages is None:
-            packages = installed()
+            packages_ = installed()
+        else:
+            packages_ = packages
+        set.__init__(self, packages_)
 
-        set.__init__(self, packages)
 
 class AptCache(set):
     Error = Error
 
-    def __init__(self, packages):
-        command = "apt-cache show " + " ".join(packages)
-        status, output = subprocess.getstatusoutput(command)
-        status = os.WEXITSTATUS(status)
-        if status not in (0, 100):
-            raise self.Error("execution failed (%d): %s\n%s" % (status, command, output))
-
-        cached = [ line.split()[1]
-                   for line in output.split("\n") if
-                   line.startswith("Package: ") ]
-
+    def __init__(self, packages: list[str]) -> None:
+        command = ["apt-cache", "show", *packages]
+        p = subprocess.run(command, capture_output=True, text=True)
+        if p.returncode not in (0, 100):
+            raise self.Error("execution failed (%d): %s\n%s" % (p.returncode,
+                                                                ''.join(command),
+                                                                p.stderr))
+        cached = [line.split()[1]
+                  for line in p.stdout.split("\n") if
+                  line.startswith("Package: ")]
         set.__init__(self, cached)
 
+
 class Blacklist:
-    def __init__(self, patterns):
+    def __init__(self, patterns: list[str]) -> None:
         self.patterns = patterns
 
-    def __contains__(self, val):
+    def __contains__(self, val: str) -> bool:
         if self.patterns:
             for pattern in self.patterns:
                 if fnmatch(val, pattern):
                     return True
         return False
 
-def installable(packages, blacklist=[]):
+def installable(packages: list[str], blacklist: Optional[list[str]] = None) -> tuple[list[str], list[str]]:
     installed = Packages()
     aptcache = AptCache(packages)
-    blacklist = Blacklist(blacklist)
+    if blacklist is None:
+        blacklist_ = Blacklist([])
+    else:
+        blacklist_ = Blacklist(blacklist)
 
     installable = []
     skipped = []
@@ -112,7 +118,7 @@ def installable(packages, blacklist=[]):
             skipped.append(package)
             continue
 
-        if package in blacklist:
+        if package in blacklist_:
             skipped.append(package)
             continue
 
@@ -133,34 +139,38 @@ class Installer:
     """
     Error = Error
 
-    def __init__(self, packages, blacklist=None):
-        self.installable, self.skipping = installable(packages, blacklist)
+    def __init__(self, packages: list[str], blacklist: Optional[list[str]] = None) -> None:
+        if blacklist is None:
+            blacklist_ = []
+        else:
+            blacklist_ = blacklist
+        self.installable, self.skipping = installable(packages, blacklist_)
         self.installed = None
 
         self.installable.sort()
         self.skipping.sort()
 
         if self.installable:
-            self.command = "apt-get install --assume-yes " + " ".join(self.installable)
+            self.command = ["apt-get", "install", "--assume-yes", *self.installable]
         else:
             self.command = None
 
-    def __call__(self, interactive=False):
+    def __call__(self, interactive: bool = False) -> tuple[int, str]:
         """Install packages. Return (exitcode, output) from execution of installation command
         """
         if not self.installable:
             raise Error("no installable packages")
-
-        command = self.command
+        env = {}
         if not interactive:
-            command = "DEBIAN_FRONTEND=noninteractive " + command
-
+            env = {"DEBIAN_FRONTEND": "noninteractive"}
         sys.stdout.flush()
         sys.stderr.flush()
 
+        if self.command is None:
+            return 1, 'command not set'
         packages_before = Packages()
-        retval = os.system(command)
+        p = subprocess.run(self.command, env=env, capture_output=True, text=True)
         packages_after = Packages()
 
         self.installed = packages_after - packages_before
-        return retval
+        return p.returncode, p.stdout
