@@ -13,23 +13,39 @@
 """
 Execute an internal command
 """
-import os
 from os.path import realpath
+import shlex
+
 from cliwrapper import CliWrapper as CliWrapper_
 
 import cmd_internals
 
+class TklbamCliError(Exception):
+    pass
+
 class CliWrapper(CliWrapper_):
     DESCRIPTION = __doc__
-    PATH = cmd_internals.__path__
+    PATH = list(cmd_internals.__path__)
 
 main = CliWrapper.main
 
-def fmt_internal_command(command, *args):
-    internal_command = [ realpath(__file__), command ] + list(args)
-    return ("python3", *internal_command)
+def _split(string: str) -> list[str]:
+    if '|' in string or '>' in string:
+        raise TklbamCliError(f'Invalid char in string: {string}')
+    elif ' ' in string:
+        return shlex.split(string)
+    return [string,]
+
+def fmt_internal_command(command: str, *args: list[str]|str) -> list[str]:
+    command_, *args_ = _split(command)
+    for arg in args:
+        if isinstance(arg, list):
+            args_ = [*args_, *arg]
+        elif isinstance(arg, str):
+            args_ = [*args_, *_split(arg)]
+
+    internal_command = [realpath(__file__), command_, *args_]
+    return ["python3", *internal_command]
 
 if __name__ == "__main__":
     CliWrapper.main()
-
-

@@ -20,14 +20,15 @@ Options:
 
 import sys
 import getopt
+from typing import Optional, NoReturn
 
 from rollback import Rollback
 
-def fatal(e):
+def fatal(e: str) -> NoReturn:
     print("error: " + str(e), file=sys.stderr)
     sys.exit(1)
 
-def usage(e=None):
+def usage(e: Optional[str|getopt.GetoptError] = None) -> NoReturn:
     if e:
         print("error: " + str(e), file=sys.stderr)
 
@@ -75,4 +76,3 @@ def main():
 
 if __name__=="__main__":
     main()
-

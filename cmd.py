@@ -22,19 +22,21 @@ Environment variables:
                         Default: $TKLBAM_REGISTRY
 
 """
-from os.path import *
-from cliwrapper import CliWrapper
+from os.path import realpath, dirname
+from cliwrapper import CliWrapper as CliWrapper_
 
 from string import Template
+from typing import Iterable
 
 import conf
 import registry
 
-class CliWrapper(CliWrapper):
+class CliWrapper(CliWrapper_):
+    assert __doc__ is not None
     DESCRIPTION = Template(__doc__).substitute(TKLBAM_CONF=conf.Conf.DEFAULT_PATH,
                                                TKLBAM_REGISTRY=registry._Registry.DEFAULT_PATH)
 
-    PATH = [ dirname(realpath(__file__)) ]
+    PATH: Iterable[str]|list[str] = [ dirname(realpath(__file__)) ]
     COMMANDS_USAGE_ORDER = ['init',
                             '',
                             'passphrase', 'escrow',

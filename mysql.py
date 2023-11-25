@@ -76,7 +76,7 @@ def mysqldump(**conf) -> Optional[IO[str]]:
 
     return popen.stdout
 
-def mysql(**conf) -> subprocess.Popen:
+def mysql(**conf: str|list[str]) -> subprocess.Popen:
     command = "mysql " + _mysql_opts(**conf)
 
     popen = Popen(command, shell=True, stdin=PIPE, stderr=PIPE, stdout=PIPE, text=True)
@@ -205,6 +205,7 @@ class MyFS_Writer(MyFS):
         databases: dict[str, MyFS.Database] = {}
         database: Optional[MyFS.Database] = None
         table: Optional[MyFS.Table] = None
+        table_ignore_inserts = None
 
         for statement in _parse_statements(fh):
             if statement.startswith("CREATE DATABASE"):
@@ -707,12 +708,16 @@ class MysqlService:
             return None
 
         retries = 2
+        p = None
         for i in range(retries):
             p = subprocess.run([cls.INIT_SCRIPT, "start"],
                                stdout=PIPE, stderr=STDOUT)
             if p.returncode == 0:
                 return None
-        raise Error(p.stdout)
+        if p == None:
+            raise Error('process did not run')
+        else:
+            raise Error(p.stdout)
 
     @classmethod
     def stop(cls) -> None:

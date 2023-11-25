@@ -105,21 +105,20 @@ class DirIndex(dict):
         """walk paths and add files to index"""
         pathmap = PathMap(list(paths))
 
-        def _walk(dir):
-            dentries = []
+        def _walk(dir_: str) -> Generator[tuple[str, list[str]], None, None]:
+            dentries: list[str] = []
 
-            for dentry in os.listdir(dir):
-                path = join(dir, dentry)
+            for dentry in os.listdir(dir_):
+                path = join(dir_, dentry)
                 if path in pathmap.excludes:
                     continue
-
                 dentries.append(dentry)
 
                 if not islink(path) and isdir(path):
                     for val in _walk(path):
                         yield val
 
-            yield dir, dentries
+            yield dir_, dentries
 
         for path in pathmap.includes:
             if not lexists(path):

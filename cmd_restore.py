@@ -137,8 +137,9 @@ import getopt
 from string import Template
 import re
 import shlex
+from typing import NoReturn, Optional
 
-from os.path import *  # FIXME - import specific modules
+from os.path import exists, isdir, isfile, join
 import subprocess
 from restore import Restore
 import duplicity
@@ -175,24 +176,27 @@ class ExitCode:
     INCOMPATIBLE = 10
     BADPASSPHRASE = 11
 
-def do_compatibility_check(backup_profile_id, interactive=True):
+def do_compatibility_check(backup_profile_id: str, interactive: bool = True) -> None:
     # unless both backup and restore are TurnKey skip compatibility check
     logging.info(f"do_compatibility_check({backup_profile_id=}, {interactive=})")
+
     try:
-        backup_codename = TurnKeyVersion.from_string(backup_profile_id).codename
+        bkup = TurnKeyVersion.from_string(backup_profile_id)
+        assert bkup != None
+        backup_codename = bkup.codename
     except TurnKeyVersion.Error:
-        return
+        return None
 
     turnkey_version = TurnKeyVersion.from_system()
     if not turnkey_version:
-        return
+        return None
 
     local_codename = turnkey_version.codename
 
     if local_codename == backup_codename:
-        return
+        return None
 
-    def fmt(s):
+    def fmt(s: str) -> str:
         return s.upper().replace("-", " ")
 
     backup_codename = fmt(backup_codename)
@@ -219,7 +223,7 @@ def do_compatibility_check(backup_profile_id, interactive=True):
     if answer.lower() not in ('y', 'yes'):
         fatal("You didn't answer 'yes'. Aborting!")
 
-def get_backup_record(arg):
+def get_backup_record(arg: str) -> hub.BackupRecord:
     logging.info(f"get_backup_record({arg=})")
     hb = hub_backups()
     if re.match(r'^\d+$', arg):
@@ -227,7 +231,7 @@ def get_backup_record(arg):
 
         try:
             return hb.get_backup_record(backup_id)
-        except hub.InvalidBackupError as e:
+        except hub.InvalidBackupError:
             raise Error('invalid backup id (%s)' % backup_id)
 
     # treat our argument as a pattern
@@ -242,10 +246,10 @@ def get_backup_record(arg):
 
     return matches[0]
 
-def decrypt_key(key, interactive=True):
+def decrypt_key(key: str, interactive: bool = True) -> bytes:
     logging.info(f"decrypt_key({key=}, {interactive=})")
     try:
-        return keypacket.parse(key, "")
+        return keypacket.parse(key.encode(), b"")
     except keypacket.Error:
         pass
 
@@ -257,7 +261,7 @@ def decrypt_key(key, interactive=True):
                 print("Passphrase: ")
                 p = sys.stdin.readline().strip()
 
-            return keypacket.parse(key, p)
+            return keypacket.parse(key.encode(), p.encode())
 
         except keypacket.Error:
             if not interactive:
@@ -266,14 +270,14 @@ def decrypt_key(key, interactive=True):
 
             print("Incorrect passphrase, try again", file=sys.stderr)
 
-def warn(e):
+def warn(e: str) -> None:
     print("warning: " + str(e), file=sys.stderr)
 
-def fatal(e):
+def fatal(e: str|Error) -> NoReturn:
     print("error: " + str(e), file=sys.stderr)
     sys.exit(1)
 
-def usage(e=None):
+def usage(e: Optional[str|getopt.GetoptError] = None) -> NoReturn:
     from paged import stdout
 
     if e:
@@ -311,6 +315,7 @@ def main():
     interactive = True
 
     opt_debug = False
+    log_fh = None
 
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'h',
@@ -353,9 +358,10 @@ def main():
             if not isfile(val):
                 fatal("keyfile %s does not exist or is not a file" % repr(val))
 
-            opt_key = file(val).read()
+            with open(val) as fob:
+                opt_key = fob.read()
             try:
-                keypacket.fingerprint(opt_key)
+                keypacket.fingerprint(opt_key.encode())
             except keypacket.Error:
                 fatal("'%s' is not a valid keyfile created with tklbam-escrow" % val)
 
@@ -452,6 +458,13 @@ def main():
         if not opt_address:
             usage()
 
+    def get_backup_extract() -> str:
+        print(fmt_title("Executing Duplicity to download %s to %s " % (address, raw_download_path)))
+        downloader(raw_download_path, target, log=_print if not silent else None, debug=opt_debug, force=opt_force)
+        if raw_download_path:
+            return raw_download_path
+        return ''
+
     if backup_extract_path:
         for opt, val in opts:
             if opt[2:] in ('time', 'keyfile', 'address', 'restore-cache-size', 'restore-cache-dir'):
@@ -472,31 +485,28 @@ def main():
                 do_compatibility_check(hbr.profile_id, interactive)
 
             if opt_key and \
-               keypacket.fingerprint(hbr.key) != keypacket.fingerprint(opt_key):
+               keypacket.fingerprint(hbr.key) != keypacket.fingerprint(opt_key.encode()):
 
                 fatal("invalid escrow key for the selected backup")
 
+        assert hbr != None
         key = opt_key if opt_key else hbr.key
         secret = decrypt_key(key, interactive)
 
         target = duplicity.Target(address, credentials, secret)
         downloader = duplicity.Downloader(opt_time, restore_cache_size, restore_cache_dir)
 
-        def _print(s):
+        def _print(s: str) -> None:
             print(s)
-
-        def get_backup_extract():
-            print(fmt_title("Executing Duplicity to download %s to %s " % (address, raw_download_path)))
-            downloader(raw_download_path, target, log=_print if not silent else None, debug=opt_debug, force=opt_force)
-            return raw_download_path
 
         if raw_download_path:
             get_backup_extract()
             return
         else:
-            raw_download_path = TempDir(prefix="tklbam-")
+            raw_download_path = TempDir(prefix=b"tklbam-")
             os.chmod(raw_download_path, 0o700)
 
+    assert conf.force_profile != None
     update_profile(conf.force_profile, strict=False)
 
     if not (opt_simulate or opt_debug):
@@ -506,7 +516,6 @@ def main():
             print("\n" + fmt_timestamp(), file=log_fh)
 
             log_fh.flush()
-
             trap = UnitedStdTrap(usepty=True, transparent=(False if silent else True), tee=log_fh)
     else:
         trap = None
@@ -522,6 +531,7 @@ def main():
         if not isdir(extras_paths.path):
             fatal("missing %s directory - this doesn't look like a system backup" % extras_paths.path)
 
+        assert backup_extract_path != None
         os.environ['TKLBAM_BACKUP_EXTRACT_PATH'] = backup_extract_path
 
         if not silent:
@@ -556,6 +566,7 @@ def main():
             restore.database()
 
         print()
+        logging.debug(' * just restore hook to go')
         hooks.restore.post()
 
     except:
@@ -566,6 +577,7 @@ def main():
         raise
 
     finally:
+        assert log_fh != None
         if trap:
             sys.stdout.flush()
             sys.stderr.flush()

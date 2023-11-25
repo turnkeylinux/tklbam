@@ -24,9 +24,10 @@ import getopt
 import hub
 import keypacket
 from registry import registry, hub_backups
-from passphrase import *
+from typing import Optional, NoReturn
+from passphrase import random_passphrase, get_passphrase
 
-def usage(e=None):
+def usage(e: Optional[str|getopt.GetoptError] = None) -> NoReturn:
     if e:
         print("error: " + str(e), file=sys.stderr)
 
@@ -35,11 +36,12 @@ def usage(e=None):
     sys.exit(1)
 
 def main():
+    opts = None
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], "h", ["help", "random"])
     except getopt.GetoptError as e:
         usage(e)
-
+    assert opts != None
     opt_random = False
     for opt, val in opts:
         if opt in ('-h', '--help'):
@@ -57,7 +59,7 @@ def main():
         print("(For no passphrase, just press Enter)")
         passphrase = get_passphrase()
 
-    key = keypacket.fmt(registry.secret, passphrase)
+    key = keypacket.fmt(registry.secret, passphrase.encode())
     hbr = registry.hbr
 
     # after we setup a backup record

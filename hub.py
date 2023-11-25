@@ -85,20 +85,21 @@ import base64
 import tempfile
 from datetime import datetime
 import subprocess
+from typing import Optional
 
 from py3curl_wrapper import API as _API
 from utils import AttrDict
 
 class Error(Exception):
-    def __init__(self, description, *args):
+    def __init__(self, description: str, *args: str):
         Exception.__init__(self, description, *args)
         self.description = description
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.description
 
 class APIError(Error, _API.Error):
-    def __init__(self, code, name, description):
+    def __init__(self, code: int, name: str, description: str):
         _API.Error.__init__(self, code, name, description)
 
 class NotSubscribed(Error):
@@ -106,14 +107,14 @@ class NotSubscribed(Error):
 Backups are not yet enabled for your TurnKey Hub account. Log
 into the Hub and go to the "Backups" section for instructions."""
 
-    def __init__(self, desc=DESC):
+    def __init__(self, desc: str = DESC):
         Error.__init__(self, desc)
 
 class InvalidBackupError(Error):
     pass
 
 class API(_API):
-    def request(self, method, url, attrs={}, headers={}):
+    def request(self, method: str, url: str, attrs: dict[str, str] = {}, headers: dict[str, str] = {}) -> dict[str, str]:
         try:
             return _API.request(self, method, url, attrs, headers)
         except self.Error as e:
@@ -128,14 +129,14 @@ class API(_API):
 
 class BackupRecord(AttrDict):
     @staticmethod
-    def _parse_datetime(s):
+    def _parse_datetime(s: str) -> Optional[datetime]:
         # return datetime("Y-M-D h:m:s")
         if not s:
             return None
 
         return datetime.strptime(s, "%Y-%m-%d %H:%M:%S")
 
-    def __init__(self, response):
+    def __init__(self, response: dict[str, str]):
         self.key = response['key']
         self.address = response['address']
         self.backup_id = response['backup_id']
@@ -149,7 +150,7 @@ class BackupRecord(AttrDict):
         self.label = response['description']
 
         # no interface for this in tklbam, so not returned from hub
-        self.sessions = []
+        self.sessions: list[str] = []
 
         AttrDict.__init__(self)
 
@@ -160,7 +161,7 @@ class BaseCredentials(AttrDict):
 class Credentials:
 
     class IAMRole(BaseCredentials):
-        def __init__(self, accesskey, secretkey, sessiontoken, expiration):
+        def __init__(self, accesskey: str, secretkey: str, sessiontoken: str, expiration: str):
             self.accesskey = accesskey
             self.secretkey = secretkey
             self.sessiontoken = sessiontoken
@@ -169,7 +170,7 @@ class Credentials:
             BaseCredentials.__init__(self)
 
     class IAMUser(BaseCredentials):
-        def __init__(self, accesskey, secretkey, sessiontoken):
+        def __init__(self, accesskey: str, secretkey: str, sessiontoken: str):
             self.accesskey = accesskey
             self.secretkey = secretkey
             self.sessiontoken = sessiontoken
@@ -177,7 +178,7 @@ class Credentials:
             BaseCredentials.__init__(self)
 
     class DevPay(BaseCredentials):
-        def __init__(self, accesskey, secretkey, usertoken, producttoken):
+        def __init__(self, accesskey: str, secretkey: str, usertoken: str, producttoken: str):
             self.accesskey = accesskey
             self.secretkey = secretkey
             self.usertoken = usertoken
@@ -186,7 +187,7 @@ class Credentials:
             BaseCredentials.__init__(self)
 
     @classmethod
-    def from_dict(cls, d):
+    def from_dict(cls, d: dict[str, str]) -> BaseCredentials:
 
         creds_types = dict((subcls.__name__.lower(), subcls)
                            for subcls in list(cls.__dict__.values())
@@ -215,19 +216,19 @@ class Backups:
     class NotInitialized(Error):
         pass
 
-    def __init__(self, subkey=None):
+    def __init__(self, subkey: Optional[str] = None):
         if subkey is None:
             raise self.NotInitialized("no APIKEY - tklbam not linked to the Hub")
 
         self.subkey = subkey
         self.api = API()
 
-    def _api(self, method, uri, attrs={}):
+    def _api(self, method: str, uri: str, attrs:dict[str, str] = {}) -> dict[str, str]:
         headers = { 'subkey': str(self.subkey) }
         return self.api.request(method, self.API_URL + uri, attrs, headers)
 
     @classmethod
-    def get_sub_apikey(cls, apikey):
+    def get_sub_apikey(cls, apikey: str) -> str:
         response = API().request('GET', cls.API_URL + 'subkey/', {'apikey': apikey})
         return response['subkey']
 
@@ -257,7 +258,7 @@ class Backups:
         content = base64.urlsafe_b64decode(str(response['archive_content']))
 
         fd, archive_path = tempfile.mkstemp(prefix="archive.")
-        fh = os.fdopen(fd, "w")
+        fh = os.fdopen(fd, "wb")
         fh.write(content)
         fh.close()
 
@@ -308,6 +309,5 @@ class ProfileArchive:
 
 from conf import Conf
 if os.environ.get("TKLBAM_DUMMYHUB") or os.path.exists(os.path.join(Conf.DEFAULT_PATH, "dummyhub")):
-    from dummyhub import Backups
-
-
+    from dummyhub import Backups  # type: ignore[assignment]
+    # error: Incompatible import of "Backups" (imported name has type "Type[dummyhub.Backups]", local name has type "Type[hub.Backups]")  [assignment]

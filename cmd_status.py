@@ -26,7 +26,7 @@ Exitcode:
 """
 import sys
 import getopt
-from io import StringIO
+from typing import Optional, NoReturn
 
 from registry import registry
 
@@ -47,7 +47,7 @@ class Status:
         else:
             return cls.OK
 
-def usage(e=None):
+def usage(e: Optional[str|getopt.GetoptError] = None) -> NoReturn:
     if e:
         print("error: " + str(e), file=sys.stderr)
 
@@ -57,12 +57,14 @@ def usage(e=None):
     sys.exit(1)
 
 def main():
+    opts = None
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], "h",
                                        [ "short", "help" ])
     except getopt.GetoptError as e:
         usage(e)
 
+    assert opts != None
     opt_short = False
     for opt, val in opts:
         if opt in ('-h', '--help'):

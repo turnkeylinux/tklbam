@@ -85,8 +85,9 @@ import base64
 import struct
 import hashlib
 import getopt
+from typing import NoReturn, Optional
 
-def is_valid_apikey(apikey):
+def is_valid_apikey(apikey: str) -> bool:
     padded = "A" * (20 - len(apikey)) + apikey
     try:
         struct.unpack("!L8s", base64.b32decode(padded + "=" * 4))
@@ -95,17 +96,17 @@ def is_valid_apikey(apikey):
 
     return True
 
-def generate_secret():
+def generate_secret() -> bytes:
     # effective is key size: 160-bits (SHA1)
     # base64 encoding to ensure cli safeness
     # urandom guarantees we won't block. Redundant randomness just in case.
     return base64.b64encode(hashlib.sha1(os.urandom(32)).digest()).rstrip(b"=")
 
-def fatal(e):
+def fatal(e: str|Exception) -> NoReturn:
     print("error: " + str(e), file=sys.stderr)
     sys.exit(1)
 
-def usage(e=None):
+def usage(e: Optional[str|getopt.GetoptError] = None) -> NoReturn:
     from paged import stdout
 
     if e:
@@ -150,7 +151,7 @@ def main():
 
     if not registry.registry.secret:
         registry.registry.secret = generate_secret()
-        registry.registry.key = keypacket.fmt(registry.registry.secret, "")
+        registry.registry.key = keypacket.fmt(registry.registry.secret, b"")
         print("""\
 Generated backup encryption key:
 
@@ -182,7 +183,7 @@ Generated backup encryption key:
 
             try:
                 sub_apikey = hub.Backups.get_sub_apikey(apikey)
-            except Exception as e:
+            except Exception as e:  # TODO - essentially bare exception
                 fatal(e)
 
             registry.registry.sub_apikey = sub_apikey
@@ -201,6 +202,7 @@ Generated backup encryption key:
             fatal("already initialized")
 
     if force_profile or not registry.registry.profile:
+        assert conf.force_profile != None
         try:
             registry.update_profile(conf.force_profile)
         except hub.Backups.NotInitialized:

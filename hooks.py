@@ -1,6 +1,7 @@
 import os
-from os.path import *
+from os.path import exists, isdir, join
 import subprocess
+from typing import Optional
 
 from registry import registry
 
@@ -9,7 +10,7 @@ from conf import Conf
 class HookError(Exception):
     pass
 
-def _is_signed(fpath, keyring):
+def _is_signed(fpath: str, keyring: str) -> bool:
     fpath_sig = fpath + ".sig"
     if not exists(fpath_sig):
         return False
@@ -20,7 +21,7 @@ def _is_signed(fpath, keyring):
     else:
         return False
 
-def _run_hooks(path, args, keyring=None):
+def _run_hooks(path, args, keyring: Optional[str] = None) -> None:
     if not isdir(path):
         return
 
@@ -64,22 +65,22 @@ class Hooks:
 
     PROFILE_KEYRING = "/etc/apt/trusted.gpg.d/turnkey.gpg"
 
-    def __init__(self, name):
+    def __init__(self, name: str):
         self.name = name
 
-    def _run(self, state):
+    def _run(self, state: str) -> None:
 
         _run_hooks(self.LOCAL_HOOKS, (self.name, state))
         if registry.profile:
             _run_hooks(join(registry.profile, self.BASENAME), (self.name, state), keyring=self.PROFILE_KEYRING)
 
-    def pre(self):
+    def pre(self) -> None:
         self._run("pre")
 
-    def post(self):
+    def post(self) -> None:
         self._run("post")
 
-    def inspect(self, extras_path):
+    def inspect(self, extras_path: str) -> None:
         orig_cwd = os.getcwd()
 
         os.chdir(extras_path)

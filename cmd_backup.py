@@ -124,7 +124,7 @@ Examples:
 """
 
 import os
-from os.path import *
+from os.path import exists, isdir
 
 import sys
 import getopt
@@ -136,6 +136,7 @@ import shutil
 from string import Template
 
 from pidlock import PidLock
+from typing import Optional, NoReturn
 
 import hub
 import backup
@@ -155,7 +156,7 @@ import traceback
 PATH_LOGFILE = path_global_or_local("/var/log/tklbam-backup", registry.path.backup_log)
 PATH_PIDLOCK = path_global_or_local("/var/run/tklbam-backup.pid", registry.path.backup_pid)
 
-def usage(e=None):
+def usage(e: Optional[str|getopt.GetoptError] = None) -> NoReturn:
     from paged import stdout
 
     if e:
@@ -172,10 +173,10 @@ def usage(e=None):
                                     LOGFILE=PATH_LOGFILE), file=stdout)
     sys.exit(1)
 
-def warn(e):
+def warn(e: str) -> None:
     print("warning: " + str(e), file=sys.stderr)
 
-def fatal(e):
+def fatal(e: str|hub.NotSubscribed|hub_backups.Error) -> NoReturn:
     print("error: " + str(e), file=sys.stderr)
     sys.exit(1)
 
@@ -184,13 +185,17 @@ from conffile import ConfFile
 class ServerConf(ConfFile):
     CONF_FILE="/var/lib/hubclient/server.conf"
 
-def get_server_id():
+def get_server_id() -> Optional[str]:
     try:
         return ServerConf()['serverid']
     except KeyError:
         return None
 
 def main():
+    opts = None
+    opt = None
+    val = None
+    args = None
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'qh',
                                        ['help',
@@ -208,6 +213,8 @@ def main():
 
     raw_upload_path = None
     dump_path = None
+    hb = None
+    log_fh = None
 
     opt_verbose = True
     opt_simulate = False
@@ -219,7 +226,9 @@ def main():
     conf = Conf()
     conf.secretfile = registry.path.secret
 
+    assert opts != None
     for opt, val in opts:
+
         if opt == '--dump':
             dump_path = val
 
@@ -294,11 +303,13 @@ def main():
             usage()
 
     if dump_path:
+        assert opts != None
         for opt, val in opts:
             if opt[2:] in ('simulate', 'raw-upload', 'volsize', 's3-parallel-uploads', 'full-backup', 'address', 'resume', 'disable-resume', 'raw-upload'):
                 fatal("%s incompatible with --dump=%s" % (opt, dump_path))
 
-    conf.overrides += args
+    if args != None:
+        conf.overrides += args
 
     if opt_resume:
         # explicit resume
@@ -321,10 +332,11 @@ def main():
     except lock.Locked:
         fatal("a previous backup is still in progress")
 
-    if conf.s3_parallel_uploads > 1 and conf.s3_parallel_uploads > (conf.volsize / 5):
+    if int(conf.s3_parallel_uploads) > 1 and int(conf.s3_parallel_uploads) > (int(conf.volsize) / 5):
         warn("s3-parallel-uploads > volsize / 5 (minimum upload chunk is 5MB)")
 
     if not raw_upload_path:
+        assert conf.force_profile != None
         try:
             update_profile(conf.force_profile)
         except hub.Backups.NotInitialized as e:
@@ -332,6 +344,7 @@ def main():
 
     credentials = None
     if not conf.address and not dump_path:
+        hb = None
         try:
             hb = hub_backups()
         except hub.Backups.NotInitialized as e:
@@ -392,6 +405,7 @@ def main():
     if not opt_simulate:
         registry.backup_resume_conf = conf
 
+    assert conf.secretfile != None
     with open(conf.secretfile) as fob:
         secret = fob.readline().strip()
     target = duplicity.Target(conf.address, credentials, secret)
@@ -409,9 +423,10 @@ def main():
     else:
         trap = None
 
-    def backup_inprogress(bool):
+    def backup_inprogress(bool) -> None:
         is_hub_address = registry.hbr and registry.hbr.address == conf.address
         if is_hub_address and not (dump_path or opt_simulate):
+            assert hb != None
             try:
                 hb.set_backup_inprogress(registry.hbr.backup_id, bool)
             except hb.Error as e:
@@ -431,15 +446,16 @@ def main():
 
             _print("export PASSPHRASE=$(cat %s)" % conf.secretfile)
             uploader = duplicity.Uploader(True,
-                                          conf.volsize,
+                                          int(conf.volsize),
                                           conf.full_backup,
-                                          conf.s3_parallel_uploads)
+                                          int(conf.s3_parallel_uploads))
             uploader(raw_upload_path, target, force_cleanup=not opt_resume, dry_run=opt_simulate, debug=opt_debug,
                      log=_print)
 
         else:
             hooks.backup.pre()
-            b = backup.Backup(registry.profile,
+            assert opt_resume != None
+            b = backup.Backup(str(registry.profile),
                               conf.overrides,
                               conf.backup_skip_files, conf.backup_skip_packages, conf.backup_skip_database,
                               opt_resume, True, dump_path if dump_path else "/")
@@ -453,9 +469,9 @@ def main():
                 _print("export PASSPHRASE=$(cat %s)" % conf.secretfile)
 
                 uploader = duplicity.Uploader(True,
-                                              conf.volsize,
+                                              int(conf.volsize),
                                               conf.full_backup,
-                                              conf.s3_parallel_uploads,
+                                              int(conf.s3_parallel_uploads),
                                               includes=[ b.extras_paths.path ],
                                               include_filelist=b.extras_paths.fsdelta_olist
                                                                if exists(b.extras_paths.fsdelta_olist)
@@ -482,6 +498,7 @@ def main():
 
     finally:
         backup_inprogress(False)
+        assert log_fh != None
         if trap:
             sys.stdout.flush()
             sys.stderr.flush()
@@ -490,6 +507,7 @@ def main():
             log_fh.close()
 
     if not opt_verbose and trap:
+        assert trap.std != None
         # print only the summary
         output = trap.std.read()
         m = re.search(r'(^---+\[ Backup Statistics \]---+.*)', output, re.M | re.S)
@@ -500,6 +518,7 @@ def main():
     registry.backup_resume_conf = None
 
     if not (opt_simulate or dump_path):
+        assert hb != None
         try:
             hb.updated_backup(conf.address)
         except:

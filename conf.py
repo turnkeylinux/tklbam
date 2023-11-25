@@ -23,7 +23,7 @@ class Limits(list):
     def fromfile(cls, inputfile: str) -> Self:
         try:
             fh = open(inputfile)
-        except:  # FIXME no bare exceptions!
+        except FileNotFoundError:
             return cls()
 
         limits = []
@@ -77,22 +77,24 @@ class Limits(list):
 
         return db_limits
 
-    def mydb_(self):
+    def mydb_(self) -> list[str]:
         return self._db('mysql')
     mydb = property(mydb_)
 
-    def pgdb_(self):
+    def pgdb_(self) -> list[str]:
         return self._db('pgsql')
+
     pgdb = property(pgdb_)
 
-    def __add__(self, b: list[str]) -> Self:  # type: ignore[override]
-    # error: Signature of "__add__" incompatible with supertype "list"  [override]
+    def __add__(self, b: list[str]) -> Self:
         cls = type(self)
         return cls(list.__add__(self, b))
 
 from utils import AttrDict
 
 class Conf(AttrDict):
+    volsize: str
+    s3_parallel_upload: str
     DEFAULT_PATH = os.environ.get('TKLBAM_CONF', '/etc/tklbam')
     class Error(Exception):
         pass
@@ -158,12 +160,12 @@ class Conf(AttrDict):
         self.force_profile: Optional[str] = None
         self.overrides = Limits.fromfile(self.paths.overrides)
 
-        self.volsize = duplicity.Uploader.VOLSIZE
-        self.s3_parallel_uploads = duplicity.Uploader.S3_PARALLEL_UPLOADS
-        self.full_backup = duplicity.Uploader.FULL_IF_OLDER_THAN
+        self.volsize = str(duplicity.Uploader.VOLSIZE)
+        self.s3_parallel_uploads = str(duplicity.Uploader.S3_PARALLEL_UPLOADS)
+        self.full_backup = str(duplicity.Uploader.FULL_IF_OLDER_THAN)
 
-        self.restore_cache_size = duplicity.Downloader.CACHE_SIZE
-        self.restore_cache_dir = duplicity.Downloader.CACHE_DIR
+        self.restore_cache_size = str(duplicity.Downloader.CACHE_SIZE)
+        self.restore_cache_dir = str(duplicity.Downloader.CACHE_DIR)
 
         self.backup_skip_files = False
         self.backup_skip_database = False

@@ -19,7 +19,7 @@ from types import ModuleType
 
 class _Commands(dict):
     @staticmethod
-    def _list_commands(paths: list[str]):
+    def _list_commands(paths: list[str]) -> set[str]:
         commands = set()
         for path in paths:
             for file in os.listdir(path):
@@ -38,9 +38,11 @@ class _Commands(dict):
         return imp.load_module(modname, file, pathname, description)  # type: ignore[arg-type]
         # error: Argument 2 to "load_module" has incompatible type "IO[Any]"; expected "Optional[_FileLike]"
 
-    def __init__(self, path: str):
-        for command in self._list_commands([path]):
-            self[command] = self._get_internals_module(command, [path])
+    def __init__(self, path: str|list[str]):
+        if isinstance(path, str):
+            path = [path]
+        for command in self._list_commands(path):
+            self[command] = self._get_internals_module(command, path)
 
 class CliWrapper:
     DESCRIPTION = ""
@@ -63,8 +65,12 @@ class CliWrapper:
         maxlen = max([ len(name) for name in command_names ]) + 2
         tpl = "    %%-%ds %%s" % (maxlen)
 
-        def shortdesc(command):
-            return commands[command].__doc__.strip().split('\n')[0]
+        def shortdesc(command: str) -> str:
+            docstr = commands[command].__doc__
+            if isinstance(docstr, str):
+                return docstr.strip().split('\n')[0]
+            else:
+                return ''
 
         for command in cls.COMMANDS_USAGE_ORDER:
             if command == '':
@@ -79,8 +85,8 @@ class CliWrapper:
 
     @classmethod
     def main(cls) -> None:
-        commands = _Commands(cls.PATH)  # type: ignore[arg-type]
-        # error: Argument 1 to "_Commands" has incompatible type "None"; expected "str"
+        assert cls.PATH is not None
+        commands = _Commands(cls.PATH)
 
         if os.geteuid() != 0:
             cls._usage(commands, 'Must run as root, rerun with sudo')

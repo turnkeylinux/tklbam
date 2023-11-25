@@ -76,11 +76,9 @@ UnitedStdTrap examples with tee to logfile:
 
 import os
 import sys
-import pty
 import select
 from io import StringIO
 import signal
-
 from typing import IO, Callable, Optional
 
 class Error(Exception):
@@ -174,7 +172,7 @@ class Splicer:
 
         sinks = [Sink(outpipe.fileno())]
         if tee:
-            sinks += [Sink(f) for f in tee]
+            sinks += [Sink(int(f)) for f in tee]
         if transparent:
             sinks.append(Sink(orig_fd_dup))
 
@@ -219,12 +217,12 @@ class Splicer:
 
         os._exit(0)
 
-    def __init__(self, spliced_fd: int, usepty: bool = False, transparent: bool = False, tee: Optional[list[str]] = None):
+    def __init__(self, spliced_fd: int, usepty: bool = False, transparent: bool = False, tee: Optional[IO[str]|list[str]] = None):
         if tee is None:
             tee = []
 
         if not isinstance(tee, list):
-            tee = [tee]
+            tee = [str(tee)]
 
         vals = self._splice(spliced_fd, usepty, transparent, tee)
         self.splicer_pid, self.splicer_reader, self.orig_fd_dup = vals
@@ -258,9 +256,19 @@ class SignalEvent:
     def _sighandler(self, sig: signal.Signals, frame: bytes) -> None:
         self.value = True
 
+
     def __init__(self):
         self.value = False
         signal.signal(self.SIG, self._sighandler)
+        # E ▎Argument of type "(sig: Signals, frame: bytes) -> None" cannot be assigned to parameter "handler" of type "_HANDLER" in function "signal" 
+        #    Type "(sig: Signals, frame: bytes) -> None" cannot be assigned to type "_HANDLER"
+        #        Type "(sig: Signals, frame: bytes) -> None" cannot be assigned to type "(int, FrameType | None) -> Any"
+        #    Parameter 1: type "int" cannot be assigned to type "Signals"
+        #        "int" is incompatible with "Signals"
+        #    Parameter 2: type "FrameType | None" cannot be assigned to type "bytes"
+        #        Type "FrameType | None" cannot be assigned to type "bytes"
+        #        "FrameType" is incompatible with "bytes"
+        #    "function" is incompatible with "int"
 
     def isSet(self):
         return self.value
@@ -273,8 +281,8 @@ class Pipe:
     fileno: Callable
     def __init__(self):
         r, w = os.pipe()
-        self.r = os.fdopen(r, "rb")
-        self.w = os.fdopen(w, "wb")
+        self.r = os.fdopen(r, "r")
+        self.w = os.fdopen(w, "w")
 
 
 def set_blocking(fd: int, block: bool) -> None:
@@ -286,9 +294,12 @@ def set_blocking(fd: int, block: bool) -> None:
 
 
 class Sink:
-    def __init__(self, fd: int):
-        if hasattr(fd, 'fileno'):
-            fd = fd.fileno()
+    def __init__(self, fd: int|Pipe):
+        if isinstance(fd, Pipe):
+            if hasattr(fd, 'fileno'):
+                fd = fd.fileno()
+            else:
+                raise Error('Pipe has no fileno()')
 
         self.fd = fd
         self.data: bytes = b''
@@ -297,6 +308,8 @@ class Sink:
         self.data += data
 
     def write(self) -> bool:
+        if not isinstance(self.fd, int) and isinstance(self.fd, Pipe):
+            raise Error("fd is not int or Pipe")
         try:
             written = os.write(self.fd, self.data)
         except:
@@ -308,48 +321,10 @@ class Sink:
         return False
 
 
-class StdTrap:
-    def __init__(self,
-                 stdout: bool = True, stderr: bool = True, usepty: bool = False,
-                 transparent: bool = False,
-                 stdout_tee: Optional[list[str]] = None, stderr_tee: Optional[list[str]] = None):
-        if not stdout_tee:
-            stdout_tee = []
-        if not stderr_tee:
-            stderr_tee = []
-        self.usepty = pty
-        self.transparent = transparent
-
-        self.stdout_splice = None
-        self.stderr_splice = None
-
-        if stdout:
-            sys.stdout.flush()
-            self.stdout_splice = Splicer(sys.stdout.fileno(), usepty,
-                                         transparent, stdout_tee)
-
-        if stderr:
-            sys.stderr.flush()
-            self.stderr_splice = Splicer(sys.stderr.fileno(), usepty,
-                                         transparent, stderr_tee)
-
-        self.stdout: Optional[IO[str]] = None
-        self.stderr: Optional[IO[str]] = None
-
-    def close(self) -> None:
-        if self.stdout_splice:
-            sys.stdout.flush()
-            self.stdout = StringIO(self.stdout_splice.close())
-
-        if self.stderr_splice:
-            sys.stderr.flush()
-            self.stderr = StringIO(self.stderr_splice.close())
-
-
 class UnitedStdTrap:
-    def __init__(self, usepty: bool = False, transparent: bool = False, tee: Optional[list[str]] = None):
+    def __init__(self, usepty: bool = False, transparent: bool = False, tee: Optional[IO[str]|list[str]] = None):
         if not tee:
-            tee == []
+            tee = []
         self.usepty = usepty
         self.transparent = transparent
 
@@ -403,7 +378,7 @@ def getoutput(callback: Callable, args: Optional[list[str]] = None) -> str:
     return ''
 
 
-def tests():
+def tests() -> None:
     def test(transparent: bool = False) -> None:
         def sysprint():
             os.system("echo echo stdout")
@@ -421,45 +396,14 @@ def tests():
         print("printing to united stderr...", file=sys.stderr)
         sysprint()
         s1.close()
-        print('trapped united stdout and stderr: """%s"""' % _read(s.stdout))
+        print('trapped united stdout and stderr: """%s"""' % _read(s1.stdout))
         print("printing to stderr", file=sys.stderr)
 
-        print("--- 2:")
+        print("--- 2: None")
 
-        s2 = StdTrap(transparent=transparent)
-        s2.close()
+        print("--- 3: None")
 
-        print('nothing in stdout: """%s"""' % _read(s.stdout))
-        print('nothing in stderr: """%s"""' % _read(s.stdout))
-
-        print("--- 3:")
-
-        s3 = StdTrap(transparent=transparent)
-        print("printing to stdout...")
-        print("printing to stderr...", file=sys.stderr)
-        sysprint()
-        s3.close()
-
-        print('trapped stdout: """%s"""' % _read(s.stdout))
-        print('trapped stderr: """%s"""' % _read(s.stdout), file=sys.stderr)
-
-    def test2():
-        trap = StdTrap(stdout=True, stderr=True, transparent=False)
-
-        try:
-            for i in range(1000):
-                print("A" * 70)
-                sys.stdout.flush()
-                print("B" * 70, file=sys.stderr)
-                sys.stderr.flush()
-
-        finally:
-            trap.close()
-
-        assert len(trap.stdout.read()) == 71000
-        assert len(trap.stderr.read()) == 71000
-
-    def test3():
+    def test3() -> None:
         trap = UnitedStdTrap(transparent=True)
         try:
             for i in range(10):
@@ -469,31 +413,8 @@ def tests():
                 sys.stderr.flush()
         finally:
             trap.close()
-
+        assert trap.stdout is not None
         print(len(trap.stdout.read()))
-
-    def test4():
-        s = StdTrap(transparent=True)
-        s.close()
-        print('nothing in stdout: """%s"""' % s.stdout.read())
-        print('nothing in stderr: """%s"""' % s.stderr.read())
-
-    def test_tee():
-        with open('/tmp/log', 'w') as fob:
-
-            trap = StdTrap(transparent=True, stdout_tee=fob)
-            try:
-                os.system("echo hello world")
-                for i in range(10):
-                    print(i)
-            finally:
-                trap.close()
-
-            trapped_output = trap.stdout.read()
-            logfile.close()
-
-        with open('/tmp/log', 'r') as fob:
-            assert fob.read() == trapped_output
 
     def test_united_tee():
         with open('/tmp/log', 'w') as fob:
@@ -505,9 +426,8 @@ def tests():
                     print(i)
             finally:
                 trap.close()
-
+            assert trap.std != None
             trapped_output = trap.std.read()
-            logfile.close()
 
         with open('/tmp/log', 'r') as fob:
             assert fob.read() == trapped_output
@@ -517,88 +437,5 @@ def tests():
     print("=== TRANSPARENT MODE ===")
     print()
     test(True)
-    test2()
+    test3()
     test_united_tee()
-    test_tee()
-
-
-def usage(e: Optional[str] = None):
-    if e:
-        print("error: " + str(e), file=sys.stderr)
-
-    print("""\
-python stdtrap.py [ -options ] path/to/file [ command ]
-python stdtrap.py [ -options ] "|shell command" [ command ]
-
-Execute command while sending trapped output to output-destination, and selectively logging it
-
-Arguments:
-
-    command          Shell command to execute, if none provided, execute shell.
-
-Options:
-    -q --quiet       Don't trap stdout/stderr transparently
-    -p --pty         Use a pty (psuedo-terminal) instead of a pipe to trap output
-
-Example::
-
-    # execute shell and redirect output to ~/shell.log in real-time
-    python stdtrap.py --pty /tmp/shell.log
-
-    # does the same thing as "ls -la / > /tmp/ls.log"
-    python stdtrap.py --quiet /tmp/ls.log -- ls -la /
-    """, file=sys.stderr)
-
-    sys.exit(1)
-
-
-def main():
-    import getopt
-    import subprocess
-
-    args = sys.argv[1:]
-    try:
-        opts, args = getopt.gnu_getopt(args, 'qph', ["quiet", "pty", "help"])
-    except getopt.GetoptError as e:
-        usage(e)
-
-    opt_quiet = False
-    opt_pty = False
-
-    for opt, val in opts:
-        if opt in ('-h', '--help'):
-            usage()
-
-        if opt in ('-q', '--quiet'):
-            opt_quiet = True
-
-        if opt in ('-p', '--pty'):
-            opt_pty = True
-
-    if not args:
-        usage()
-
-    output = args.pop(0)
-    if output[0] == '|':
-        output = output[1:]
-        from subprocess import Popen, PIPE
-
-        p = Popen(output, shell=True, stdin=PIPE)
-        output_fh = p.stdin
-
-    else:
-        output_fh = open(output, 'w')
-
-    command = args if args else [os.environ.get('SHELL', '/bin/bash')]
-    trap = UnitedStdTrap(usepty=opt_pty, transparent=not opt_quiet,
-                         tee=output_fh)
-    try:
-        os.system(command[0] + " ".join(subprocess.mkarg(arg)
-                                        for arg in command[1:]))
-    finally:
-        trap.close()
-        output_fh.close()
-
-
-if __name__ == '__main__':
-    main()

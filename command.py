@@ -1,5 +1,5 @@
 # Copyright (c) 2007-2011 Liraz Siri <liraz@turnkeylinux.org>
-#               2019 TurnKey GNU/Linux <admin@turnkeylinux.org>
+#               2019-2023 TurnKey GNU/Linux <admin@turnkeylinux.org>
 #
 # turnkey-command is open source software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -24,7 +24,7 @@ from io import StringIO, TextIOWrapper
 
 import popen4
 from fifobuffer import FIFOBuffer
-from fileevent import *
+from fileevent import FileEventAdaptor, Observer
 
 
 def fmt_argv(argv: list[str]) -> str:
@@ -241,7 +241,7 @@ class Command:
                 self._child.tochild.write(ctrl_c)
 
             pid = self.pid
-            if self._setpgrp:
+            if self._setpgrp and pid != None:
                 pid = -pid
 
             try:
@@ -259,7 +259,7 @@ class Command:
                     return
                 time.sleep(1)
 
-            if self.running:
+            if self.running and pid != None:
                 os.kill(pid, signal.SIGKILL)
 
                 if not self.wait(timeout=3, poll_interval=0.1):
@@ -432,14 +432,14 @@ class Command:
         if m:
             return m
 
-        ref: list[tuple[re.Pattern|str, re.Match]]
+        ref: list[tuple[re.Pattern|str, re.Match]] = []
         started = time.time()
 
         def callback(self, buf: str) -> bool:
             if buf:
                 m = check_match()
                 if m:
-                    ref[0] = m
+                    self.ref[0] = m
                     return False
 
             if buf == '':

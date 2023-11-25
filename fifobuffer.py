@@ -1,16 +1,16 @@
 class FIFOBuffer:
     """FIFO Style Buffer"""
-    def __init__(self, s=""):
+    def __init__(self, s: str = ""):
         self.buf = s
         self.rpos = 0
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.buf)
     
-    def reset(self, pos=0):
+    def reset(self, pos: int = 0) -> None:
         self.rpos = pos
 
-    def read(self, size=0, read_incomplete=False):
+    def read(self, size: int = 0, read_incomplete: bool = False) -> str:
         howmuch = len(self.buf) - self.rpos
         if size:
             if not read_incomplete and howmuch < size:
@@ -23,10 +23,10 @@ class FIFOBuffer:
             self.rpos += len(buf)
             return buf
 
-    def write(self, s):
+    def write(self, s: str) -> None:
         self.buf += s
 
-    def readline(self, read_incomplete=False):
+    def readline(self, read_incomplete: bool = False) -> str:
         """Read a line from the buffer.
         
         If 'read_incomplete' is True, will read back an incomplete line too.
@@ -45,6 +45,5 @@ class FIFOBuffer:
         self.rpos = next_endline + 1
         return next_line
 
-    def getvalue(self):
+    def getvalue(self) -> str:
         return self.buf
-    

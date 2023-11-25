@@ -24,12 +24,14 @@ Options:
 
 import sys
 import getopt
+import os
+from typing import Optional, NoReturn
 
 import keypacket
 from registry import registry
-from passphrase import *
+from passphrase import random_passphrase, get_passphrase
 
-def usage(e=None):
+def usage(e: Optional[str|getopt.GetoptError] = None) -> NoReturn:
     if e:
         print("error: " + str(e), file=sys.stderr)
 
@@ -84,7 +86,7 @@ def main():
         return get_passphrase()
 
     passphrase = _passphrase()
-    key = keypacket.fmt(registry.secret, passphrase)
+    key = keypacket.fmt(registry.secret, passphrase.encode())
 
     if keyfile == '-':
         fh = sys.stdout

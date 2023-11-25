@@ -12,10 +12,12 @@
 import os
 from os.path import lexists, islink, isdir
 import subprocess
+from subprocess import Popen, PIPE
 
 import shutil
 import stat
 import datetime
+from typing import TypeVar
 
 from io import StringIO
 
@@ -33,13 +35,17 @@ def remove_any(path: str) -> bool:
 
     return True
 
+_KT = TypeVar("_KT")
+_VT = TypeVar("_VT")
+
+
 class AttrDict(dict):
-    def __getattr__(self, name: str) -> str:
+    def __getattr__(self, name: _KT|str) -> _VT|str:
         if name in self:
             return self[name]
         raise AttributeError("no such attribute '%s'" % name)
 
-    def __setattr__(self, name: str, val: str) -> None:
+    def __setattr__(self, name: _KT|str, val: _VT,str) -> None:
         self[name] = val
 
 def is_writeable(fpath: str) -> bool:
@@ -66,13 +72,15 @@ def move(src: str, dst: str) -> None:
         shutil.move(src, dst)
         os.lchown(dst, st.st_uid, st.st_gid)
 
+class OverlayError(Exception):
+    pass
+
 def apply_overlay(src: str, dst: str, olist_path: str) -> None:
-    # rewrite using rsync - should be doing the same...
-    subprocess.run(['rsync', '-avz', '--min-size=1', f'--files-from={olist_path}', src, dst])
-    # old code:
-    # cd src
-    # executil.getoutput("tar --create --files-from=%s | tar --extract --directory %s" %
-    #                   (olist_path, executil.mkarg(dst)))
+    # refactor to use subprocess
+    p1 = Popen(['tar', '--create', f'--files-from={olist_path}'], cwd=src, stdout=PIPE)
+    p2 = subprocess.run(['tar', '--extract', '--directory', dst], stdin=p1.stdout)
+    if p2.returncode != 0 or p1.wait() != 0:
+        raise OverlayError(f"Applying overlay failed: {p2.stderr.decode()}")
 
 def fmt_title(title: str, c: str = '=') -> str:
     return title + "\n" + c * len(title) + "\n"

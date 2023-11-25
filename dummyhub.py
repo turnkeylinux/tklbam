@@ -9,6 +9,7 @@ from paths import Paths
 import pickle
 import glob
 from datetime import datetime
+from typing import Optional, Self
 
 from utils import AttrDict
 
@@ -16,7 +17,7 @@ from hub import Credentials, ProfileArchive
 from hub import Error, NotSubscribed, InvalidBackupError
 
 class APIKey:
-    def __init__(self, apikey):
+    def __init__(self, apikey: str):
         apikey = str(apikey)
         self.encoded = apikey
 
@@ -30,55 +31,83 @@ class APIKey:
         self.secret = secret
 
     @classmethod
-    def generate(cls, uid, secret=None):
+    def generate(cls, uid: str, secret: Optional[bytes] = None) -> Self:
         if secret is None:
             secret = os.urandom(8)
         else:
             secret = sha(secret).digest()[:8]
 
         packed = struct.pack("!L8s", uid, secret)
-        encoded = base64.b32encode(packed).lstrip("A").rstrip("=")
+        encoded = base64.b32encode(packed).lstrip(b"A").rstrip(b"=")
 
-        return cls(encoded)
+        return cls(encoded.decode())
 
-    def subkey(self, namespace):
+    def subkey(self, namespace: str) -> Self:
         return self.generate(self.uid, namespace + self.secret)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.encoded
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "APIKey(%s)" % repr(str(self))
 
-    def __eq__(self, other):
+    def __eq__(self, other: Self) -> bool:
         return self.encoded == other.encoded
 
-    def __ne__(self, other):
+    def __ne__(self, other: Self) -> bool:
         return not self.__eq__(other)
 
+class DummyBackupRecord(AttrDict):
+    # backup_id, address
+    def __init__(self, backup_id: str, address: str, key: str, profile_id: str, server_id: Optional[str]):
+        self.backup_id = backup_id
+        self.address = address
+        self.key = key
+        self.profile_id = profile_id
+        self.server_id = server_id
+
+        self.created = datetime.now()
+        self.updated:Optional[datetime] = None
+
+        # in MBs
+        self.size = 0
+        self.label = "TurnKey Backup"
+
+        # no user interface for this in the dummy hub
+        self.sessions: list[Self] = []
+
+    def update(self) -> None:
+        self.updated = datetime.now()
+
+        path = self.address[len("file://"):]
+
+        self.sessions = _parse_duplicity_sessions(path)
+        self.size = sum([session.size for session in self.sessions])
+
+
 class DummyUser(AttrDict):
-    def __init__(self, uid, apikey):
+    def __init__(self, uid: str, apikey: APIKey):
         self.uid = uid
         self.apikey = apikey
         self.credentials = None
-        self.backups = {}
+        self.backups = DummyBackupRecord('', '', '', '', '')
         self.backups_max = 0
 
-    def subscribe(self):
-        accesskey = base64.b64encode(sha("%d" % self.uid).digest())[:20]
+    def subscribe(self) -> None:
+        accesskey = base64.b64encode(sha(b"%d" % self.uid).digest())[:20]
         secretkey = base64.b64encode(os.urandom(30))[:40]
-        producttoken = "{ProductToken}" + base64.b64encode("\x00" + os.urandom(2) + "AppTkn" + os.urandom(224))
-        usertoken = "{UserToken}" + base64.b64encode("\x00" + os.urandom(2) + "UserTkn" + os.urandom(288))
+        producttoken = b"{ProductToken}" + base64.b64encode(b"\x00" + os.urandom(2) + b"AppTkn" + os.urandom(224))
+        usertoken = b"{UserToken}" + base64.b64encode(b"\x00" + os.urandom(2) + b"UserTkn" + os.urandom(288))
 
         self.credentials = Credentials({'accesskey': accesskey,
                                         'secretkey': secretkey,
                                         'producttoken': producttoken,
                                         'usertoken': usertoken})
 
-    def unsubscribe(self):
+    def unsubscribe(self) -> None:
         self.credentials = None
 
-    def new_backup(self, address, key, profile_id, server_id=None):
+    def new_backup(self, address: str, key: str, profile_id: str, server_id: Optional[str] = None) -> DummyBackupRecord:
         self.backups_max += 1
 
         id = str(self.backups_max)
@@ -91,7 +120,7 @@ class DummyUser(AttrDict):
 
 class DuplicityFile(AttrDict):
     @classmethod
-    def from_fname(cls, fname):
+    def from_fname(cls, fname: str) -> Optional[Self]:
         m = re.match(r'duplicity-(.*?)\.(.*?).(?:sigtar|vol.*difftar)', fname)
         if not m:
             return None
@@ -109,21 +138,21 @@ class DuplicityFile(AttrDict):
         try:
             timestamp = datetime.strptime(timestamp, "%Y%m%dT%H%M%SZ")
         except ValueError:
-            return
+            return None
 
         return cls(type, timestamp)
 
-    def __init__(self, type, timestamp):
-        self.type = type
+    def __init__(self, type_: str, timestamp: datetime):
+        self.type = type_
         self.timestamp = timestamp
 
 class DummySession(AttrDict):
-    def __init__(self, type, timestamp, size=0):
-        self.type = type
+    def __init__(self, type_: str, timestamp: datetime, size: int = 0):
+        self.type = type_
         self.timestamp = timestamp
         self.size = size
 
-def _parse_duplicity_sessions(path):
+def _parse_duplicity_sessions(path: str) -> list[AttrDict]:
     sessions = {}
     for fname in os.listdir(path):
         fpath = join(path, fname)
@@ -140,82 +169,67 @@ def _parse_duplicity_sessions(path):
 
     return list(sessions.values())
 
-class DummyBackupRecord(AttrDict):
-    # backup_id, address
-    def __init__(self, backup_id, address, key, profile_id, server_id):
-        self.backup_id = backup_id
-        self.address = address
-        self.key = key
-        self.profile_id = profile_id
-        self.server_id = server_id
-
-        self.created = datetime.now()
-        self.updated = None
-
-        # in MBs
-        self.size = 0
-        self.label = "TurnKey Backup"
-
-        # no user interface for this in the dummy hub
-        self.sessions = []
-
-    def update(self):
-        self.updated = datetime.now()
-
-        path = self.address[len("file://"):]
-
-        self.sessions = _parse_duplicity_sessions(path)
-        self.size = sum([ session.size for session in self.sessions ])
-
 class _DummyDB(AttrDict):
+    users: APIKey
     class Paths(Paths):
         files = ['users', 'profiles']
 
     @staticmethod
-    def _save(path, obj):
-        with open(path, "w") as fob:
-            pickle.dump(obj, fob)
+    def _save(path: str, obj: Optional[APIKey]) -> None:
+        if isinstance(obj, str):
+            with open(path, "wb") as fob:
+                pickle.dump(obj, fob)
 
     @staticmethod
-    def _load(path, default=None):
+    def _load(path: str, default: Optional[APIKey] = None) -> APIKey:
+        if default:
+            default_ = default
+        else:
+            default = APIKey('')
         if not exists(path):
             return default
 
         try:
-            with open(path) as fob:
+            with open(path, 'rb') as fob:
                 return pickle.load(fob)
         except:
             return default
 
-    def save(self):
+    def save(self) -> None:
         self._save(self.path.users, self.users)
 
-    def load(self):
-        self.users = self._load(self.path.users, {})
+    def load(self) -> None:
+        self.users = self._load(self.path.users, APIKey(''))
 
-    def __init__(self, path):
+    def __init__(self, path: str):
         if not exists(path):
             os.makedirs(path)
 
         self.path = self.Paths(path)
         self.load()
 
-    def get_user(self, uid):
-        if uid not in self.users:
+    def get_user(self, uid: str) -> Optional[APIKey]:
+        if self.users:
+            if uid not in self.users.keys():  # type: ignore[attr-defined]
+            # "APIKey" has no attribute "keys"  [attr-defined] XXX wtf?! but it does, doesn't it?
+                return None
+        else:
             return None
-
-        return self.users[uid]
+        return self.users[uid]  # type: ignore[index]
+        # error: Value of type "APIKey" is not indexable  [index] XXX - but it is - I tested it...
 
     def add_user(self):
         if self.users:
-            uid = max(self.users.keys()) + 1
+            uid = int(max(self.users.keys())) + 1  # type: ignore[attr-defined]
+            # this issue (same as self.users.keys() above) only shows in pyright, not mypy - perhaps because I silenced it earlier?
         else:
             uid = 1
 
-        apikey = APIKey.generate(uid)
+        apikey = APIKey.generate(str(uid))
 
-        user = DummyUser(uid, apikey)
-        self.users[uid] = user
+        user = DummyUser(str(uid), apikey)
+        self.users[uid] = user  # type: ignore[attr-defined]
+        # "__setitem__" method not defined on type "APIKey" - is only an issue in pyright...
 
         return user
 
@@ -228,7 +242,9 @@ class _DummyDB(AttrDict):
         return matches[0]
 
 try:
-    dummydb
+    dummydb  # type: ignore[used-before-def,has-type]
+    # error: Cannot determine type of "dummydb"  [has-type]
+    # error: Name "dummydb" is used before definition  [used-before-def]
 except NameError:
     dummydb = _DummyDB("/var/tmp/tklbam/dummyhub")
 
@@ -251,12 +267,12 @@ class Backups:
     SUBKEY_NS = "tklbam"
 
     @classmethod
-    def get_sub_apikey(cls, apikey):
+    def get_sub_apikey(cls, apikey: str) -> str:
         """Check that APIKey is valid and return subkey"""
-        apikey = APIKey(apikey)
-        user = dummydb.get_user(apikey.uid)
+        apikey_ = APIKey(apikey)
+        user = dummydb.get_user(apikey_.uid)
 
-        if not user or user.apikey != apikey:
+        if not user or user.apikey != apikey_:
             raise Error("invalid APIKey: %s" % apikey)
 
         return apikey.subkey(cls.SUBKEY_NS)

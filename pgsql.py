@@ -11,13 +11,18 @@
 #
 import sys
 import os
-from os.path import * # join
+from os.path import join, isdir, exists
 
 import re
 import subprocess
+from subprocess import PIPE
 import shutil
+from typing import Generator, Optional, Callable, IO
 
 from dblimits import DBLimits
+
+import logging
+logging.basicConfig(level=logging.DEBUG)
 
 FNAME_GLOBALS = ".globals.sql"
 FNAME_MANIFEST = "manifest.txt"
@@ -25,11 +30,12 @@ FNAME_MANIFEST = "manifest.txt"
 class Error(Exception):
     pass
 
-def su(command):
-    return ["su", "postgres", "-c", command]
+def su(command: list[str]) -> list[str]:
+    logging.debug(f'["su", "postgres", "-c", *command]')
+    return ["su", "postgres", "-c", *command]
 
-def list_databases():
-    p = subprocess.run(su('psql -l'), capture_output=True, text=True)
+def list_databases() -> Generator[str, None, None]:
+    p = subprocess.run(su(['psql", "-l']), capture_output=True, text=True)
     for line in p.stdout.splitlines():
         m = re.match(r'^ (\S+?)\s', line)
         if not m:
@@ -38,50 +44,66 @@ def list_databases():
         name = m.group(1)
         yield name
 
-def dumpdb(outdir, name, tlimits=[]):
+def dumpdb(outdir: str, name: str, tlimits: list[tuple[str, str|bool]] = []) -> None:
     path = join(outdir, name)
     if isdir(path):
         shutil.rmtree(path)
     os.makedirs(path)
 
     # format pg_dump command
-    pg_dump = "pg_dump --format=tar"
-    for (table, sign) in tlimits:
+    pg_dump = ["pg_dump", "--format=tar"]
+    for (table, sign) in tlimits:  # XXX this might be an issue?
         if sign:
-            pg_dump += " --table=" + table
+            pg_dump.append("--table=" + table)
         else:
-            pg_dump += " --exclude-table=" + table
-    pg_dump += " " + name
+            pg_dump.append("--exclude-table=" + table)
+    pg_dump.append(name)
 
-    p1 = subprocess.run(su(pg_dump), capture_output=True, text=True)
-    manifest = subprocess.run(["tar", "xvC", path], stdin=p1.stdout)
+    p1 = subprocess.Popen(su(pg_dump), stdout=PIPE)
+    p2 = subprocess.Popen(["tar", "xvC", path], stdin=p1.stdout, stdout=PIPE)
+    manifest, err = p2.communicate()
+    if err:
+        raise Error(err.decode())
     with open(join(path, FNAME_MANIFEST), "w") as fob:
-        fob.write(manifest + "\n")
+        fob.write(f'{manifest.decode()}\n')
 
-def restoredb(dbdump, dbname, tlimits=[]):
+def restoredb(dbdump: str, dbname: str, tlimits: list[tuple[str, str|bool]] = []) -> None:
     with open(join(dbdump, FNAME_MANIFEST)) as fob:
         manifest = fob.read().splitlines()
 
-    subprocess.run(su("dropdb " + dbname))
+    subprocess.run(su(["dropdb", dbname]))
 
     orig_cwd = os.getcwd()
     os.chdir(dbdump)
 
     try:
-        command = "tar c %s 2>/dev/null" % " ".join(manifest)
+        # command = "tar c %s 2>/dev/null" % " ".join(manifest)
         pg_restore_com = ["pg_restore", "--create", "--format=tar"]
-        for (table, sign) in tlimits:
+        for (table, sign) in tlimits:  # XXX this might be an issue? (again)
             if sign:
+                assert isinstance(sign, bool)
                 pg_restore_com.append(f"--table={table}")
-        p1 = subprocess.run(["tar", "c", *manifest], capture_output=True)
-        p2 = subprocess.run(pg_restore_com, stdin=p1.stdout, capture_output=True)
-        p3 = subprocess.run(su("cd $HOME; psql"), stdin=p2.stdout)
-        
+        p1 = subprocess.Popen(["tar", "c", *manifest], stdout=PIPE, stderr=PIPE)
+        p2 = subprocess.Popen(pg_restore_com, stdin=p1.stdout, stdout=PIPE, stderr=PIPE)
+        p3 = subprocess.Popen(su(["psql"]), stdin=p2.stdout, stdout=PIPE, stderr=PIPE)
+        p1.wait()
+        p2.wait()
+        out, err = p3.communicate()
+        if p1.returncode != 0:
+            raise Error(p1.stderr)
+        elif p2.returncode != 0:
+            raise Error(p2.stderr)
+        if err:
+            raise Error(err.decode())
+        logging.debug(f'pgsql.restordb: {out.decode()}')
+
+
     finally:
         os.chdir(orig_cwd)
 
-def pgsql2fs(outdir, limits=[], callback=None):
-    limits = DBLimits(limits)
+def pgsql2fs(outdir: str, limits: Optional[list[str]|DBLimits] = None, callback: Optional[Callable] = None) -> None:
+    if not isinstance(limits, DBLimits):
+        limits = DBLimits(limits)
 
     for dbname in list_databases():
         if dbname not in limits or dbname == 'postgres' or re.match(r'template\d', dbname):
@@ -92,20 +114,20 @@ def pgsql2fs(outdir, limits=[], callback=None):
 
         dumpdb(outdir, dbname, limits[dbname])
 
-    globals = subprocess.run(su("pg_dumpall --globals"), capture_output=True, text=True).stdout
+    globals = subprocess.run(su(["pg_dumpall", "--globals"]), capture_output=True, text=True).stdout
     with open(join(outdir, FNAME_GLOBALS), "w") as fob:
         fob.write(globals)
 
-def fs2pgsql(outdir, limits=[], callback=None):
-    limits = DBLimits(limits)
-    for (database, table) in limits.tables:
+def fs2pgsql(outdir: str, limits: list[str] = [], callback: Optional[Callable] = None) -> None:
+    limits_ = DBLimits(limits)
+    for (database, table) in limits_.tables:
         if (database, table) not in limits:
             raise Error("can't exclude %s/%s: table excludes not supported for postgres" % (database, table))
 
     # load globals first, suppress noise (e.g., "ERROR: role "postgres" already exists)
     with open(join(outdir, FNAME_GLOBALS)) as fob:
         globals = fob.read()
-    subprocess.run([su("psql -q -o /dev/null"), globals], check_output=True)
+    subprocess.run(su(["psql", "-q", "-o", "/dev/null"]) + [globals], check_output=True)
 
     for dbname in os.listdir(outdir):
 
@@ -116,18 +138,18 @@ def fs2pgsql(outdir, limits=[], callback=None):
         if callback:
             callback(dbname)
 
-        restoredb(fpath, dbname, limits[dbname])
+        restoredb(fpath, dbname, limits_[dbname])
 
-def cb_print(fh=None):
+def cb_print(fh: Optional[IO[str]] = None) -> function:
     if not fh:
         fh = sys.stdout
 
-    def func(val):
+    def func(val: str) -> None:
         print("database: " + val, file=fh)
 
     return func
 
-def backup(outdir, limits=[], callback=None):
+def backup(outdir: str, limits: Optional[list[str]] = [], callback: Optional[Callable] = None) -> None:
     if isdir(outdir):
         shutil.rmtree(outdir)
 
@@ -141,7 +163,7 @@ def backup(outdir, limits=[], callback=None):
             shutil.rmtree(outdir)
         raise Error("pgsql backup failed: " + str(e))
 
-def restore(path, limits=[], callback=None):
+def restore(path: str, limits: list[str] = [], callback: Optional[Callable] = None) -> None:
     try:
         fs2pgsql(path, limits, callback=callback)
     except Exception as e:
@@ -151,7 +173,7 @@ class PgsqlService:
     INIT_SCRIPT = "/etc/init.d/postgresql"
 
     @classmethod
-    def is_running(cls):
+    def is_running(cls) -> bool:
         try:
             p = subprocess.run([cls.INIT_SCRIPT, "status"])
             if p.returncode == 0:

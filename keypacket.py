@@ -38,6 +38,7 @@ def _unpad(padded: bytes) -> bytes:
     return padded[-(2 + len) :-2]
 
 def _repeat(func, input_: bytes, count: int) -> bytes:
+    output_ = b''
     for x in range(count):
         output_ = func(input_)
     return output_
@@ -99,8 +100,8 @@ def parse(packet: bytes, passphrase: bytes) -> bytes:
     if not passphrase:
         hash_repeats = cipher_repeats = 1
     else:
-        hash_repeats = khr * 1000 + 1
-        cipher_repeats = kcr * 1000 + 1
+        hash_repeats = int(khr) * 1000 + 1
+        cipher_repeats = int(kcr) * 1000 + 1
 
     cipher_key = _cipher_key(passphrase, hash_repeats)
     decrypted = _repeat(lambda v: _cipher(cipher_key).decrypt(v),

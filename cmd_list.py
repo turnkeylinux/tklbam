@@ -37,13 +37,14 @@ Examples:
 import sys
 import getopt
 import string
+from typing import Optional, NoReturn
 
 import hub
 import keypacket
 
 from registry import registry, hub_backups
 
-def usage(e=None):
+def usage(e: Optional[str|getopt.GetoptError] = None) -> NoReturn:
     if e:
         print("error: " + str(e), file=sys.stderr)
 
@@ -63,7 +64,7 @@ class Formatter:
 
         self.tpl = string.Template(tpl)
 
-    def __call__(self, hbr: str) -> str:
+    def __call__(self, hbr: hub_backups.backup) -> str:
         # backwards compat. hack
         hbr = hbr.copy()
         hbr['turnkey_version'] = hbr['profile_id']
@@ -77,7 +78,7 @@ def key_has_passphrase(key: str) -> bool:
         return True
 
 def fmt_skpp(key: bytes) -> str:
-    return "Yes" if key_has_passphrase(key) else "No"
+    return "Yes" if key_has_passphrase(key.decode()) else "No"
 
 def fmt_size(bytes_: int) -> str:
     if bytes_ < (10 * 1024):
@@ -118,6 +119,7 @@ def main():
     elif hbrs:
         print("# ID  SKPP  Created     Updated     Size (MB)  Label")
         for hbr in hbrs:
+            assert hbr.created != None
             print("%4s  %-3s   %s  %-10s  %-8s   %s" % \
                     (hbr.backup_id, fmt_skpp(hbr.key),
                      hbr.created.strftime("%Y-%m-%d"),
