@@ -4,6 +4,7 @@ contrib/example-conf => /etc/tklbam/conf
 contrib/example-overrides => /etc/tklbam/overrides
 contrib/example-hook => /etc/tklbam/hooks.d/example
 contrib/fixclock-hook => /etc/tklbam/hooks.d/fixclock
+contrib/mariadb-changes-hook => /etc/tklbam/hooks.d/mariadb-changes
 contrib/cron.sh => /etc/cron.daily/tklbam-backup
 
 contrib/example-hook-pre-backup => /usr/share/tklbam/contrib/example-hook-pre-backup

@@ -1,0 +1,131 @@
+#!/bin/bash -e
+# This is a hook to handle the changes to the mysql.user table in MariaDB 10.4+
+
+# set DEBUG=y to enable verbose output
+[[ -z "$DEBUG" ]] || set -x
+
+# hooks are always called with two arguments
+op=$1
+state=$2
+
+echo "HOOK $0 :: op=$op state=$state pwd=$(pwd) :: "
+echo "TKLBAM_RESTORE_PROFILE_ID: $TKLBAM_RESTORE_PROFILE_ID"
+
+fatal() { echo "[$(basename $0)] FATAL: $*" >&2; exit 1; }
+warn() { echo "[$(basename $0)] WARN: $*" >&2; }
+info() { echo "[$(basename $0)] INFO: $*"; }
+
+migrate_db_not_set() {
+    warn "MIGRATE_DB env var not set; DB restore of MySQL/MariaDB from TKL v16.x and earlier may fail"
+    warn "If migration of old backup fails, please run 'tklbam-restore-rollback' and retry with 'MIGRATE_DB=y tklbam-restore ...'"
+}
+
+check_version() {
+    local org_version=$(cat /etc/turnkey_version | sed -En "s|turnkey-[a-z0-9-]+-([0-9]+)\.[0-9]+[a-z0-9]*-.*|\1|p")
+    local bak_version=$(echo $TKLBAM_RESTORE_PROFILE_ID | sed -En "s|turnkey-[a-z0-9-]+-([0-9]+)\.[0-9]+[a-z0-9]*-.*|\1|p")
+    if [[ "$org_version" -ge 17 ]] && [[ "$bak_version" -le 16 ]]; then
+        echo "run_migration"
+    else
+        echo "skip_migration"
+    fi
+}
+
+if [[ "$state" == "pre" ]] && [[ "$op" == "restore" ]]; then
+    info "hook invoked before Duplicity downloads backup archive. Extras path = $(pwd)"
+    info "Nothing to do yet (DB migration may be required)"
+
+elif [[ "$state" == "inspect" ]] && [[ "$op" == "restore" ]]; then
+
+    info "hook invoked after Duplicity downloads backup archive. Extras path = $(pwd)"
+
+    if [[ "$(check_version)" == 'skip_migration' ]]; then
+        info "DB migration not required, skipping"
+    elif [[ -x "/usr/bin/mysql" ]]; then
+        info "Migration of MySQL/MariaDB database detected, working around possible issue"
+        mysqldump mysql > /tmp/mysql_db.sql
+        info "'mysql' DB dumped to /tmp/mysql_db.sql (in case you need to restore) - or just run 'tklbam-restore-rollback'"
+        mysql -e "DROP TABLE IF EXISTS mysql.global_priv; DROP VIEW IF EXISTS mysql.user;"
+        info "Table mysql.global_priv & view mysql.user dropped, continuing restore"
+    else
+        warn "/usr/bin/mysql not found (or not executable) - assuming no MySQL/MariaDB database"
+    fi
+
+
+elif [[ "$state" == "post" ]]  && [[ "$op" == "restore" ]]; then
+
+    info "hook invoked after backup restore. Extras path = $(pwd)"
+    if [[ "$(check_version)" == 'skip_migration' ]]; then
+        info "DB migration not required, skipping"
+    elif [[ -x "/usr/bin/mysql" ]]; then
+        if [[ -f "/tmp/mysql_db.sql" ]]; then
+            info "Restore of MySQL/MariaDB database detected; ensuring that MySQL/MariaDB is running properly"
+        else
+            warn "no local MySQL/MariDB 'mysql' database backup located"
+        fi
+        # ensure no mariadb processes still running
+        systemctl stop mariadb
+        pkill mariadb || true
+
+        # start mariadb with '--skip-grant-tables' - to fix permissions
+        # pre/post exec commands taken from mariadb.service file, possibly not
+        # all needed, but just in case...
+        ## pre-exec
+        /usr/bin/install -m 755 -o mysql -g root -d /var/run/mysqld
+        systemctl unset-environment _WSREP_START_POSITION
+        [ ! -e /usr/bin/galera_recovery ] && VAR= || \
+            VAR=`cd /usr/bin/..; /usr/bin/galera_recovery`; [ $? -eq 0 ] \
+            && systemctl set-environment _WSREP_START_POSITION=$VAR || exit 1
+        ## exec
+        su mysql -s /bin/bash -c "/usr/sbin/mariadbd --skip-grant-tables" &
+        ## post-exec
+        systemctl unset-environment _WSREP_START_POSITION
+        /etc/mysql/debian-start
+       
+        # wait until mariadb socket is available
+        tries=0
+        sock="/var/run/mysqld/mysqld.sock"
+        while [[ ! -S "$sock" ]]; do
+            if [[ "$tries" -le 10 ]]; then
+                sleep 1
+            else
+                echo "FATAL: $sock not found after waiting $tries seconds"
+                exit 1
+            fi
+            tries=$((tries+1))
+            
+        done
+
+        # reset root@localhost and mysql@locahost users are authenticted by unix_socket
+        mysql --wait --batch --execute \
+                 "FLUSH PRIVILEGES; \
+                  GRANT SELECT ON *.* TO root@localhost IDENTIFIED VIA unix_socket; \
+                  GRANT SELECT ON *.* TO mysql@localhost IDENTIFIED VIA unix_socket;"
+        if [[ -f '/etc/mysql/debian.cnf' ]]; then
+            # adjust /etc/mysql/debian.cnf if it uses the debian-sys-maint user
+            if grep -q debian-sys-maint /etc/mysql/debian.cnf; then
+                sed -i "1a # This file has been automatically adjusted by TKLBAM" /etc/mysql/debian.cnf
+                sed -i "\|debian-sys-maint|s|||g; \|^password|s|^|#|; \|^basedir|s|^|#|;" /etc/mysql/debian.cnf
+            fi
+        fi
+        # force upgrade to recreate the mysql.global_priv table and convert mysql.user from table to view
+        mariadb-upgrade --force
+        
+        # kill mariadb background process and start service
+        pkill mariadb || true
+        systemctl start mariadb
+        info "MariaDB restarted"
+        info "Everything should be good to go"
+    else
+        echo "/usr/bin/mysql not found (or not executable) - assuming no MySQL/MariaDB database"
+    fi
+
+elif [[ "$op" == "backup" ]]; then
+
+    info "nothing to do when backing up"
+
+else
+
+    echo "bad hook invocation"
+    exit 1
+
+fi
