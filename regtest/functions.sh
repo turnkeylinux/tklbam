@@ -36,7 +36,7 @@ testresult() {
     testdesc=$2
 
     # make relative
-    tmp=$(tempfile)
+    tmp=$(mktemp)
     sed "s|$(/bin/pwd)/||" $file | sort > $tmp
     cat $tmp > $file
     rm $tmp

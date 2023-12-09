@@ -11,4 +11,4 @@ done
 cd ../
     make clean > /dev/null
 cd - > /dev/null
-faketime -f '2000-1-1 00:00:00' fakeroot $(dirname $0)/_regtest.sh $@
+faketime -f '2020-1-1 00:00:00' fakeroot $(dirname $0)/_regtest.sh $@
