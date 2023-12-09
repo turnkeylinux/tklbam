@@ -18,7 +18,7 @@ import sys
 import errno
 import termios
 
-from typing import Optional, Callable
+from typing import Optional, Callable, Self
 from shlex import quote
 from io import StringIO, TextIOWrapper
 
@@ -64,7 +64,7 @@ def set_blocking(fd: int|TextIOWrapper, blocking: bool) -> None:
 
 
 class FileEnhancedRead:
-    def __init__(self, fh: TextIOWrapper|FileEventAdaptor):
+    def __init__(self, fh: TextIOWrapper):
         self.fh = fh
 
     def __getattr__(self, attr: str) -> str:
@@ -89,7 +89,6 @@ class FileEnhancedRead:
             timeout = 0
 
         fd = self.fh.fileno()
-        output = None
 
         p = select.poll()
         p.register(fd, select.POLLIN | select.POLLHUP)
@@ -148,7 +147,7 @@ class Command:
 
         assert c.running is False
 
-        print c.output
+        print(c.output)
 
         c = Command("./test.py")
 
@@ -159,11 +158,11 @@ class Command:
         while c.output is None:
             time.sleep(1)
 
-        print "output = '%s', exitcode = %d" % (c.output, c.exitcode)
+        print("output = '%s', exitcode = %d" % (c.output, c.exitcode))
 
         c = Command("cat", pty=True)
         print >> c.tochild, "test"
-        print c.fromchild.readline(),
+        print(c.fromchild.readline(),)
 
     """
     class Error(Exception):
@@ -178,16 +177,16 @@ class Command:
             if self.debug:
                 print("# EVENT '%s':\n%s" % (event, msg), file=sys.stderr)
 
-        def notify(self, subject: str, event: str, val: str) -> None:
+        def notify(self, subject: Self, event: str, value: str) -> None:
             if event in ('read', 'readline'):
-                self._dprint(event, val)
-                self.outputbuf.write(val)
+                self._dprint(event, value)
+                self.outputbuf.write(value)
             elif event in ('readlines', 'xreadlines'):
-                self._dprint(event, "".join(val))
-                self.outputbuf.write("".join(val))
+                self._dprint(event, "".join(value))
+                self.outputbuf.write("".join(value))
 
-    def __init__(self, cmd: str|list[str], runas: Optional[str] = None,
-                 pty: bool = False, setpgrp: Optional[bool] = None, debug: bool = False
+    def __init__(self, cmd: list[str], runas: Optional[str] = None,
+                 pty: bool = False, setpgrp: bool = False, debug: bool = False
                  ):
         """Args:
         'cmd' what command to execute
@@ -204,7 +203,7 @@ class Command:
         self._child = None
         self._child = popen4.Popen4(cmd, 0, pty, runas, setpgrp)
         self.tochild = self._child.tochild
-        self._fromchild: FileEventAdaptor|FileEnhancedRead|None = None
+        self._fromchild = None
 
         self.pid = self._child.pid
 
@@ -213,8 +212,8 @@ class Command:
         self._cmd = cmd
 
         self._output = FIFOBuffer()
-        self._dprint(("# command started (pid=%d, pty=%s): %s"
-                      ) % (self._child.pid, repr(pty), cmd))
+        self._dprint(f"# command started (pid={self._child.pid},"
+                     f" pty={repr(pty)}): {cmd}")
 
     def __del__(self) -> None:
         if not self._child:
@@ -236,15 +235,18 @@ class Command:
         if self.running:
             assert self._child is not None
             if self._child.pty:
-                cc_magic = termios.tcgetattr(self._child.tochild.fileno())[-1]
+                # XXX shouldn't be a string? Should be popen4.CatchIOErrorWrapper!?
+                cc_magic = termios.tcgetattr(self._child.tochild.fileno())[-1]  #type: ignore[operator]
                 ctrl_c = cc_magic[termios.VINTR]
-                self._child.tochild.write(ctrl_c)
+                # and again ...
+                self._child.tochild.write(ctrl_c)  #type: ignore[operator]
 
             pid = self.pid
-            if self._setpgrp and pid != None:
+            if self._setpgrp and pid is not None:
                 pid = -pid
 
             try:
+                assert pid is not None
                 os.kill(pid, sig)
             except OSError as e:
                 if e.errno != errno.EPERM or \
@@ -265,7 +267,7 @@ class Command:
                 if not self.wait(timeout=3, poll_interval=0.1):
                     raise self.Error("process just won't die!")
 
-                self._dprint("# command (pid %d) terminated" % self._child.pid)
+                self._dprint(f"# command (pid {self._child.pid}) terminated")
 
     def terminated_(self) -> Optional[str]:
         assert self._child is not None
@@ -352,10 +354,10 @@ class Command:
         if self._fromchild:
             return self._fromchild
         assert self._child is not None
-        fh = FileEventAdaptor(self._child.fromchild)
+        fh = FileEventAdaptor(self._child.fromchild.fh)
         fh.addObserver(self._ChildObserver(self._output,
                                            self._debug))
-
+        assert isinstance(fh, TextIOWrapper)
         self._fromchild = FileEnhancedRead(fh)
         return self._fromchild
 
@@ -439,7 +441,7 @@ class Command:
             if buf:
                 m = check_match()
                 if m:
-                    self.ref[0] = m
+                    ref[0] = m
                     return False
 
             if buf == '':
@@ -518,7 +520,7 @@ class CommandTrue:
 
     A command istrue() if its exitcode == 0
     """
-    def __init__(self, cmd: str):
+    def __init__(self, cmd: list[str]):
         self._c = Command(cmd)
 
     def wait(self, timeout: Optional[int] = None) -> int:
@@ -561,7 +563,7 @@ def eval(cmd, setpgrp: bool = False) -> bool:
     return last_exitcode == 0
 
 
-def output(cmd: str) -> Callable[[], str]:
+def output(cmd: list[str]) -> Callable[[], str]:
     """convenience function
     execute 'cmd' and return it's output
 

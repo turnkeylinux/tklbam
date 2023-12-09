@@ -10,19 +10,21 @@
 # the License, or (at your option) any later version.
 #
 import os
-from os.path import *
+from os.path import isdir, join
 
 import sys
+from subprocess import Popen
+from typing import Optional, Callable
+from dataclasses import dataclass
 
-from subprocess import *
 from squid import Squid
 
-from utils import AttrDict, iamroot
+from utils import iamroot
 
 import resource
 RLIMIT_NOFILE_MAX = 8192
 
-def _find_duplicity_pylib(path):
+def _find_duplicity_pylib(path: str) -> Optional[str]:
     if not isdir(path):
         return None
 
@@ -41,41 +43,53 @@ from cmd_internal import fmt_internal_command
 class Error(Exception):
     pass
 
+@dataclass
+class Creds:
+    c_type: str
+    accesskey: Optional[str] = None
+    secretkey: Optional[str] = None
+    producttoken: Optional[str] = None
+    usertoken: Optional[str] = None
+    sessiontoken: Optional[str] = None
+
 class Duplicity:
     """low-level interface to Duplicity"""
 
-    def __init__(self, *args):
+    def __init__(self, opts: list[tuple[str, str]]|str, *args: str):
         """Duplicity command. The first member of args can be a an array of tuple arguments"""
 
-        if isinstance(args[0], list):
-            opts = args[0][:]
-            args = args[1:]
+        command: list[str] = []
+        if isinstance(opts, str):
+            if ' ' in opts:
+                raise Error(f"space in opts: '{opts}'")
+            command.append(opts)
         else:
-            opts = []
+            for opt in opts:
+                k, v = opt
+                command.append(f'--{k}={v}')
+
+        if iamroot():
+            command.append('--archive-dir=/var/cache/duplicity')
 
         if not args:
             raise Error("no arguments!")
 
-        if iamroot():
-            opts += [ ('archive-dir', '/var/cache/duplicity') ]
+        self.command: list[str] = ["duplicity"] + command + list(args)
 
-        opts = [ "--%s=%s" % (key, val) for key, val in opts ]
-        self.command = ["duplicity"] + opts + list(args)
-
-    def run(self, passphrase, creds=None, debug=False):
+    def run(self, passphrase: str, creds: Optional[Creds] = None, debug: bool = False) -> None:
         sys.stdout.flush()
 
         if creds:
-            if creds.type in ('devpay', 'iamuser'):
-                os.environ['AWS_ACCESS_KEY_ID'] = creds.accesskey
-                os.environ['AWS_SECRET_ACCESS_KEY'] = creds.secretkey
-                os.environ['X_AMZ_SECURITY_TOKEN'] = (",".join([creds.producttoken,
-                                                                creds.usertoken])
-                                                    if creds.type == 'devpay'
-                                                    else creds.sessiontoken)
+            if creds.c_type in ('devpay', 'iamuser'):
+                os.environ['AWS_ACCESS_KEY_ID'] = str(creds.accesskey)
+                os.environ['AWS_SECRET_ACCESS_KEY'] = str(creds.secretkey)
+                os.environ['X_AMZ_SECURITY_TOKEN'] = str(",".join([str(creds.producttoken),
+                                                                   str(creds.usertoken)])
+                                                         if creds.c_type == 'devpay'
+                                                         else str(creds.sessiontoken))
 
-            elif creds.type == 'iamrole':
-                os.environ['AWS_STSAGENT'] = fmt_internal_command('stsagent')
+            elif creds.c_type == 'iamrole':
+                os.environ['AWS_STSAGENT'] = ' '.join(fmt_internal_command('stsagent'))
 
         if PATH_DEPS_BIN not in os.environ['PATH'].split(':'):
             os.environ['PATH'] = PATH_DEPS_BIN + ':' + os.environ['PATH']
@@ -106,7 +120,6 @@ class Duplicity:
 
             subprocess.run(shell)
 
-
         child = Popen(self.command)
         del os.environ['PASSPHRASE']
 
@@ -114,72 +127,76 @@ class Duplicity:
         if exitcode != 0:
             raise Error("non-zero exitcode (%d) from backup command: %s" % (exitcode, str(self)))
 
-    def __str__(self):
+    def __str__(self) -> str:
         return " ".join(self.command)
 
 
-def _raise_rlimit(type, newlimit):
-    soft, hard = resource.getrlimit(type)
+def _raise_rlimit(type_: int, newlimit: int) -> None:
+    soft, hard = resource.getrlimit(type_)
     if soft > newlimit:
-        return
+        return None
 
     if hard > newlimit:
-        return resource.setrlimit(type, (newlimit, hard))
+        resource.setrlimit(type_, (newlimit, hard))
+        return None
 
     try:
-        resource.setrlimit(type, (newlimit, newlimit))
+        resource.setrlimit(type_, (newlimit, newlimit))
     except ValueError:
-        return
+        pass
+    return None
 
-class Target(AttrDict):
-    def __init__(self, address, credentials, secret):
-        AttrDict.__init__(self)
-        self.address = address
-        self.credentials = credentials
-        self.secret = secret
+@dataclass
+class Target:
+    address: str
+    credentials: Creds
+    secret: str
 
-class Downloader(AttrDict):
+
+@dataclass
+class Downloader:
     """High-level interface to Duplicity downloads"""
 
-    CACHE_SIZE = "50%"
-    CACHE_DIR = "/var/cache/tklbam/restore"
+    CACHE_SIZE: str = "50%"
+    CACHE_DIR: str = "/var/cache/tklbam/restore"
 
-    def __init__(self, time=None, cache_size=CACHE_SIZE, cache_dir=CACHE_DIR):
-        AttrDict.__init__(self)
+    time: Optional[str] = None
+    cache_size: str = CACHE_SIZE
+    cache_dir: str = CACHE_DIR
 
-        self.time = time
-        self.cache_size = cache_size
-        self.cache_dir = cache_dir
-
-    def __call__(self, download_path, target, debug=False, log=None, force=False):
+    def __call__(self, download_path: str, target: Target, debug: bool = False, log: Optional[Callable] = None, force: bool = False) -> None:
+        orig_env = None
+        squid = None
         if log is None:
             log = lambda s: None
+            assert log is not None
 
         if self.time:
-            opts = [("restore-time", self.time)]
+            opts: list[tuple[str, str]] = [("restore-time", self.time)]
         else:
             opts = []
-
         if iamroot():
-            log("// started squid: caching downloaded backup archives to " + self.cache_dir + "\n")
+            log(f"// started squid: caching downloaded backup archives to {self.cache_dir}\n")
 
             squid = Squid(self.cache_size, self.cache_dir)
             squid.start()
 
             orig_env = os.environ.get('http_proxy')
-            os.environ['http_proxy'] = squid.address
+            if squid.address:
+                os.environ['http_proxy'] = squid.address
 
         _raise_rlimit(resource.RLIMIT_NOFILE, RLIMIT_NOFILE_MAX)
-        args = [ '--s3-unencrypted-connection', target.address, download_path ]
+        assert isinstance(target.address, str)
+        args = ['--s3-unencrypted-connection', target.address, download_path]
         if force:
-            args = [ '--force' ] + args
+            args = ['--force'] + args
 
         command = Duplicity(opts, *args)
 
-        log("# " + str(command))
+        log(f"# {command}")
 
         command.run(target.secret, target.credentials, debug=debug)
-
+        assert squid is not None
         if iamroot():
             if orig_env:
                 os.environ['http_proxy'] = orig_env
@@ -191,42 +208,35 @@ class Downloader(AttrDict):
 
         sys.stdout.flush()
 
-class Uploader(AttrDict):
+class Uploader:
     """High-level interface to Duplicity uploads"""
 
-    VOLSIZE = 25
-    FULL_IF_OLDER_THAN = "1M"
-    S3_PARALLEL_UPLOADS = 1
+    VOLSIZE: int = 25
+    FULL_IF_OLDER_THAN: str = "1M"
+    S3_PARALLEL_UPLOADS: int = 1
 
-    def __init__(self,
-                 verbose=True,
-                 volsize=VOLSIZE,
-                 full_if_older_than=FULL_IF_OLDER_THAN,
-                 s3_parallel_uploads=S3_PARALLEL_UPLOADS,
+    verbose: bool = True
+    volsize: int = VOLSIZE
+    full_if_older_than: str = FULL_IF_OLDER_THAN
+    s3_parallel_uploads: int = S3_PARALLEL_UPLOADS
+    includes: Optional[list[str]] = None
+    include_filelist: Optional[str] = None
+    excludes: Optional[list[str]] = None
 
-                 includes=[],
-                 include_filelist=None,
-                 excludes=[],
-                 ):
+    def __post_init__(self) -> None:
+        if self.includes is None:
+            self.includes = []
+        if self.excludes is None:
+            self.excludes = []
 
-        AttrDict.__init__(self)
-
-        self.verbose = verbose
-        self.volsize = volsize
-        self.full_if_older_than = full_if_older_than
-        self.s3_parallel_uploads = s3_parallel_uploads
-
-        self.includes = includes
-        self.include_filelist = include_filelist
-        self.excludes = excludes
-
-    def __call__(self, source_dir, target, force_cleanup=True, dry_run=False, debug=False, log=None):
+    def __call__(self, source_dir: str, target: Target, force_cleanup: bool = True, dry_run: bool = False, debug: bool = False, log: Optional[Callable] = None):
         if log is None:
             log = lambda s: None
+            assert log is not None
 
-        opts = []
+        opts: list[tuple[str, str]] = []
         if self.verbose:
-            opts += [('verbosity', 5)]
+            opts.append(('verbosity', '5'))
 
         if force_cleanup:
             cleanup_command = Duplicity(opts, "cleanup", "--force", target.address)
@@ -237,18 +247,20 @@ class Uploader(AttrDict):
 
             log("\n")
 
-        opts += [('volsize', self.volsize),
+        opts += [('volsize', str(self.volsize)),
                  ('full-if-older-than', self.full_if_older_than),
                  ('gpg-options', '--cipher-algo=aes')]
 
-        for include in self.includes:
-            opts += [ ('include', include) ]
+        if self.includes:
+            for include in self.includes:
+                opts += [ ('include', include) ]
 
         if self.include_filelist:
             opts += [ ('include-filelist', self.include_filelist) ]
 
-        for exclude in self.excludes:
-            opts += [ ('exclude', exclude) ]
+        if self.excludes:
+            for exclude in self.excludes:
+                opts += [ ('exclude', exclude) ]
 
         args = [ '--s3-unencrypted-connection', '--allow-source-mismatch' ]
 

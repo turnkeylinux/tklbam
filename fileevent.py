@@ -1,7 +1,8 @@
-from typing import IO, Self
+from typing import Self
+from io import TextIOWrapper
 
 class Observer:
-    def notify(self, subject: Self, event: str, value: list[str]) -> None:
+    def notify(self, subject: Self, event: str, value: str) -> None:
         pass
     
 class FileEventAdaptor:
@@ -16,7 +17,7 @@ class FileEventAdaptor:
     """
     class Error(Exception):
         pass
-    def __init__(self, fh: IO[str]):
+    def __init__(self, fh: TextIOWrapper):
         self.fh = fh
         self.observers: list[Observer] = []
 
