@@ -139,6 +139,9 @@ class Installer:
     """
     Error = Error
 
+    command: Optional[list[str]]
+    installed: Optional[set[str]]
+
     def __init__(self, packages: list[str], blacklist: Optional[list[str]] = None) -> None:
         if blacklist is None:
             blacklist_ = []

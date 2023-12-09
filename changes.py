@@ -11,9 +11,7 @@
 #
 import sys
 import os
-from os.path import *
-
-import types
+from os.path import lexists, isdir, islink
 
 from dirindex import DirIndex
 from pathmap import PathMap
@@ -108,7 +106,7 @@ class Change:
                 self.gid = int(gid)
 
         def __str__(self) -> str:
-            return self.fmt(self.uid, self.gid)
+            return self.fmt(str(self.uid), str(self.gid))
 
     class Stat(Overwrite):
         OP = 's'
@@ -123,7 +121,7 @@ class Change:
                     self.mode = int(mode, 8)
 
         def __str__(self) -> str:
-            return self.fmt(self.uid, self.gid, oct(self.mode))
+            return self.fmt(str(self.uid), str(self.gid), oct(self.mode))
 
     @classmethod
     def parse(cls, line: str) -> Base:
