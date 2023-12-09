@@ -21,13 +21,12 @@ import shutil
 from string import Template
 import subprocess
 from subprocess import Popen, PIPE, STDOUT
-from typing import Optional, IO, Generator, Self, Callable
+from typing import Optional, IO, Generator, Callable
 
 from dblimits import DBLimits
 from paths import Paths as _Paths
 
 import stat
-from command import Command
 
 class Error(Exception):
     pass
@@ -35,7 +34,9 @@ class Error(Exception):
 PATH_DEBIAN_CNF = "/etc/mysql/debian.cnf"
 
 def _mysql_opts(opts: Optional[list[str]] = None,
-                defaults_file: Optional[str] = None, **conf) -> str:
+                defaults_file: Optional[str] = None,
+                **conf: str
+                ) -> list[str]:
     if not opts:
         opts = []
     def isreadable(path):
@@ -55,13 +56,13 @@ def _mysql_opts(opts: Optional[list[str]] = None,
     for opt, val in list(conf.items()):
         opts.append(opt.replace("_", "-") + "=" + val)
 
-    return " ".join([ "--" + opt for opt in opts ])
+    return [ "--" + opt for opt in opts ]
 
 def mysqldump(**conf) -> Optional[IO[str]]:
     opts = [ "all-databases", "skip-extended-insert", "single-transaction",
              "compact", "quick" ]
 
-    command = "mysqldump " + _mysql_opts(opts, **conf)
+    command = ["mysqldump"] + _mysql_opts(opts, **conf)
     popen = Popen(command, shell=True, stderr=PIPE, stdout=PIPE, text=True)
 
     firstline = ''
@@ -72,12 +73,15 @@ def mysqldump(**conf) -> Optional[IO[str]]:
         stderr = popen.stderr.read()
     if not firstline:
         returncode = popen.wait()
-        raise Error("mysqldump error (%d): %s" % (returncode, stderr))
+        raise Error(f"mysqldump error ({returncode}): {stderr}")
 
     return popen.stdout
 
-def mysql(**conf: str|list[str]) -> subprocess.Popen:
-    command = "mysql " + _mysql_opts(**conf)
+def mysql(opts: Optional[list[str]] = None,
+          defaults_file: Optional[str] = None,
+          **conf: str
+          ) -> subprocess.Popen:
+    command = ["mysql"] + _mysql_opts(opts, defaults_file, **conf)
 
     popen = Popen(command, shell=True, stdin=PIPE, stderr=PIPE, stdout=PIPE, text=True)
     if popen.stdin:
@@ -717,6 +721,7 @@ class MysqlService:
         if p == None:
             raise Error('process did not run')
         else:
+            assert p
             raise Error(p.stdout)
 
     @classmethod
@@ -770,17 +775,17 @@ class MysqlNoAuth:
         self.orig_varrun_mode = stat.S_IMODE(os.stat(self.PATH_VARRUN).st_mode)
         os.chmod(self.PATH_VARRUN, 0o750)
 
-        command = Command(self.COMMAND)
+        command = Popen(self.COMMAND)
 
-        def cb() -> bool:
-            if MysqlService.is_running():
-                continue_waiting = False
-            else:
-                continue_waiting = True
-
-            return continue_waiting
-
-        command.wait(timeout=10, callback=cb)
+        #def cb() -> bool:
+        #    if MysqlService.is_running():
+        #        continue_waiting = False
+        #    else:
+        #        continue_waiting = True
+        #
+        #    return continue_waiting
+        
+        command.wait(timeout=10)
         if not command.running or not MysqlService.is_running():
             command.terminate()
             if was_running:

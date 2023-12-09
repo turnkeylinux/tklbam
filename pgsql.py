@@ -18,6 +18,8 @@ import subprocess
 from subprocess import PIPE
 import shutil
 from typing import Generator, Optional, Callable, IO
+import pwd
+import grp
 
 from dblimits import DBLimits
 
@@ -33,6 +35,15 @@ class Error(Exception):
 def su(command: list[str]) -> list[str]:
     logging.debug(f'["su", "postgres", "-c", *command]')
     return ["su", "postgres", "-c", *command]
+
+def check_user(user: str = 'postgres', check_group: bool = False) -> bool:
+    try:
+        uid = pwd.getpwnam(user).pw_uid
+        if check_group:
+            gid = grp.getgrnam(user).gr_gid
+        return True
+    except KeyError:
+        return False
 
 def list_databases() -> Generator[str, None, None]:
     p = subprocess.run(su(['psql", "-l']), capture_output=True, text=True)
@@ -114,20 +125,24 @@ def pgsql2fs(outdir: str, limits: Optional[list[str]|DBLimits] = None, callback:
 
         dumpdb(outdir, dbname, limits[dbname])
 
-    globals = subprocess.run(su(["pg_dumpall", "--globals"]), capture_output=True, text=True).stdout
+    globals = subprocess.run(["pg_dumpall", "--globals"], user='postgres', capture_output=True, text=True).stdout
     with open(join(outdir, FNAME_GLOBALS), "w") as fob:
         fob.write(globals)
 
-def fs2pgsql(outdir: str, limits: list[str] = [], callback: Optional[Callable] = None) -> None:
+def fs2pgsql(outdir: str, limits: Optional[list[str]] = None, callback: Optional[Callable] = None) -> None:
+    if not limits:
+        limits = []
     limits_ = DBLimits(limits)
-    for (database, table) in limits_.tables:
-        if (database, table) not in limits:
-            raise Error("can't exclude %s/%s: table excludes not supported for postgres" % (database, table))
+    if limits_.tables is not None:
+        for (database, table) in limits_.tables:
+            if (database, table) not in limits:
+                raise Error(f"can't exclude {database}/{table}: table"
+                            " excludes not supported for postgres")
 
     # load globals first, suppress noise (e.g., "ERROR: role "postgres" already exists)
     with open(join(outdir, FNAME_GLOBALS)) as fob:
         globals = fob.read()
-    subprocess.run(su(["psql", "-q", "-o", "/dev/null"]) + [globals], check_output=True)
+    subprocess.check_output(["psql", "-q", "-o", "/dev/null", globals])
 
     for dbname in os.listdir(outdir):
 
@@ -140,7 +155,7 @@ def fs2pgsql(outdir: str, limits: list[str] = [], callback: Optional[Callable] =
 
         restoredb(fpath, dbname, limits_[dbname])
 
-def cb_print(fh: Optional[IO[str]] = None) -> function:
+def cb_print(fh: Optional[IO[str]] = None) -> Callable:
     if not fh:
         fh = sys.stdout
 
