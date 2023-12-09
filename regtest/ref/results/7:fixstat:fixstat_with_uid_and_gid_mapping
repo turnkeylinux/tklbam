@@ -1,7 +1,7 @@
-chmod 0 testdir/chmod
 chmod 0755 testdir/subdir
+chmod 0 testdir/chmod
 chown -h 777:777 testdir/subdir
-chown -h 777:docker testdir/chown
+chown -h 777:systemd-journal testdir/chown
 chown -h 999:777 testdir/chgrp
 chown -h 999:777 testdir/subdir/file2
-chown -h 999:docker testdir/subdir/subsubdir
+chown -h 999:systemd-journal testdir/subdir/subsubdir

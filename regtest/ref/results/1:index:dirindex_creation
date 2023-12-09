@@ -1,12 +1,12 @@
-testdir	41ed	3e7	3e7	1000	386ca8d0
-testdir/chgrp	81a4	3e7	3e7	0	386ca8d0
-testdir/chmod	81a4	3e7	3e7	0	386ca8d0
-testdir/chown	81a4	3e7	3e7	0	386ca8d0
-testdir/donttouchme	81a4	3e7	3e7	6	386ca8d0
-testdir/emptydir	41ed	3e7	3e7	1000	386ca8d0
-testdir/file	81a4	3e7	3e7	6	386ca8d0
-testdir/link	a1ff	3e7	3e7	4	386ca8d0	file
-testdir/subdir	41ed	3e7	3e7	1000	386ca8d0
-testdir/subdir/file2	81a4	3e7	3e7	c	386ca8d0
-testdir/subdir/subsubdir	41ed	3e7	3e7	1000	386ca8d0
-testdir/subdir/subsubdir/file3	81a4	3e7	3e7	4	386ca8d0
+testdir	41ed	3e7	3e7	1000	5e0b4650
+testdir/chgrp	81a4	3e7	3e7	0	5e0b4650
+testdir/chmod	81a4	3e7	3e7	0	5e0b4650
+testdir/chown	81a4	3e7	3e7	0	5e0b4650
+testdir/donttouchme	81a4	3e7	3e7	6	5e0b4650
+testdir/emptydir	41ed	3e7	3e7	1000	5e0b4650
+testdir/file	81a4	3e7	3e7	6	5e0b4650
+testdir/link	a1ff	3e7	3e7	4	5e0b4650	file
+testdir/subdir	41ed	3e7	3e7	1000	5e0b4650
+testdir/subdir/file2	81a4	3e7	3e7	c	5e0b4650
+testdir/subdir/subsubdir	41ed	3e7	3e7	1000	5e0b4650
+testdir/subdir/subsubdir/file3	81a4	3e7	3e7	4	5e0b4650

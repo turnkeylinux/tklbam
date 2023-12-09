@@ -1,2 +1,2 @@
 chmod 0755 testdir/subdir
-chown -h 999:docker testdir/subdir/subsubdir
+chown -h 999:systemd-journal testdir/subdir/subsubdir
