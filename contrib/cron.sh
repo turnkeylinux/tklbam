@@ -1,12 +1,12 @@
 #!/bin/sh
 
-set ${JITTER:=3600}
+set "${JITTER:=3600}"
 
 randomsleep() {
     MAXSLEEP=$1
 
     if [ -n "$MAXSLEEP" ] ; then
-        if [ $MAXSLEEP -gt 0 ] ; then
+        if [ "$MAXSLEEP" -gt 0 ] ; then
             if [ -z "$RANDOM" ] ; then
                 # A fix for shells that do not have this bash feature.
                 RANDOM=$(dd if=/dev/urandom count=1 2> /dev/null | cksum | cut -c"1-5")
