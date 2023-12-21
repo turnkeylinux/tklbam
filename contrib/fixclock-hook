@@ -30,7 +30,7 @@ Unfortunately, something went wrong...
 $ERROR
 """
 
-LXC_TPL = f"""\
+CONT_TPL = f"""\
 ##########################
 ## FIXCLOCK HOOK FAILED ##
 ##########################
@@ -38,9 +38,9 @@ LXC_TPL = f"""\
 Amazon S3 and Duplicity need a UTC synchronized clock, but TKLBAM detected
 that we're running in a container ($CONTAINER).
 
-As the container host manages the local time (and an unprivileged container
-can't update it) the automated time update performed by TKLBAM will be
-skipped.
+As the container host should manage the local time (and an unprivileged
+container can't update it anyway) the automated time update performed by
+TKLBAM will be skipped.
 
 To ensure that TKLBAM functions properly, please ensure that your host OS
 is regularly updating it's clock. If you're using Proxmox, then this
@@ -54,7 +54,7 @@ this warning. To stop this message from displaying, please run:
 
 
 def echo(msg: str, stderr: bool = False, fatal: bool = False) -> None:
-    """ Echo messge to terminal (exit 1 if fatal)"""
+    """ Echo message to terminal (exit 1 if fatal)"""
     output = sys.stdout
     if stderr:
         output = sys.stderr
@@ -79,15 +79,15 @@ def runit(command: list[str]) -> tuple[int, str, str]:
     return p.returncode, p.stdout, p.stderr
 
 
-def is_container() -> str:
+def is_container() -> Optional[str]:
     """Check if running in container, if yes, return container type,
     otherwise 'no'"""
 
     returncode, stdout, stderr = runit(['systemd-detect-virt', '-c'])
 
-    if stdout.strip() == 'none':
+    if returncode != 0:
         # "proper" VM or bare metal
-        return 'no'
+        return None
     else:
         # container - return type
         return stdout
@@ -103,9 +103,8 @@ def fixclock() -> None:
         echo(msg, stderr=True, fatal=True)
 
 
-def dont_fixclock() -> None:
-    retcode, container, stderr = runit(['systemd-detect-virt'])
-    msg = Template(LXC_TPL).substitute(CONTAINER=container.strip())
+def dont_fixclock(container: str) -> None:
+    msg = Template(CONT_TPL).substitute(CONTAINER=container)
     echo(msg, stderr=True)
 
 
@@ -113,10 +112,11 @@ def main() -> None:
     op, state = sys.argv[1:]
 
     if op in ('restore', 'backup') and state == 'pre':
-        if is_container() == 'no':
+        container = is_container()
+        if not container:
             fixclock()
         else:
-            dont_fixclock()
+            dont_fixclock(container)
 
 
 if __name__ == "__main__":
