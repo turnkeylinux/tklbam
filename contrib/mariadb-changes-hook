@@ -11,9 +11,9 @@ state=$2
 echo "HOOK $0 :: op=$op state=$state pwd=$(pwd) :: "
 echo "TKLBAM_RESTORE_PROFILE_ID: $TKLBAM_RESTORE_PROFILE_ID"
 
-fatal() { echo "[$(basename $0)] FATAL: $*" >&2; exit 1; }
-warn() { echo "[$(basename $0)] WARN: $*" >&2; }
-info() { echo "[$(basename $0)] INFO: $*"; }
+fatal() { echo "[$(basename "$0")] FATAL: $*" >&2; exit 1; }
+warn() { echo "[$(basename "$0")] WARN: $*" >&2; }
+info() { echo "[$(basename "$0")] INFO: $*"; }
 
 migrate_db_not_set() {
     warn "MIGRATE_DB env var not set; DB restore of MySQL/MariaDB from TKL v16.x and earlier may fail"
@@ -21,8 +21,10 @@ migrate_db_not_set() {
 }
 
 check_version() {
-    local org_version=$(cat /etc/turnkey_version | sed -En "s|turnkey-[a-z0-9-]+-([0-9]+)\.[0-9]+[a-z0-9]*-.*|\1|p")
-    local bak_version=$(echo $TKLBAM_RESTORE_PROFILE_ID | sed -En "s|turnkey-[a-z0-9-]+-([0-9]+)\.[0-9]+[a-z0-9]*-.*|\1|p")
+    local org_version
+    local bak_version
+    org_version=$(sed -En "s|turnkey-[a-z0-9-]+-([0-9]+)\.[0-9]+[a-z0-9]*-.*|\1|p" /etc/turnkey_version)
+    bak_version=$(sed -En "s|turnkey-[a-z0-9-]+-([0-9]+)\.[0-9]+[a-z0-9]*-.*|\1|p" <<<"$TKLBAM_RESTORE_PROFILE_ID")
     if [[ "$org_version" -ge 17 ]] && [[ "$bak_version" -le 16 ]]; then
         echo "run_migration"
     else
@@ -72,9 +74,15 @@ elif [[ "$state" == "post" ]]  && [[ "$op" == "restore" ]]; then
         ## pre-exec
         /usr/bin/install -m 755 -o mysql -g root -d /var/run/mysqld
         systemctl unset-environment _WSREP_START_POSITION
-        [ ! -e /usr/bin/galera_recovery ] && VAR= || \
-            VAR=`cd /usr/bin/..; /usr/bin/galera_recovery`; [ $? -eq 0 ] \
-            && systemctl set-environment _WSREP_START_POSITION=$VAR || exit 1
+        if [ ! -e /usr/bin/galera_recovery ]; then
+           VAR=
+        else
+            if VAR=$(cd /usr/bin/..; /usr/bin/galera_recovery); then
+                systemctl set-environment _WSREP_START_POSITION="$VAR"
+            else
+                exit 1
+            fi
+        fi
         ## exec
         su mysql -s /bin/bash -c "/usr/sbin/mariadbd --skip-grant-tables" &
         ## post-exec

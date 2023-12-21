@@ -2,8 +2,10 @@
 # hook that runs ntpdate before duplicity to sync clock to UTC
 
 import os
+from os.path import realpath
 import sys
 import subprocess
+import shutil
 from string import Template
 
 NTPSERVER = os.environ.get("NTPSERVER", "2.pool.ntp.org")
@@ -26,27 +28,96 @@ You can change the NTP server like this:
 Unfortunately, something went wrong...
 
 $ERROR
-
 """
 
-def fixclock():
-    os.environ['PATH'] += ':/usr/sbin'
+LXC_TPL = f"""\
+##########################
+## FIXCLOCK HOOK FAILED ##
+##########################
 
-    command = ["ntpdate", "-u", NTPSERVER]
+Amazon S3 and Duplicity need a UTC synchronized clock, but TKLBAM detected
+that we're running in a container ($CONTAINER).
 
-    p = subprocess.run(command, capture_output=True, text=True)
-    if p.returncode != 0:
-        msg = Template(ERROR_TPL).substitute(COMMAND=' '.join(command),
-                                             ERROR=p.stderr)
+As the container host manages the local time (and an unprivileged container
+can't update it) the automated time update performed by TKLBAM will be
+skipped.
 
-        print(msg, end=' ', file=sys.stderr)
+To ensure that TKLBAM functions properly, please ensure that your host OS
+is regularly updating it's clock. If you're using Proxmox, then this
+should already be happening automatically.
+
+If your host is regularly updating it's clock, then you can safely ignore
+this warning. To stop this message from displaying, please run:
+
+    chmod -x {realpath(sys.argv[0])}
+"""
+
+
+def echo(msg: str, stderr: bool = False, fatal: bool = False) -> None:
+    """ Echo messge to terminal (exit 1 if fatal)"""
+    output = sys.stdout
+    if stderr:
+        output = sys.stderr
+    print(msg, end=' ', file=output)
+    print(file=output)
+    if fatal:
         sys.exit(1)
 
-def main():
+
+def runit(command: list[str]) -> tuple[int, str, str]:
+    """Run 'command' via subprocess; returns:
+
+        tuple(returncode, stdout, stderr)
+    """
+    if '/usr/sbin' not in os.environ['PATH']:
+        os.environ['PATH'] += ':/usr/sbin'
+    full_path = shutil.which(command[0])
+    if full_path is None:
+        echo(f"FATAL[{__file__}]: Couldn't find path to {command[0]}",
+             stderr=True, fatal=True)
+    p = subprocess.run(command, capture_output=True, text=True)
+    return p.returncode, p.stdout, p.stderr
+
+
+def is_container() -> str:
+    """Check if running in container, if yes, return container type,
+    otherwise 'no'"""
+
+    returncode, stdout, stderr = runit(['systemd-detect-virt', '-c'])
+
+    if stdout.strip() == 'none':
+        # "proper" VM or bare metal
+        return 'no'
+    else:
+        # container - return type
+        return stdout
+
+
+def fixclock() -> None:
+    command = ["ntpdate", "-u", NTPSERVER]
+    echo("Updating system clock")
+    returncode, stdout, stderr = runit(command)
+    if returncode != 0:
+        msg = Template(ERROR_TPL).substitute(COMMAND=' '.join(command),
+                                             ERROR=stderr)
+        echo(msg, stderr=True, fatal=True)
+
+
+def dont_fixclock() -> None:
+    retcode, container, stderr = runit(['systemd-detect-virt'])
+    msg = Template(LXC_TPL).substitute(CONTAINER=container.strip())
+    echo(msg, stderr=True)
+
+
+def main() -> None:
     op, state = sys.argv[1:]
 
     if op in ('restore', 'backup') and state == 'pre':
-        fixclock()
+        if is_container() == 'no':
+            fixclock()
+        else:
+            dont_fixclock()
+
 
 if __name__ == "__main__":
     main()
