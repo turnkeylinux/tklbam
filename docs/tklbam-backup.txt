@@ -36,7 +36,7 @@ Filesystem overrides
 This includes or excludes additional files and directories from being 
 backed up if they've changed since installation.
 
-Overrides defaults in /var/lib/tklbam/profile/dirindex.conf
+Overrides defaults in /var/lib/tklbam3/profile/dirindex.conf
 
 Gotchas:
 
@@ -200,10 +200,10 @@ USAGE EXAMPLES
 
     # Create separate backups with unique backup ids containing the previously excluded items
     # Tip: use tklbam-status after tklbam-backup to determine the Hub backup ID
-    export TKLBAM_REGISTRY=/var/lib/tklbam.customers-and-webapp-emails
+    export TKLBAM_REGISTRY=/var/lib/tklbam3.customers-and-webapp-emails
     tklbam-backup --skip-files --skip-packages -- mysql:customers mysql:webapp/emails
 
-    export TKLBAM_REGISTRY=/var/lib/tklbam.raw-srv
+    export TKLBAM_REGISTRY=/var/lib/tklbam3.raw-srv
     tklbam-backup --raw-upload=/srv
 
 
@@ -214,7 +214,7 @@ FILES
 
 :Local cache of profile: $TKLBAM_REGISTRY/profile
 
-By default TKLBAM_REGISTRY=/var/lib/tklbam
+By default TKLBAM_REGISTRY=/var/lib/tklbam3
 
 
 

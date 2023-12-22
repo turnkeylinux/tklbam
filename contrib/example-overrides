@@ -4,7 +4,7 @@
 #
 # FILESYSTEM OVERRIDES
 # 
-#   Override default configurations in /var/lib/tklbam/profile/dirindex.conf
+#   Override default configurations in /var/lib/tklbam3/profile/dirindex.conf
 #   
 #   This includes or excludes additional files and directories from being 
 #   backed up if they've changed since installation.

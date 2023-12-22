@@ -139,7 +139,7 @@ You can also generate your own custom profiles with the following command::
 
     tklbam-internal create-profile
 
-The backup profile is stored in /var/lib/tklbam/profile and contains the
+The backup profile is stored in /var/lib/tklbam3/profile and contains the
 following text files:
 
 1) dirindex.conf: a list of directories to check for changes by default.
@@ -226,8 +226,8 @@ frequently and take less time to update/restore::
 
     export TKLBAM_CONF=/etc/tklbam.light
 
-    mkdir /var/lib/tklbam.light
-    export TKLBAM_REGISTRY=/var/lib/tklbam.light
+    mkdir /var/lib/tklbam3.light
+    export TKLBAM_REGISTRY=/var/lib/tklbam3.light
 
     tklbam-init
     tklbam-backup
@@ -238,7 +238,7 @@ and TKLBAM_CONF environment variables::
     cat > /usr/local/bin/tklbam-backup-light << EOF
     #!/bin/bash
     export TKLBAM_CONF=/etc/tklbam.light
-    export TKLBAM_REGISTRY=/var/lib/tklbam.light
+    export TKLBAM_REGISTRY=/var/lib/tklbam3.light
 
     tklbam-backup
     EOF
@@ -252,7 +252,7 @@ Yes. Here are a couple of recommended ways to do this:
 
 1) Create a separate backup with an empty backup profile::
 
-    export TKLBAM_REGISTRY=/var/lib/tklbam.srv
+    export TKLBAM_REGISTRY=/var/lib/tklbam3.srv
     export TKLBAM_CONF=/etc/tklbam.srv
 
     tklbam-init --force-profile=empty
@@ -272,7 +272,7 @@ Yes. Here are a couple of recommended ways to do this:
    backup and create another TKLBAM backup just for the big files::
    
         echo -/srv >> /etc/tklbam/overrides
-        export TKLBAM_REGISTRY=/var/lib/tklbam.srv-raw 
+        export TKLBAM_REGISTRY=/var/lib/tklbam3.srv-raw 
         tklbam-backup --raw-upload=/srv
 
    Later, you'll need to use the --raw-download option to restore::

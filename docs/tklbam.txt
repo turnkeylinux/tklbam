@@ -21,7 +21,7 @@ ENVIRONMENT VARIABLES
 
 :TKLBAM_CONF: Path to TKLBAM configurations dir (default: /etc/tklbam)
 
-:TKLBAM_REGISTRY: Path to TKLBAM registry (default: /var/lib/tklbam)
+:TKLBAM_REGISTRY: Path to TKLBAM registry (default: /var/lib/tklbam3)
 
 
 DESCRIPTION
@@ -242,7 +242,7 @@ matter to Alon either way. It's all automagic.
 FILES
 =====
 
-* /var/lib/tklbam: the registry
+* /var/lib/tklbam3: the registry
 
 SEE ALSO
 ========
