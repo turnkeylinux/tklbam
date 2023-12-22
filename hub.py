@@ -85,10 +85,13 @@ import base64
 import tempfile
 from datetime import datetime
 import subprocess
-from typing import Optional
+from typing import Optional, Self
+from dataclasses import dataclass
 
 from py3curl_wrapper import API as _API
-from utils import AttrDict
+
+from utils import BaseAttrDict
+from registry import BaseRegisry
 
 class Error(Exception):
     def __init__(self, description: str, *args: str):
@@ -127,7 +130,11 @@ class API(_API):
 
             raise APIError(e.code, e.name, e.description)
 
-class BackupRecord(AttrDict):
+@dataclass
+class BackupRecord:
+
+    response: dict[str, str]
+
     @staticmethod
     def _parse_datetime(s: str) -> Optional[datetime]:
         # return datetime("Y-M-D h:m:s")
@@ -136,62 +143,51 @@ class BackupRecord(AttrDict):
 
         return datetime.strptime(s, "%Y-%m-%d %H:%M:%S")
 
-    def __init__(self, response: dict[str, str]):
-        self.key = response['key']
-        self.address = response['address']
-        self.backup_id = response['backup_id']
-        self.server_id = response['server_id']
-        self.profile_id = response['turnkey_version']
+    def __post_init__(self):
+        self.key = self.response['key']
+        self.address = self.response['address']
+        self.backup_id = self.response['backup_id']
+        self.server_id = self.response['server_id']
+        self.profile_id = self.response['turnkey_version']
 
-        self.created = self._parse_datetime(response['date_created'])
-        self.updated = self._parse_datetime(response['date_updated'])
+        self.created = self._parse_datetime(self.response['date_created'])
+        self.updated = self._parse_datetime(self.response['date_updated'])
 
-        self.size = int(response['size']) # in MBs
-        self.label = response['description']
+        self.size = int(self.response['size']) # in MBs
+        self.label = self.response['description']
 
         # no interface for this in tklbam, so not returned from hub
         self.sessions: list[str] = []
 
-        AttrDict.__init__(self)
+@dataclass
+class CredsBase(BaseAttrDict):
 
-class BaseCredentials(AttrDict):
-    def __init__(self):
-        self.type = self.__class__.__name__.lower()
+    def __post_init__(self):
+        self.kind = self.__class__.__name__.lower()
 
 class Credentials:
 
-    class IAMRole(BaseCredentials):
-        def __init__(self, accesskey: str, secretkey: str, sessiontoken: str, expiration: str):
-            self.accesskey = accesskey
-            self.secretkey = secretkey
-            self.sessiontoken = sessiontoken
-            self.expiration = expiration
+    @dataclass
+    class IAMRole(CredsBase):
+        accesskey: str
+        secretkey: str
+        sessiontoken: str
+        expiration: str
 
-            BaseCredentials.__init__(self)
-
-    class IAMUser(BaseCredentials):
-        def __init__(self, accesskey: str, secretkey: str, sessiontoken: str):
-            self.accesskey = accesskey
-            self.secretkey = secretkey
-            self.sessiontoken = sessiontoken
-
-            BaseCredentials.__init__(self)
-
-    class DevPay(BaseCredentials):
-        def __init__(self, accesskey: str, secretkey: str, usertoken: str, producttoken: str):
-            self.accesskey = accesskey
-            self.secretkey = secretkey
-            self.usertoken = usertoken
-            self.producttoken = producttoken
-
-            BaseCredentials.__init__(self)
+    @dataclass
+    class IAMUser(CredsBase):
+        accesskey: str
+        secretkey: str
+        sessiontoken: str
 
     @classmethod
-    def from_dict(cls, d: dict[str, str]) -> BaseCredentials:
+    def from_dict(cls, d: dict[str, str] | BaseRegisry) -> Optional[IAMRole|IAMUser]:
 
         creds_types = dict((subcls.__name__.lower(), subcls)
                            for subcls in list(cls.__dict__.values())
-                           if isinstance(subcls, type) and issubclass(subcls, BaseCredentials))
+                           if isinstance(subcls, type) and (
+                               issubclass(subcls, cls.IAMRole)
+                               or issubclass(subcls, cls.IAMUser)))
 
         creds_type = d.get('type')
 
@@ -201,14 +197,27 @@ class Credentials:
         except KeyError:
             pass
 
-        # implicit devpay if no type (backwards compat with existing registry)
-        if not creds_type:
-            return cls.DevPay(**kwargs)
-
         if creds_type not in creds_types:
-            raise Error('unknown credentials type "%s"' % creds_type)
+            raise Error(f'unknown credentials type "{creds_type}"'
+                        f' (known types: {", ".join(creds_types.keys())})')
 
+        assert creds_type is not None
         return(creds_types[creds_type](**kwargs))
+
+
+class ProfileArchive:
+    def __init__(self, profile_id: str, archive: str, timestamp: int) -> None:
+        self.path_archive = archive
+        self.timestamp = timestamp
+        self.profile_id = profile_id
+
+    def extract(self, path: str) -> None:
+        subprocess.run(["tar", f"-zxf {self.path_archive}", f"-C {path}"])
+
+    def __del__(self) -> None:
+        if os.path.exists(self.path_archive):
+            os.remove(self.path_archive)
+
 
 class Backups:
     API_URL = os.getenv('TKLBAM_APIURL', 'https://hub.turnkeylinux.org/api/backup/')
@@ -232,11 +241,11 @@ class Backups:
         response = API().request('GET', cls.API_URL + 'subkey/', {'apikey': apikey})
         return response['subkey']
 
-    def get_credentials(self):
+    def get_credentials(self) -> Optional[Credentials | Credentials.IAMRole | Credentials.IAMUser]:
         response = self._api('GET', 'credentials/')
         return Credentials.from_dict(response)
 
-    def get_new_profile(self, profile_id, profile_timestamp):
+    def get_new_profile(self, profile_id: str, profile_timestamp: int) -> Optional[ProfileArchive]:
         """
         Gets a profile for <profile_id> that is newer than <profile_timestamp>.
 
@@ -264,48 +273,35 @@ class Backups:
 
         return ProfileArchive(profile_id, archive_path, archive_timestamp)
 
-    def new_backup_record(self, key, profile_id, server_id=None):
+    def new_backup_record(self, key: str, profile_id: str, server_id: Optional[str] = None) -> BackupRecord:
         attrs = {'key': key, 'turnkey_version': profile_id}
         if server_id:
             attrs['server_id'] = server_id
-
         response = self._api('POST', 'record/create/', attrs)
         return BackupRecord(response)
 
-    def get_backup_record(self, backup_id):
-        response = self._api('GET', 'record/%s/' % backup_id)
+    def get_backup_record(self, backup_id: str) -> BackupRecord:
+        response = self._api('GET', f'record/{backup_id}/')
         return BackupRecord(response)
 
-    def set_backup_inprogress(self, backup_id, bool):
-        response = self._api('PUT', 'record/%s/inprogress/' % backup_id,
-                             {'bool': bool})
-
+    def set_backup_inprogress(self, backup_id: str, bool_: str) -> dict[str, str]:
+        response = self._api('PUT', f'record/{backup_id}/inprogress/',
+                             {'bool': bool_})
         return response
 
-    def update_key(self, backup_id, key):
-        response = self._api('PUT', 'record/%s/' % backup_id, {'key': key})
+    def update_key(self, backup_id: str, key: str) -> BackupRecord:
+        response = self._api('PUT', f'record/{backup_id}/', {'key': key})
         return BackupRecord(response)
 
-    def updated_backup(self, address):
+    def updated_backup(self, address: str) -> dict[str, str]:
         response = self._api('PUT', 'record/update/', {'address': address})
         return response
 
-    def list_backups(self):
+    def list_backups(self) -> list[BackupRecord]:
         response = self._api('GET', 'records/')
-        return [BackupRecord(r) for r in response]
+        # XXX this seems weird and perhaps wrong?!
+        return [BackupRecord({k: v}) for k, v in response.items()]
 
-class ProfileArchive:
-    def __init__(self, profile_id, archive, timestamp):
-        self.path_archive = archive
-        self.timestamp = timestamp
-        self.profile_id = profile_id
-
-    def extract(self, path):
-        subprocess.run(["tar", f"-zxf {self.path_archive}", f"-C {path}"])
-
-    def __del__(self):
-        if os.path.exists(self.path_archive):
-            os.remove(self.path_archive)
 
 from conf import Conf
 if os.environ.get("TKLBAM_DUMMYHUB") or os.path.exists(os.path.join(Conf.DEFAULT_PATH, "dummyhub")):
