@@ -1,15 +1,17 @@
 import os
-from os.path import exists
-
+from os.path import exists, join, realpath
 import re
+from dataclasses import dataclass
+from typing import Self
 
-from paths import Paths as _Paths
 import duplicity
 
-from typing import Self, Optional
+DEFAULT_PATH = os.environ.get('TKLBAM_CONF', '/etc/tklbam3')
+
 
 class Error(Exception):
     pass
+
 
 class Limits(list):
     @staticmethod
@@ -21,28 +23,24 @@ class Limits(list):
 
     @classmethod
     def fromfile(cls, inputfile: str) -> Self:
-        try:
-            fh = open(inputfile)
-        except FileNotFoundError:
-            return cls()
-
         limits = []
-        for line in fh.readlines():
-            line = re.sub(r'#.*', '', line).strip()
-            if not line:
-                continue
-
-            limits.append(line)
-        fh.close()
 
         def is_legal(limit: str) -> bool:
-            if cls._is_db_limit(limit):
+            if cls._is_db_limit(limit) or re.match(r'^-?/', limit):
                 return True
-
-            if re.match(r'^-?/', limit):
-                return True
-
             return False
+
+
+        try:
+            with open(inputfile) as fob:
+                for line in fob.readlines():
+                    line = re.sub(r'#.*', '', line).strip()
+                    if not line:
+                        continue
+                    limits.append(line)
+
+        except FileNotFoundError:
+            return cls()
 
         for limit in limits:
             if not is_legal(limit):
@@ -50,9 +48,9 @@ class Limits(list):
 
         return cls(limits)
 
-    def fs_(self) -> list[str]:
-        return [ val for val in self if not self._is_db_limit(val) ]
-    fs = property(fs_)
+    @property
+    def fs(self) -> list[str]:
+        return [val for val in self if not self._is_db_limit(val)]
 
     def _db(self, namespace: str) -> list[str]:
         db_limits = []
@@ -77,124 +75,129 @@ class Limits(list):
 
         return db_limits
 
-    def mydb_(self) -> list[str]:
+    @property
+    def mydb(self) -> list[str]:
         return self._db('mysql')
-    mydb = property(mydb_)
 
-    def pgdb_(self) -> list[str]:
+    @property
+    def pgdb(self) -> list[str]:
         return self._db('pgsql')
 
-    pgdb = property(pgdb_)
-
-    def __add__(self, b: list[str]) -> Self:
+    def __add__(self, b: list) -> list:
         cls = type(self)
         return cls(list.__add__(self, b))
 
-from utils import AttrDict
+@dataclass
+class ConfDir:
+    DEFAULT_PATH = DEFAULT_PATH
+    path: str = DEFAULT_PATH
 
-class Conf(AttrDict):
-    volsize: str
-    s3_parallel_upload: str
-    DEFAULT_PATH = os.environ.get('TKLBAM_CONF', '/etc/tklbam')
-    class Error(Exception):
-        pass
+    def __post_init__(self):
+        self.conf: str = join(self.path, 'tklbam.conf')
+        self.overrides: str = join(self.path, 'overrides.conf')
+        self.hooks_dir: str = join(self.path, 'hooks.d')
 
-    class Paths(_Paths):
-        files = [ 'overrides', 'conf' ]
 
-    def _error(self, s: str|Error) -> Error:
-        return self.Error("%s: %s" % (self.paths.conf, s))
+@dataclass
+class Conf:
+    Error = Error
+    DEFAULT_PATH = DEFAULT_PATH
 
-    def __setitem__(self, name: str, val: int|str|bool) -> None:
-        # sanity checking / parsing values reach us whenver someone
-        # (including a method in this instance) sets an instance member
+    # dfault conf vals
+    path: str = DEFAULT_PATH
+    full_backup: str = duplicity.Uploader.FULL_IF_OLDER_THAN
+    volsize: int = duplicity.Uploader.VOLSIZE
+    s3_parallel_uploads: int = duplicity.Uploader.S3_PARALLEL_UPLOADS
+    restore_cache_size: str = duplicity.Downloader.CACHE_SIZE
+    restore_cache_dir: str = duplicity.Downloader.CACHE_DIR
+    backup_skip_files: bool = False
+    backup_skip_database: bool = False
+    backup_skip_packages: bool = False
+    force_profile: str = ''
 
-        if name == 'full_backup':
-            if not re.match(r'^now$|^\d+[mhDWMY]', str(val)):
-                raise self.Error("bad full-backup value (%s)" % val)
+    # other defaults
+    secretfile: str = ''
+    address: str = ''
 
-        if name == 'volsize':
-            try:
-                val = int(val)
-            except ValueError:
-                raise self.Error("volsize not a number (%s)" % val)
+    @staticmethod
+    def _validate_bool(opt: str, value: str|bool) -> str|bool:
+        """Returns value if valid, otherwise raise exception"""
+        if value in (True, False):
+            val = value
+        else:
+            if re.match(r'^true|1|yes$', str(value), re.IGNORECASE):
+                val = True
+            elif re.match(r'^false|0|no$', str(value), re.IGNORECASE):
+                val = False
+            else:
+                raise Error(f"bad bool value '{value}'")
+        os.environ['TKLBAM_' + opt.upper()] = 'yes'
+        return val
 
-        if name == 's3_parallel_uploads':
-            try:
-                val = int(val)
-            except ValueError:
-                raise self.Error("s3-parallel-uploads not a number (%s)" % val)
+    @staticmethod
+    def _validate_string(opt: str, regex: str, value: str) -> str:
+        """Returns value if valid, otherwise raise exception"""
+        if not re.match(regex, str(value), re.IGNORECASE):
+            raise Error(f"bad {opt} value ({value})")
+        return str(value).upper()
 
-        if name == 'restore_cache_size':
-            if not re.match(r'^\d+(%|mb?|gb?)?$', str(val), re.IGNORECASE):
-                raise self.Error("bad restore-cache value (%s)" % val)
+    @staticmethod
+    def _validate_int(opt: str, value: str) -> int:
+        """Returns value if valid, otherwise raise exception"""
+        try:
+            value_ = int(value)
+        except ValueError:
+            raise ValueError(f"{opt} not a number ({value})")
+        return value_
 
-        backup_skip_options = [ 'backup_skip_' + opt
-                                for opt in ('files', 'database', 'packages') ]
-        if name in backup_skip_options:
-            if val not in (True, False):
-                if re.match(r'^true|1|yes$', str(val), re.IGNORECASE):
-                    val = True
-                elif re.match(r'^false|0|no$', str(val), re.IGNORECASE):
-                    val = False
-                else:
-                    raise self.Error("bad bool value '%s'" % val)
+    @staticmethod
+    def _validate_path(opt: str, value: str) -> str:
+        """Returns value if valid, otherwise raise exception"""
+        if not exists(value):
+            raise ValueError(f"{opt} path does not exist ({value})")
+        return realpath(value)
 
-            if val:
-                os.environ['TKLBAM_' + name.upper()] = 'yes'
-
-        AttrDict.__setitem__(self, name, val)  # type: ignore[assignment]
-        # Incompatible types in assignment (expression has type "str", target has type "_KT")  [assignment]
-        # Incompatible types in assignment (expression has type "Union[int, str, bool]", target has type "_VT")  [assignment]
-
-    def __init__(self, path: Optional[str] = None):
-        AttrDict.__init__(self)
-        if path is None:
-            path = self.DEFAULT_PATH
-
-        self.path = path
-        self.paths = self.Paths(path)
-
-        self.secretfile: Optional[str] = None
-        self.address: Optional[str] = None
-        self.force_profile: Optional[str] = None
-        self.overrides = Limits.fromfile(self.paths.overrides)
-
-        self.volsize = str(duplicity.Uploader.VOLSIZE)
-        self.s3_parallel_uploads = str(duplicity.Uploader.S3_PARALLEL_UPLOADS)
-        self.full_backup = str(duplicity.Uploader.FULL_IF_OLDER_THAN)
-
-        self.restore_cache_size = str(duplicity.Downloader.CACHE_SIZE)
-        self.restore_cache_dir = str(duplicity.Downloader.CACHE_DIR)
-
-        self.backup_skip_files = False
-        self.backup_skip_database = False
-        self.backup_skip_packages = False
-
-        if not exists(self.paths.conf):
-            return
-
-        with open(self.paths.conf) as fob:
+    @classmethod
+    def load_from_file(cls, conffile: str) -> None:
+        with open(conffile) as fob:
             for line in fob.read().split("\n"):
                 line = line.strip()
                 if not line or line.startswith("#"):
                     continue
 
                 try:
-                    opt, val = re.split(r'\s+', line, 1)
+                    opt, value = re.split(r'\s+', line, 1)
                 except ValueError:
-                    raise self._error("illegal line '%s'" % (line))
+                    raise ValueError(f"{conffile}: illegal line '{line}'")
 
                 try:
-                    if opt in ('full-backup', 'volsize', 's3-parallel-uploads',
-                               'restore-cache-size', 'restore-cache-dir',
-                               'backup-skip-files', 'backup-skip-packages', 'backup-skip-database', 'force-profile'):
-
-                        attrname = opt.replace('-', '_')
-                        setattr(self, attrname, val)
-
+                    opt = opt.replace('-', '_')
+                    if opt in ('full_backup', 'restore_cache_size'):
+                        if opt == 'full_backup':
+                            regex =  r'^now$|^\d+[mhDWMY]'
+                        else:
+                            regex = r'^\d+(%|mb?|gb?)?$'
+                        value = cls._validate_string(opt, regex, value)
+                    elif opt in ('volsize', 's3_parallel_uploads'):
+                        value = cls._validate_int(opt, value)
+                    elif opt in ('restore_cache_dir', 'force_profile'):
+                        value = cls._validate_path(opt, value)
+                    elif opt in ('backup_skip_files', 'backup_skip_packages', 'backup_skip_database'):
+                        value = cls._validate_bool(opt, value)
+                    elif opt == 'force_profile':
+                        value = str(value).lower()
                     else:
-                        raise self.Error("unknown conf option '%s'" % opt)
+                        raise cls.Error(f"unknown conf option '{opt}'")
+                except Error as e:
+                    raise ValueError(e)
+                setattr(cls, opt, value)
 
-                except self.Error as e:
-                    raise self._error(e)
+    def __post_init__(self) -> None:
+        self.paths = ConfDir(self.path)
+        if not exists(self.paths.overrides):
+            self.overrides = Limits()
+        else:
+            self.overrides = Limits.fromfile(self.paths.overrides)
+        if exists(self.paths.conf):
+            self.load_from_file(self.paths.conf)
+        # TODO warn if file not found?

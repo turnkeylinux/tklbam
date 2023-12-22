@@ -1,14 +1,14 @@
 import os
-from os.path import *
+from os.path import exists
 import fcntl
 import errno
-
+from typing import Optional
 
 class Locked(Exception):
     pass
 
 
-def pid_exists(pid):
+def pid_exists(pid: int) -> bool:
     try:
         os.kill(pid, 0)
     except OSError as e:
@@ -21,13 +21,13 @@ def pid_exists(pid):
 class PidLock:
     Locked = Locked
 
-    def __init__(self, filename, nonblock=False):
+    def __init__(self, filename: str, nonblock: bool = False) -> None:
         self.filename = filename
         self.nonblock = nonblock
         self.locked = False
         self.fh = None
 
-    def lock(self, nonblock=None):
+    def lock(self, nonblock: Optional[bool] = None) -> Optional[bool]:
         if exists(self.filename):
             try:
                 with open(self.filename, 'r') as fob:
@@ -55,8 +55,8 @@ class PidLock:
 
         self.locked = True
 
-    def unlock(self):
-        if not self.locked:
+    def unlock(self) -> None:
+        if not self.locked or self.fh is None:
             return
 
         fcntl.flock(self.fh.fileno(), fcntl.LOCK_UN)
@@ -64,7 +64,7 @@ class PidLock:
 
         self.locked = False
 
-    def __del__(self):
+    def __del__(self) -> None:
         self.unlock()
 
 

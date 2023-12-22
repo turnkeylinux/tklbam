@@ -13,22 +13,26 @@
 """
 Dump PostgreSQL databases to a filesystem path.
 """
-from os.path import *
 
+from typing import Optional, NoReturn
 import sys
+
 import pgsql
 
-def fatal(e):
+
+def fatal(e: Optional[str] = None) -> NoReturn:
     print("fatal: " + str(e), file=sys.stderr)
     sys.exit(1)
 
-def usage(e=None):
+
+def usage(e: Optional[str] = None) -> NoReturn:
     if e:
         print("error: " + str(e), file=sys.stderr)
 
     print("Syntax: %s path/to/output [ -?database/table ... ] " % sys.argv[0], file=sys.stderr)
     print(__doc__.strip(), file=sys.stderr)
     sys.exit(1)
+
 
 def main():
     args = sys.argv[1:]
@@ -40,6 +44,6 @@ def main():
 
     pgsql.backup(outdir, limits)
 
+
 if __name__ == "__main__":
     main()
-

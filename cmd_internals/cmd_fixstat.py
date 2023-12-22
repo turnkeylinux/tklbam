@@ -26,10 +26,11 @@ Options:
 import os
 import sys
 import getopt
+from typing import Optional, NoReturn
 
 from changes import Changes
 
-def usage(e=None):
+def usage(e: Optional[str | getopt.GetoptError] = None) -> NoReturn:
     if e:
         print("error: " + str(e), file=sys.stderr)
 
@@ -47,11 +48,15 @@ def main():
     verbose = False
     simulate = False
 
-    uidmap = {}
-    gidmap = {}
+    uidmap: dict[int, int] = {}
+    gidmap: dict[int, int] = {}
 
-    def parse_idmap(line):
-        return dict([ list(map(int, val.split(',', 1))) for val in line.split(':') ])
+    def parse_idmap(line: str) -> dict[int, int]:
+        d: dict[int, int] = {}
+        for val in line.split(':'):
+            k, v = val.split(',', 1)
+            d[int(k)] = int(v)
+        return d
 
     for opt, val in opts:
         if opt in ('-u', '--uid-map'):
@@ -84,4 +89,3 @@ def main():
 
 if __name__=="__main__":
     main()
-

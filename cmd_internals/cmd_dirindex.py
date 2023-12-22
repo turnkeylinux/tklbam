@@ -20,11 +20,12 @@ Options:
 """
 import sys
 import getopt
+from typing import Optional, NoReturn
 
 import dirindex
 import changes
 
-def usage(e=None):
+def usage(e: Optional[str | getopt.GetoptError] = None) -> NoReturn:
     if e:
         print("error: " + str(e), file=sys.stderr)
 
@@ -59,7 +60,7 @@ def main():
     paths = args[1:]
     
     if opt_input:
-        fh = file(opt_input) if opt_input != '-' else sys.stdin
+        fh = open(opt_input) if opt_input != '-' else sys.stdin
         paths = dirindex.read_paths(fh) + paths
 
     if opt_create:

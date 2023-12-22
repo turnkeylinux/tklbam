@@ -15,10 +15,11 @@ Determine your system's default backup profile_id
 """
 import sys
 import getopt
+from typing import Optional, NoReturn
 
 from version import detect_profile_id
 
-def usage(e=None):
+def usage(e: Optional[str | getopt.GetoptError] = None) -> NoReturn:
     if e:
         print("error: " + str(e), file=sys.stderr)
     print("Syntax: %s [ path/to/root ]" % sys.argv[0], file=sys.stderr)

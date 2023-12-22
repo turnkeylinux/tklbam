@@ -30,12 +30,12 @@ Supports the following subset of mysqldump(1) options:
 
 """
 import os
-from os.path import *
+from os.path import isdir, exists
 
 import sys
 import getopt
-
 import shutil
+from typing import Optional, NoReturn
 
 import mysql
 
@@ -43,7 +43,7 @@ def fatal(e):
     print("fatal: " + str(e), file=sys.stderr)
     sys.exit(1)
 
-def usage(e=None):
+def usage(e: Optional[str | getopt.GetoptError] = None) -> NoReturn:
     if e:
         print("error: " + str(e), file=sys.stderr)
 
@@ -106,11 +106,11 @@ def main():
 
     callback = None
     if opt_verbose:
-        print("source: " + mysqldump_fh.name)
+        if mysqldump_fh is not None:
+            print("source: " + mysqldump_fh.name)
         callback = mysql.cb_print()
 
     mysql.mysql2fs(mysqldump_fh, outdir, limits, callback)
 
 if __name__ == "__main__":
     main()
-

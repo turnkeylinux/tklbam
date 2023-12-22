@@ -14,10 +14,11 @@
 import os
 import sys
 import subprocess
+from typing import Optional, NoReturn
 
 from pkgman import Packages
 
-def usage(e=None):
+def usage(e: Optional[str] = None) -> NoReturn:
     if e:
         print("error: " + str(e), file=sys.stderr)
 

@@ -13,15 +13,18 @@
 """Ask Hub to use IAM role to get temporary credentials to your TKLBAM S3 storage"""
 
 import sys
+from typing import Optional, NoReturn
+
 from registry import hub_backups
 import hub
-from retry import retry
+import retries
 
-@retry(5, backoff=2)
-def get_credentials(hb):
+
+@retries.retry(5, backoff=2)
+def get_credentials(hb: hub.Backups):
     return hb.get_credentials()
 
-def usage(e=None):
+def usage(e: Optional[str] = None) -> NoReturn:
     if e:
         print("error: " + str(e), file=sys.stderr)
 
@@ -29,12 +32,14 @@ def usage(e=None):
     print(__doc__.strip(), file=sys.stderr)
     sys.exit(1)
 
-def fatal(e):
+def fatal(e: str) -> NoReturn:
     print("error: " + str(e), file=sys.stderr)
     sys.exit(1)
 
-def format(creds):
-    values = [ creds[k] for k in ('accesskey', 'secretkey', 'sessiontoken', 'expiration') ]
+def format(creds: Optional[hub.Credentials.IAMRole | hub.Credentials.IAMUser]) -> str:
+    if not creds:
+        return ''
+    values = [creds[k] for k in ('accesskey', 'secretkey', 'sessiontoken', 'expiration')]
     return " ".join(values)
 
 
@@ -43,13 +48,15 @@ def main():
     if args:
         usage()
 
+    hb = None
     try:
         hb = hub_backups()
     except hub.Backups.NotInitialized as e:
         print("error: " + str(e), file=sys.stderr)
-
+    if not hb:
+        fatal('Unexpected error - this code should never run')
     creds = get_credentials(hb)
-    if creds.type != 'iamrole':
+    if creds.kind != 'iamrole':
         fatal("STS agent incompatible with '%s' type credentials" % creds.type)
 
     print(format(creds))

@@ -11,22 +11,20 @@
 import re
 from os.path import join, exists
 from typing import Optional, Self
-
-from utils import AttrDict
+from dataclasses import dataclass
 
 class Error(Exception):
     pass
 
-class TurnKeyVersion(AttrDict):
+@dataclass
+class TurnKeyVersion:
     Error = Error
-    def __init__(self, codename: str, release: Optional[str] = None, arch: Optional[str] = None):
-        AttrDict.__init__(self)
-        self.codename = codename
-        self.release = release
-        self.arch = arch
+    codename: str
+    release: Optional[str] = None
+    arch: Optional[str] = None
 
     def __str__(self) -> str:
-        return "turnkey-%s-%s-%s" % (self.codename, self.release, self.arch)
+        return f"turnkey-{self.codename}-{self.release}-{self.arch}"
 
     def is_complete(self) -> bool:
         if self.codename and self.release and self.arch:

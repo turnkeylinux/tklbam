@@ -13,11 +13,12 @@
 Map a filesystem created by pgsql2fs back to PostgreSQL
 """
 import sys
-from os.path import *
+from os.path import isdir
+from typing import Optional, NoReturn
 
 import pgsql
 
-def usage(e=None):
+def usage(e: Optional[str] = None) -> NoReturn:
     if e:
         print("error: " + str(e), file=sys.stderr)
 

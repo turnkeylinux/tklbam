@@ -13,8 +13,9 @@
 """Merge passwd and group files and print uid and gid maps"""
 import sys
 import userdb
+from typing import Optional, NoReturn
 
-def usage(e=None):
+def usage(e: Optional[str] = None) -> NoReturn:
     if e:
         print("error: " + str(e), file=sys.stderr)
 
@@ -32,13 +33,16 @@ def main():
     merged_passwd, merged_group = args[4:6]
 
     def r(path):
-        return file(path).read()
+        with open(path) as fob:
+            return fob.read()
 
     passwd, group, uidmap, gidmap = userdb.merge(r(old_passwd), r(old_group),
                                                  r(new_passwd), r(new_group))
 
-    print(passwd, file=file(merged_passwd, "w"))
-    print(group, file=file(merged_group, "w"))
+    with open(merged_passwd, "w") as fob:
+        print(passwd, file=fob)
+    with open(merged_group, "w") as fob:
+        print(group, file=fob)
 
     def fmt_map(m):
          return ":".join([ "%d,%d" % (key, val) for key,val in list(m.items()) ])

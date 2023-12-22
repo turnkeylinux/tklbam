@@ -11,7 +11,7 @@
 # the License, or (at your option) any later version.
 # 
 """
-Create custom backup profile 
+Create custom backup profile
 
 What is a backup profile?
 
@@ -87,11 +87,13 @@ Usage examples:
 
 """
 import os
-from os.path import *
+from os.path import join, exists, isdir
 
 import sys
 import getopt
 import re
+from io import TextIOWrapper
+from typing import Optional, NoReturn, TextIO
 
 import dirindex
 from backup import ProfilePaths
@@ -100,7 +102,7 @@ from temp import TempFile
 class Error(Exception):
     pass
 
-def usage(e=None):
+def usage(e: Optional[str | Error | getopt.GetoptError] = None) -> NoReturn:
     from paged import stdout
 
     if e:
@@ -110,18 +112,18 @@ def usage(e=None):
     print(__doc__.strip(), file=stdout)
     sys.exit(1)
 
-def fatal(e):
+def fatal(e: str | Error | getopt.GetoptError) -> NoReturn:
     print("error: " + str(e), file=sys.stderr)
     sys.exit(1)
 
 class ProfileGenerator:
 
     @staticmethod
-    def _get_dirindex(path_dirindex_conf, path_rootfs):
+    def _get_dirindex(path_dirindex_conf: str, path_rootfs: str) -> str:
         with open(path_dirindex_conf) as fob:
             paths = dirindex.read_paths(fob)
-        paths = [ re.sub(r'^(-?)', '\\1' + path_rootfs, path) 
-                  for path in paths ]
+        paths = [re.sub(r'^(-?)', '\\1' + path_rootfs, path)
+                 for path in paths]
 
         tmp = TempFile()
         dirindex.create(tmp.path, paths)
@@ -132,7 +134,7 @@ class ProfileGenerator:
         return "".join(filtered)
 
     @staticmethod
-    def _get_packages(path_rootfs):
+    def _get_packages(path_rootfs: str) -> list[str]:
         def parse_status(path):
             control = ""
             with open(path) as fob:
@@ -147,8 +149,8 @@ class ProfileGenerator:
                 yield control
 
         def parse_control(control):
-            return dict([ line.split(': ', 1) 
-                          for line in control.splitlines() 
+            return dict([ line.split(': ', 1)
+                          for line in control.splitlines()
                           if re.match(r'^Package|Status', line) ])
 
         packages = []
@@ -160,10 +162,9 @@ class ProfileGenerator:
         packages.sort()
         return packages
 
-    def __init__(self, conf_paths, path_output, rootfs="/", packages=True, dirindex=True):
+    def __init__(self, conf_paths: list[str], path_output: str, rootfs: str = "/", packages: bool = True, dirindex: bool = True) -> None:
 
         paths = ProfilePaths(path_output)
-
 
         with open(paths.dirindex_conf, "w") as fob:
             fob.write(("\n".join(conf_paths) + "\n")
@@ -175,14 +176,14 @@ class ProfileGenerator:
                 fob.write(di)
 
         if packages:
-            packages = self._get_packages(rootfs)
+            packages_ = self._get_packages(rootfs)
             with open(paths.packages, "w") as fob:
-                fob.writelines([ package + "\n"
-                                 for package in packages ])
+                fob.writelines([package + "\n"
+                                for package in packages_])
 
         self.paths = paths
 
-def parse_conf(fh):
+def parse_conf(fh: TextIOWrapper | TextIO) -> list[str]:
     paths = []
     for line in fh.readlines():
         line = re.sub(r'#.*', '', line)
@@ -203,9 +204,9 @@ def parse_conf(fh):
 def main():
 
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], 'fh', ['force', 'help', 
+        opts, args = getopt.gnu_getopt(sys.argv[1:], 'fh', ['force', 'help',
                                                             'root=',
-                                                            'no-dirindex', 
+                                                            'no-dirindex',
                                                             'no-packages'])
     except getopt.GetoptError as e:
         usage(e)

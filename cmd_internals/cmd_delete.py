@@ -18,14 +18,13 @@ Options:
     -s --simulate              Print list of fixes, don't apply them
 """
 
-import os
-from os.path import *
-
 import sys
 import getopt
+from typing import Optional, NoReturn
+
 from changes import Changes
 
-def usage(e=None):
+def usage(e: Optional[str | getopt.GetoptError] = None) -> NoReturn:
     if e:
         print("error: " + str(e), file=sys.stderr)
 
@@ -69,4 +68,3 @@ def main():
 
 if __name__=="__main__":
     main()
-

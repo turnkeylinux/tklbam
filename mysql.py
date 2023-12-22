@@ -21,7 +21,8 @@ import shutil
 from string import Template
 import subprocess
 from subprocess import Popen, PIPE, STDOUT
-from typing import Optional, IO, Generator, Callable
+from io import TextIOWrapper
+from typing import Optional, IO, TextIO, Generator, Callable
 
 from dblimits import DBLimits
 from paths import Paths as _Paths
@@ -80,7 +81,7 @@ def mysqldump(**conf) -> Optional[IO[str]]:
 def mysql(opts: Optional[list[str]] = None,
           defaults_file: Optional[str] = None,
           **conf: str
-          ) -> subprocess.Popen:
+          ) -> Optional[IO[str]]:
     command = ["mysql"] + _mysql_opts(opts, defaults_file, **conf)
 
     popen = Popen(command, shell=True, stdin=PIPE, stderr=PIPE, stdout=PIPE, text=True)
@@ -95,7 +96,7 @@ def mysql(opts: Optional[list[str]] = None,
 
     #return subprocess.Popen(command, shell=True, text=True,
     #                        stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-    return popen
+    return popen.stdout
 
 class MyFS:
     path: str
@@ -132,8 +133,10 @@ def _match_name(sql: str) -> str:
         return m.group(1)
     return ''
 
-def _parse_statements(fh: IO[str], delimiter: str = ';') -> Generator[str, None, None]:
+def _parse_statements(fh: str | list[str] | IO[str] | TextIO | TextIOWrapper, delimiter: str = ';') -> Generator[str, None, None]:
     statement = ""
+    if isinstance(fh, str):
+        fh = fh.split('\n')
     for line in fh:
         if line.startswith("--"):
             continue
@@ -475,10 +478,8 @@ DELIMITER ;
         triggers = property(triggers_)
 
         def tofile(self, fh: IO[str]) -> None:
-            skip_extended_insert = self.database.myfs.skip_extended_insert  # type: ignore[attr-defined]
-            # error: "Database" has no attribute "myfs"  [attr-defined]
-            max_extended_insert = self.database.myfs.max_extended_insert  # type: ignore[attr-defined]
-            # error: "Database" has no attribute "myfs"  [attr-defined]
+            skip_extended_insert = self.database.myfs.skip_extended_insert
+            max_extended_insert = self.database.myfs.max_extended_insert
 
             is_log_table = (self.database.name == "mysql" and self.name in ('general_log', 'slow_log'))
 
@@ -584,13 +585,15 @@ DELIMITER ;
 
         print(self.POST, file=fh)
 
-def fs2mysql(fh: IO[str],
+def fs2mysql(fh: IO[str] | list[str] | str | TextIO | TextIOWrapper,
              myfs: str,
              limits: Optional[DBLimits] = None,
-             callback: Optional[str] = None,
+             callback: Optional[Callable] = None,
              skip_extended_insert: bool = False,
              add_drop_database: bool = False
              ) -> None:
+    if isinstance(fh, str):
+        fh = fh.split('\n')
     MyFS_Reader(myfs, limits, skip_extended_insert, add_drop_database).tofile(fh, callback)
 
 def cb_print(fh: Optional[IO[str]] = None) -> Callable:
@@ -654,12 +657,12 @@ def restore(myfs: str, etc: str, **kws) -> None:
         if not MysqlService.is_accessible():
             mna = MysqlNoAuth()
 
-        mysql_fh = mysql()  # type: ignore[assignment]
-        # error: Incompatible types in assignment (expression has type "Popen[Any]", variable has type "TextIOWrapper")  [assignment]
+        mysql_fh = mysql()
 
     try:
         fs2mysql(mysql_fh, myfs, **kws)
-        mysql_fh.close()
+        if not isinstance(mysql_fh, Popen):
+            mysql_fh.close()
     finally:
         if mna:
             mna.stop()

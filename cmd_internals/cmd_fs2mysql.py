@@ -31,10 +31,12 @@ Supports the following subset of mysql(1) options:
 """
 import sys
 import getopt
+from subprocess import Popen
+from typing import Optional, NoReturn
 
 import mysql
 
-def usage(e=None):
+def usage(e: Optional[str | getopt.GetoptError] = None) -> NoReturn:
     if e:
         print("error: " + str(e), file=sys.stderr)
 
@@ -87,13 +89,17 @@ def main():
         if opt_tofile == '-':
             fh = sys.stdout
         else:
-            fh = file(opt_tofile, "w")
+            fh = open(opt_tofile, "w")
     else:
         fh = mysql.mysql(**myconf)
 
     callback = None
     if opt_verbose:
-        print("destination: " + fh.name)
+        if isinstance(fh, Popen):
+            name = '<mysql>'
+        else:
+            name = fh.name
+        print("destination: " + name)
         callback = mysql.cb_print()
 
     if opt_verbose:

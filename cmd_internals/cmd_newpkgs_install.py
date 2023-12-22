@@ -19,14 +19,14 @@ Options:
     -s --simulate           Don't execute apt-get
 """
 
-import os
 import re
 import sys
 import getopt
+from typing import Optional, NoReturn
 
 from pkgman import Installer
 
-def usage(e=None):
+def usage(e: Optional[str | getopt.GetoptError] = None) -> NoReturn:
     if e:
         print("error: " + str(e), file=sys.stderr)
 
@@ -34,7 +34,7 @@ def usage(e=None):
     print(__doc__.strip(), file=sys.stderr)
     sys.exit(1)
 
-def parse_input(inputfile):
+def parse_input(inputfile: str) -> list[str]:
     packages = []
     
     if inputfile == '-':
@@ -98,7 +98,7 @@ def main():
         errno, output = installer(interactive=False)
         if opt_verbose:
             print(output)
-        os.exit(errno)
+        sys.exit(errno)
 
 if __name__=="__main__":
     main()
