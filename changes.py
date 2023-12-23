@@ -229,8 +229,8 @@ class Changes(list):
             yield self.Action(os.remove, change.path)
 
     def statfixes(self,
-                  uidmap: dict[str, str] = {},
-                  gidmap: dict[str, str] = {},
+                  uidmap: dict[int, int] = {},
+                  gidmap: dict[int, int] = {},
                   optimized: bool = True
                   ) -> Generator[Action, None, None]:
         class TransparentMap(dict):

@@ -11,7 +11,7 @@
 #
 
 import os
-from os.path import exists, join, isdir
+from os.path import exists, join, isdir, realpath
 
 import stat
 
@@ -19,23 +19,46 @@ import shutil
 import json
 
 from typing import Optional, Self
+from dataclasses import dataclass, asdict
 
 from paths import Paths
 
 from dirindex import read_paths
 from changes import whatchanged
 from pkgman import Packages
-
+from registry import Profile
 import mysql
 import pgsql
 
-from utils import AttrDict, fmt_title, apply_overlay
+from utils import fmt_title, apply_overlay
 
-class ProfilePaths(Paths):
-    files = [ 'dirindex', 'dirindex.conf', 'packages' ]
+
+@dataclass
+class ProfilePaths:
+    path: str
+    packages: str = ''
+    dirindex: str = ''
+    dirindex_conf: str = ''
+
+    @dataclass
+    class _ProfPaths:
+        path: str
+
+    def __post_init__(self):
+        self.paths = self._ProfPaths(realpath(self.path))
+
 
 class ExtrasPaths(Paths):
     PATH = "TKLBAM"
+    backup_conf: str
+    fsdelta: str
+    fsdelta_olist: str
+    newpkgs: str
+    pgfs: str
+    myfs: str
+    etc: str
+    etc_mysql: str
+
     def __init__(self, backup_root=None):
         if backup_root is None:
             backup_root = '/'
@@ -61,20 +84,27 @@ def _fpaths(dpath: str) -> list[str]:
 def _filter_deleted(files: list[str]) -> list[str]:
     return [ f for f in files if exists(f) ]
 
+@dataclass
+class BackupConf:
+    profile_id: str
+    overrides: list[str]
+    skip_files: bool
+    skip_packages: bool
+    skip_database: bool
 
-class BackupConf(AttrDict):
-    def __init__(self,
-                 profile_id: str,
-                 overrides: list[str],
-                 skip_files: bool,
-                 skip_packages: bool,
-                 skip_database: bool):
-        AttrDict.__init__(self)
-        self.profile_id = profile_id
-        self.overrides = overrides
-        self.skip_files = skip_files
-        self.skip_packages = skip_packages
-        self.skip_database = skip_database
+    def __post_init__(self) -> None:
+        self.overrides_mydb = []
+        self.overrides_pgdb = []
+        self.overrides_fs = []
+        # XXX not sure about this processing here... Should perhaps go elsewhere?
+        for override in self.overrides:
+            if override.startswith('mysql:') or override.startswith('-mysql:'):
+                self.overrides_mydb.append(override)
+            elif override.startswith('pgsql:') or override.startswith('-pgsql:'):
+                self.overrides_pgdb.append(override)
+            else:
+                self.overrides_fs.append(override)
+
 
     @classmethod
     def fromfile(cls, path: str) -> Optional[Self]:
@@ -84,21 +114,23 @@ class BackupConf(AttrDict):
         with open(path) as fob:
             d = json.load(fob)
         return cls(*(d[attr]
-                     for attr in ('profile_id', 'overrides', 'skip_files', 'skip_packages', 'skip_database')))
+                     for attr in ('profile_id', 'overrides',
+                                  'skip_files', 'skip_packages',
+                                  'skip_database')))
 
     def tofile(self, path: str) -> None:
         with open(path, "w") as fob:
-            json.dump(dict(self), fob)
+            fob.write(json.dumps(asdict(self)) + '\n')
 
 class Backup:
     class Error(Exception):
         pass
 
-    def _write_new_packages(self, dest: str, base_packages: list[str]) -> None:
-        base_packages = Packages.fromfile(base_packages)
+    def _write_new_packages(self, dest: str, base_packages: str) -> None:
+        base_packages_ = Packages.fromfile(base_packages)
         current_packages = Packages()
 
-        new_packages = [x for x in current_packages if x not in base_packages]
+        new_packages = [x for x in current_packages if x not in base_packages_]
         new_packages.sort()
 
         if new_packages:
@@ -107,26 +139,24 @@ class Backup:
             self._log("  " + " ".join(new_packages))
             self._log("  EOF\n")
 
-        fh = open(dest, "w")
-        for package in new_packages:
-            print(package, file=fh)
-
-        fh.close()
+        with open(dest, "w") as fob:
+            fob.write('\n'.join(new_packages) + '\n')
 
     def _write_whatchanged(self, dest: str, dest_olist: str,
                            dirindex: str, dirindex_conf: str,
                            overrides: list[str] = []
                            ) -> None:
-        paths = read_paths(open(dirindex_conf))
+        with open(dirindex_conf) as fob:
+            paths = read_paths(fob)
         paths += overrides
 
         changes = whatchanged(dirindex, paths)
         changes.sort(key=lambda a: a.path)
 
         changes.tofile(dest)
-        olist = [ change.path for change in changes if change.OP == 'o' ]
+        olist = [change.path for change in changes if change.OP == 'o']
         with open(dest_olist, "w") as fob:
-            fob.writelines((path + "\n" for path in olist))
+            fob.write('\n'.join(olist) + '\n')
 
         if self.verbose:
             if changes:
@@ -156,7 +186,7 @@ class Backup:
                 for path in olist:
                     self._log("  " + path)
 
-    def _create_extras(self, extras: ExtrasPaths, profile: str, conf: BackupConf) -> None:
+    def _create_extras(self, extras: ExtrasPaths, profile: ProfilePaths, conf: BackupConf) -> None:
         os.mkdir(extras.path)
         os.chmod(extras.path, 0o700)
 
@@ -183,17 +213,20 @@ class Backup:
             dirindex = profile.dirindex if exists(profile.dirindex) else "/dev/null"
             dirindex_conf = profile.dirindex_conf if exists(profile.dirindex_conf) else "/dev/null"
 
+            conf_overrides_fs = []
+            if conf.overrides_fs is not None:
+                conf_overrides_fs = conf.overrides_fs
             self._write_whatchanged(extras.fsdelta, extras.fsdelta_olist,
                                     dirindex, dirindex_conf,
-                                    conf.overrides.fs)
+                                    conf_overrides_fs)
 
         if not conf.skip_database:
 
             try:
                 if mysql.MysqlService.is_running():
                     self._log("\n" + fmt_title("Serializing MySQL database to " + extras.myfs, '-'))
-                    mysql.backup(extras.myfs, extras.etc.mysql,
-                                 limits=conf.overrides.mydb, callback=mysql.cb_print()) if self.verbose else None
+                    mysql.backup(extras.myfs, extras.etc_mysql,
+                                 limits=conf.overrides_mydb, callback=mysql.cb_print()) if self.verbose else None
 
             except mysql.Error:
                 pass
@@ -201,7 +234,8 @@ class Backup:
             try:
                 if pgsql.PgsqlService.is_running():
                     self._log("\n" + fmt_title("Serializing PgSQL databases to " + extras.pgfs, '-'))
-                    pgsql.backup(extras.pgfs, conf.overrides.pgdb, callback=pgsql.cb_print() if self.verbose else None)
+                    pgsql.backup(extras.pgfs, conf.overrides_pgdb, callback=pgsql.cb_print() if self.verbose else None)
+
             except pgsql.Error:
                 pass
 
@@ -209,10 +243,10 @@ class Backup:
         if self.verbose:
             print(s)
 
-    def __init__(self, profile: str, overrides: list[str],
-            skip_files: bool = False,skip_packages: bool = False,
-            skip_database: bool = False, resume: bool = False,
-            verbose: bool = True, extras_root: str = "/"):
+    def __init__(self, profile: Profile, overrides: list[str],
+                 skip_files: bool = False,skip_packages: bool = False,
+                 skip_database: bool = False, resume: bool = False,
+                 verbose: bool = True, extras_root: str = "/") -> None:
 
         self.verbose = verbose
 
@@ -226,9 +260,9 @@ class Backup:
         # /TKLBAM has to exist and the backup configuration has to match
         backup_conf = BackupConf(profile.profile_id,
                                  overrides,
-                                 skip_files,
-                                 skip_packages,
-                                 skip_database)
+                                 skip_files=skip_files,
+                                 skip_packages=skip_packages,
+                                 skip_database=skip_database)
 
         saved_backup_conf = BackupConf.fromfile(extras_paths.backup_conf)
 
@@ -281,9 +315,11 @@ class Backup:
 
         self.extras_paths = extras_paths
 
-    def dump(self, path: str) -> str:
-        def r(p):
+    def dump(self, path: str) -> Optional[str]:
+        def r(p): # TODO this appears to be unused?!
+            print("hit hidden func 'r'!")
             return join(path, p.lstrip('/'))
 
         if exists(self.extras_paths.fsdelta_olist):
             apply_overlay('/', path, self.extras_paths.fsdelta_olist)
+        return None

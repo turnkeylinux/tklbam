@@ -66,7 +66,7 @@ Examples:
     tklbam-init --force-profile=core
 
     # initialize TKLBAM with a non-default registry path
-    TKLBAM_REGISTRY=/var/lib/tklbam2 tklbam-init
+    TKLBAM_REGISTRY=/var/lib/tklbam3_2 tklbam-init
 
     # initialize TKLBAM in solo mode with an empty profile
     tklbam-init --solo --force-profile=empty

@@ -115,10 +115,10 @@ Examples:
 
     # Create separate backups with unique backup ids containing the previously excluded items
     # Tip: use tklbam-status after tklbam-backup to determine the Hub backup ID
-    export TKLBAM_REGISTRY=/var/lib/tklbam.customers-and-webapp-emails
+    export TKLBAM_REGISTRY=/var/lib/tklbam3.customers-and-webapp-emails
     tklbam-backup --skip-files --skip-packages -- mysql:customers mysql:webapp/emails
 
-    export TKLBAM_REGISTRY=/var/lib/tklbam.raw-srv
+    export TKLBAM_REGISTRY=/var/lib/tklbam3.raw-srv
     tklbam-backup --raw-upload=/srv
 
 """
@@ -274,10 +274,10 @@ def main():
             conf.address = val
 
         elif opt == '--volsize':
-            conf.volsize = val
+            conf.volsize = int(val)
 
         elif opt == '--s3-parallel-uploads':
-            conf.s3_parallel_uploads = val
+            conf.s3_parallel_uploads = int(val)
 
         elif opt == '--full-backup':
             conf.full_backup = val
