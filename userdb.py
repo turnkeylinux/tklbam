@@ -9,36 +9,32 @@
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
 #
-import logging
 
 from collections import OrderedDict
 from typing import Optional, Self
 from functools import cmp_to_key
 
+
 class Error(Exception):
     pass
 
-logging.basicConfig(level=logging.DEBUG)
 
 class Base(OrderedDict):
     class Ent(list):
         LEN: Optional[int] = None
 
-        def _getter(self) -> Optional[str]:
-            return self._field(0)
-
-        def _setter(self, val: Optional[int]) -> None:
-            self._field(0, val)
-
-        def _field(self, index: int, val: Optional[int] = None) -> Optional[str]:
-            if val is not None:
-                self[index] = str(val)
-            else:
+        @staticmethod
+        def _create_property(index: int) -> property:
+            def _getter(self):
                 return self[index]
-            return None
 
-        name = property(_getter, _setter)
-        id = property(_getter, _setter)
+            def _setter(self, value):
+                self[index] = str(value) if value is not None else None
+
+            return property(_getter, _setter)
+
+        name = _create_property(0)
+        id = _create_property(1)
 
         def copy(self) -> list:
             return type(self)(self[:])
@@ -95,9 +91,9 @@ class Base(OrderedDict):
 
         return "\n".join([ ':'.join(ent) for ent in ents ]) + "\n"
 
-    def ids_setter_getter(self):
-        return [ self[name].id for name in self ]
-    ids = property(ids_setter_getter)
+    @property
+    def ids(self):
+        return [self[name].id for name in self]
 
     def new_id(self, extra_ids: list[int] = [], old_id: int = 1000) -> int:
         """find first new id in the same number range as old id"""
@@ -136,9 +132,9 @@ class Base(OrderedDict):
         return aliases
 
     @staticmethod
-    def _merge_get_entry(name: str, db_old, db_new,
-                         #db_old : Base,
-                         #db_new : Base,
+    def _merge_get_entry(name: str,
+                         db_old : Ent,
+                         db_new : Ent,
                          merged_ids: Optional[list[str]] = None
                          ) -> Optional[str]:
         """get merged db entry (without side effects)"""
@@ -158,16 +154,15 @@ class Base(OrderedDict):
 
         # entry exists in old db
         ent = oldent
+        assert ent is not None
 
         # entry exists in both new and old dbs
         if oldent and newent:
-
             if ent.id != newent.id:
                 ent.id = newent.id
 
         # entry exists only in old db
         if oldent and newent is None:
-
             used_ids = db_new.ids + merged_ids
             if ent.id in used_ids:
                 ent.id = db_old.new_id(used_ids)
@@ -179,7 +174,6 @@ class Base(OrderedDict):
               #db_old: Base,
               #db_new: Base
               ):  # -> tuple[Base, dict[str, str]]:
-        logging.debug(f'\nmerge(cls,\n\t{db_old=}\n\t{db_new=}')
 
         db_merged = cls()
         old2newids = {}
@@ -190,9 +184,10 @@ class Base(OrderedDict):
         def merge_entry(name: str) -> None:
 
             ent = cls._merge_get_entry(name, db_old, db_new, db_merged.ids)
+            assert ent is not None
             #if name in db_old and db_old[name].id != ent.id:
             #if name in db_old and isinstance(db_old[name], str) and hasattr(ent, 'id') and db_old[name].id != ent.id:
-            if name in db_old and isinstance(db_old[name], str) and ent is not None and hasattr(ent, 'id') and db_old[name].id != ent.id:
+            if name in db_old and isinstance(db_old[name], str) and db_old[name].id != ent.id:
                 old2newids[db_old[name].id] = ent.id
 
             db_merged[name] = ent
@@ -232,6 +227,7 @@ class Base(OrderedDict):
 
         logging.info(f'Sorting aliased:\n{aliased=}\n{aliased_sort=}')
         aliased.sort(key=cmp_to_key(aliased_sort))
+        logging.debug('sorting done')
 
         def get_merged_alias_id(name: str) -> Optional[str]:
 
@@ -243,7 +239,10 @@ class Base(OrderedDict):
 
             return None
 
+        logging.debug(f'{aliased=}')
+
         for name in aliased:
+            logging.debug(f'{name=}')
             ent = cls.Ent(db_old[name])
 
             merged_id = get_merged_alias_id(name)
@@ -263,6 +262,8 @@ class Base(OrderedDict):
 
                     db_merged[new_ent.name] = new_ent
 
+        logging.debug(f'{bool(db_merged)=}')
+        logging.debug(f'{bool(old2newids)=}')
         return db_merged, old2newids
 
 class EtcGroup(Base):
@@ -293,12 +294,16 @@ def merge(old_passwd: str, old_group: str, new_passwd: str, new_group: str) -> t
     g1 = EtcGroup(old_group)
     g2 = EtcGroup(new_group)
 
+    logging.debug('*merge() - collected etc groups, now merging')
     group, gidmap = EtcGroup.merge(g1, g2)
+    logging.debug('*merge() - merged groups')
 
     p1 = EtcPasswd(old_passwd)
     p2 = EtcPasswd(new_passwd)
 
+    logging.debug('*merge() - collected etc passwd, now fixing gids')
     p1.fixgids(gidmap)
-
+    logging.debug('*merge() - merging gids')
     passwd, uidmap = EtcPasswd.merge(p1, p2)
+    logging.debug('*merge() - merged passwds')
     return passwd, group, uidmap, gidmap

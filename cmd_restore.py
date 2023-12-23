@@ -146,7 +146,6 @@ import duplicity
 
 import logging
 
-from stdtrap import UnitedStdTrap
 from temp import TempDir
 
 import hub
@@ -162,7 +161,7 @@ from utils import is_writeable, fmt_timestamp, fmt_title, path_global_or_local
 from conf import Conf
 
 import backup
-import traceback
+#import traceback
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -182,7 +181,7 @@ def do_compatibility_check(backup_profile_id: str, interactive: bool = True) -> 
 
     try:
         bkup = TurnKeyVersion.from_string(backup_profile_id)
-        assert bkup != None
+        assert bkup is not None
         backup_codename = bkup.codename
     except TurnKeyVersion.Error:
         return None
@@ -235,8 +234,8 @@ def get_backup_record(arg: str) -> hub.BackupRecord:
             raise Error('invalid backup id (%s)' % backup_id)
 
     # treat our argument as a pattern
-    matches = [ hbr for hbr in hb.list_backups()
-                if re.search(arg, hbr.label, re.IGNORECASE) ]
+    matches = [hbr for hbr in hb.list_backups()
+               if re.search(arg, hbr.label, re.IGNORECASE)]
 
     if not matches:
         raise Error("'%s' doesn't match any backup labels" % arg)
@@ -460,7 +459,9 @@ def main():
 
     def get_backup_extract() -> str:
         print(fmt_title("Executing Duplicity to download %s to %s " % (address, raw_download_path)))
-        downloader(raw_download_path, target, log=_print if not silent else None, debug=opt_debug, force=opt_force)
+        if not raw_download_path:
+            raise Error('raw_download_path not set')
+        downloader(raw_download_path, target, log=print if not silent else None, debug=opt_debug, force=opt_force)
         if raw_download_path:
             return raw_download_path
         return ''
@@ -485,19 +486,17 @@ def main():
                 do_compatibility_check(hbr.profile_id, interactive)
 
             if opt_key and \
-               keypacket.fingerprint(hbr.key) != keypacket.fingerprint(opt_key.encode()):
+               keypacket.fingerprint(hbr.key.encode()) != keypacket.fingerprint(opt_key.encode()):
 
                 fatal("invalid escrow key for the selected backup")
+        else:
+            raise Error('hbr not set')
 
-        assert hbr != None
         key = opt_key if opt_key else hbr.key
         secret = decrypt_key(key, interactive)
 
-        target = duplicity.Target(address, credentials, secret)
+        target = duplicity.Target(address, credentials, secret.decode())
         downloader = duplicity.Downloader(opt_time, restore_cache_size, restore_cache_dir)
-
-        def _print(s: str) -> None:
-            print(s)
 
         if raw_download_path:
             get_backup_extract()
@@ -506,7 +505,6 @@ def main():
             raw_download_path = TempDir(prefix=b"tklbam-")
             os.chmod(raw_download_path, 0o700)
 
-    assert conf.force_profile != None
     update_profile(conf.force_profile, strict=False)
 
     if not (opt_simulate or opt_debug):
@@ -516,74 +514,54 @@ def main():
             print("\n" + fmt_timestamp(), file=log_fh)
 
             log_fh.flush()
-            trap = UnitedStdTrap(usepty=True, transparent=(False if silent else True), tee=log_fh)
-    else:
-        trap = None
 
-    try:
-        hooks.restore.pre()
+    hooks.restore.pre()
 
-        if not backup_extract_path:
-            backup_extract_path = get_backup_extract()
+    if not backup_extract_path:
+        backup_extract_path = get_backup_extract()
 
-        extras_paths = backup.ExtrasPaths(backup_extract_path)
+    extras_paths = backup.ExtrasPaths(backup_extract_path)
 
-        if not isdir(extras_paths.path):
-            fatal("missing %s directory - this doesn't look like a system backup" % extras_paths.path)
+    if not isdir(extras_paths.path):
+        fatal("missing %s directory - this doesn't look like a system backup" % extras_paths.path)
 
-        assert backup_extract_path != None
-        os.environ['TKLBAM_BACKUP_EXTRACT_PATH'] = backup_extract_path
+    assert backup_extract_path != None
+    os.environ['TKLBAM_BACKUP_EXTRACT_PATH'] = backup_extract_path
 
-        if not silent:
-            print(fmt_title("Restoring system from backup extract at " + backup_extract_path))
+    if not silent:
+        print(fmt_title("Restoring system from backup extract at " + backup_extract_path))
 
-        restore = Restore(backup_extract_path, limits=opt_limits, rollback=not no_rollback, simulate=opt_simulate)
+    restore = Restore(backup_extract_path, limits=opt_limits, rollback=not no_rollback, simulate=opt_simulate)
 
-        if restore.conf:
-            os.environ['TKLBAM_RESTORE_PROFILE_ID'] = restore.conf.profile_id
-        hooks.restore.inspect(restore.extras.path)
+    if restore.conf:
+        os.environ['TKLBAM_RESTORE_PROFILE_ID'] = restore.conf.profile_id
+    hooks.restore.inspect(restore.extras.path)
 
-        if opt_debug:
-            print("""\
-  The --debug option has (again) dropped you into an interactive shell so that
-  you can explore the state of the system just before restore. The current
-  working directory contains the backup extract.
+    if opt_debug:
+        print("""\
+The --debug option has (again) dropped you into an interactive shell so that
+you can explore the state of the system just before restore. The current
+working directory contains the backup extract.
 
-  To exit from the shell and continue the restore run "exit 0".
-  To exit from the shell and abort the restore run "exit 1".
+To exit from the shell and continue the restore run "exit 0".
+To exit from the shell and abort the restore run "exit 1".
 """)
-            os.chdir(backup_extract_path)
-            subprocess.run([os.environ.get("SHELL", "/bin/bash")])
-            os.chdir('/')
+        os.chdir(backup_extract_path)
+        subprocess.run([os.environ.get("SHELL", "/bin/bash")])
+        os.chdir('/')
 
-        if not skip_packages:
-            restore.packages()
+    if not skip_packages:
+        restore.packages()
 
-        if not skip_files:
-            restore.files()
+    if not skip_files:
+        restore.files()
 
-        if not skip_database:
-            restore.database()
+    if not skip_database:
+        restore.database()
 
-        print()
-        logging.debug(' * just restore hook to go')
-        hooks.restore.post()
-
-    except:
-        if trap:
-            print(file=log_fh)
-            traceback.print_exc(file=log_fh)
-
-        raise
-
-    finally:
-        assert log_fh != None
-        if trap:
-            sys.stdout.flush()
-            sys.stderr.flush()
-
-            trap.close()
-            log_fh.close()
+    print()
+    logging.debug(' * just restore hook to go')
+    hooks.restore.post()
 
     if not silent:
         print("We're done. You may want to reboot now to reload all service configurations.")

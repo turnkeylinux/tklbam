@@ -9,16 +9,19 @@ from paths import Paths
 import pickle
 import glob
 from datetime import datetime
-from typing import Optional, Self
-
-from utils import AttrDict
+from typing import Optional, Self, Any
+from dataclasses import dataclass
 
 from hub import Credentials, ProfileArchive
 from hub import Error, NotSubscribed, InvalidBackupError
 
-class APIKey:
-    def __init__(self, apikey: str):
-        apikey = str(apikey)
+@dataclass
+class APIKey(dict):
+    apikey: str
+    credentials: Optional[Credentials] = None
+
+    def __post_init__(self) -> None:
+        apikey = str(self.apikey)
         self.encoded = apikey
 
         padded = "A" * (20 - len(apikey)) + apikey
@@ -51,20 +54,27 @@ class APIKey:
     def __repr__(self) -> str:
         return "APIKey(%s)" % repr(str(self))
 
-    def __eq__(self, other: Self) -> bool:
-        return self.encoded == other.encoded
+    def __eq__(self, other: object|Self) -> bool:
+        # a bit of typing hackery - to avoid 'supertype defines the argument type as "object"'
+        if hasattr(other, 'encoded'):
+            assert isinstance(other, type(self))
+            return self.encoded == other.encoded
+        return False
 
-    def __ne__(self, other: Self) -> bool:
+    def __ne__(self, other: object|Self) -> bool:
         return not self.__eq__(other)
 
-class DummyBackupRecord(AttrDict):
+@dataclass
+class DummyBackupRecord(dict):
     # backup_id, address
-    def __init__(self, backup_id: str, address: str, key: str, profile_id: str, server_id: Optional[str]):
-        self.backup_id = backup_id
-        self.address = address
-        self.key = key
-        self.profile_id = profile_id
-        self.server_id = server_id
+    backup_id: str
+    address: str
+    key: str
+    profile_id: str
+    server_id: Optional[str]
+
+    # backup_id, address
+    def __post_init__(self) -> None:
 
         self.created = datetime.now()
         self.updated:Optional[datetime] = None
@@ -76,19 +86,23 @@ class DummyBackupRecord(AttrDict):
         # no user interface for this in the dummy hub
         self.sessions: list[Self] = []
 
-    def update(self) -> None:
+    def update(self, **kwargs: Any) -> None:
+        # kwargs not actually used - more type hacking - to avoid "update" incompatible with supertype 
         self.updated = datetime.now()
 
         path = self.address[len("file://"):]
 
-        self.sessions = _parse_duplicity_sessions(path)
+        # silly mypy: "List[DummyBackupRecord]", variable has type "List[Self]"
+        self.sessions = _parse_duplicity_sessions(path)  #type: ignore[assignment]
         self.size = sum([session.size for session in self.sessions])
 
 
-class DummyUser(AttrDict):
-    def __init__(self, uid: str, apikey: APIKey):
-        self.uid = uid
-        self.apikey = apikey
+@dataclass
+class DummyUser:
+    uid: str
+    apikey: APIKey
+
+    def __post_init__(self):
         self.credentials = None
         self.backups = DummyBackupRecord('', '', '', '', '')
         self.backups_max = 0
@@ -118,7 +132,7 @@ class DummyUser(AttrDict):
 
         return backup_record
 
-class DuplicityFile(AttrDict):
+class DuplicityFile:
     @classmethod
     def from_fname(cls, fname: str) -> Optional[Self]:
         m = re.match(r'duplicity-(.*?)\.(.*?).(?:sigtar|vol.*difftar)', fname)
@@ -142,17 +156,17 @@ class DuplicityFile(AttrDict):
 
         return cls(type, timestamp)
 
-    def __init__(self, type_: str, timestamp: datetime):
+    def __init__(self, type_: str, timestamp: datetime) -> None:
         self.type = type_
         self.timestamp = timestamp
 
-class DummySession(AttrDict):
+class DummySession:
     def __init__(self, type_: str, timestamp: datetime, size: int = 0):
         self.type = type_
         self.timestamp = timestamp
         self.size = size
 
-def _parse_duplicity_sessions(path: str) -> list[AttrDict]:
+def _parse_duplicity_sessions(path: str) -> list[DummyBackupRecord]:
     sessions = {}
     for fname in os.listdir(path):
         fpath = join(path, fname)
@@ -169,7 +183,7 @@ def _parse_duplicity_sessions(path: str) -> list[AttrDict]:
 
     return list(sessions.values())
 
-class _DummyDB(AttrDict):
+class _DummyDB:
     users: APIKey
     class Paths(Paths):
         files = ['users', 'profiles']
@@ -182,9 +196,7 @@ class _DummyDB(AttrDict):
 
     @staticmethod
     def _load(path: str, default: Optional[APIKey] = None) -> APIKey:
-        if default:
-            default_ = default
-        else:
+        if default is None:
             default = APIKey('')
         if not exists(path):
             return default
@@ -201,7 +213,7 @@ class _DummyDB(AttrDict):
     def load(self) -> None:
         self.users = self._load(self.path.users, APIKey(''))
 
-    def __init__(self, path: str):
+    def __init__(self, path: str) -> None:
         if not exists(path):
             os.makedirs(path)
 
@@ -210,29 +222,24 @@ class _DummyDB(AttrDict):
 
     def get_user(self, uid: str) -> Optional[APIKey]:
         if self.users:
-            if uid not in self.users.keys():  # type: ignore[attr-defined]
-            # "APIKey" has no attribute "keys"  [attr-defined] XXX wtf?! but it does, doesn't it?
+            if uid not in self.users.keys():
                 return None
         else:
             return None
-        return self.users[uid]  # type: ignore[index]
-        # error: Value of type "APIKey" is not indexable  [index] XXX - but it is - I tested it...
+        return self.users[uid]
 
     def add_user(self):
         if self.users:
-            uid = int(max(self.users.keys())) + 1  # type: ignore[attr-defined]
-            # this issue (same as self.users.keys() above) only shows in pyright, not mypy - perhaps because I silenced it earlier?
+            uid = int(max(self.users.keys())) + 1
         else:
             uid = 1
 
         apikey = APIKey.generate(str(uid))
 
         user = DummyUser(str(uid), apikey)
-        self.users[uid] = user  # type: ignore[attr-defined]
-        # "__setitem__" method not defined on type "APIKey" - is only an issue in pyright...
+        self.users[uid] = user
 
         return user
-
 
     def get_profile(self, profile_id):
         matches = glob.glob("%s/%s.tar.*" % (self.path.profiles, profile_id))
@@ -242,9 +249,7 @@ class _DummyDB(AttrDict):
         return matches[0]
 
 try:
-    dummydb  # type: ignore[used-before-def,has-type]
-    # error: Cannot determine type of "dummydb"  [has-type]
-    # error: Name "dummydb" is used before definition  [used-before-def]
+    dummydb: _DummyDB
 except NameError:
     dummydb = _DummyDB("/var/tmp/tklbam/dummyhub")
 
@@ -267,7 +272,7 @@ class Backups:
     SUBKEY_NS = "tklbam"
 
     @classmethod
-    def get_sub_apikey(cls, apikey: str) -> str:
+    def get_sub_apikey(cls, apikey: str) -> APIKey:
         """Check that APIKey is valid and return subkey"""
         apikey_ = APIKey(apikey)
         user = dummydb.get_user(apikey_.uid)
@@ -275,20 +280,20 @@ class Backups:
         if not user or user.apikey != apikey_:
             raise Error("invalid APIKey: %s" % apikey)
 
-        return apikey.subkey(cls.SUBKEY_NS)
+        return apikey_.subkey(cls.SUBKEY_NS)
 
     def __init__(self, subkey):
         if subkey is None:
             raise self.NotInitialized("no APIKEY - tklbam not linked to the Hub")
 
-        subkey = APIKey(subkey)
+        subkey_ = APIKey(subkey)
 
         # the non-dummy implementation should only check the subkey when an
         # action is performed. (I.e., NOT on initialization). In a REST API
         # the subkey should probably be passed as an authentication header.
 
-        user = dummydb.get_user(subkey.uid)
-        if not user or subkey != user.apikey.subkey(self.SUBKEY_NS):
+        user = dummydb.get_user(subkey_.uid)
+        if not user or (not isinstance(user.apikey, str) and subkey_ != user.apikey.subkey(self.SUBKEY_NS)):
             raise Error("invalid authentication subkey: %s" % subkey)
 
         self.user = user
@@ -326,12 +331,12 @@ class Backups:
 
         return DummyProfileArchive(profile_id, archive, archive_timestamp)
 
-    def new_backup_record(self, key, profile_id, server_id=None):
+    def new_backup_record(self, key: str, profile_id: str, server_id: Optional[str] = None) -> str:
         # in the real implementation the hub would create a bucket not a dir...
         # the real implementation would have to make sure this is unique
-        path = "/var/tmp/duplicity/" + base64.b32encode(os.urandom(10))
-        os.makedirs(path)
-        address = "file://" + path
+        path = b"/var/tmp/duplicity/" + base64.b32encode(os.urandom(10))
+        os.makedirs(path.decode())
+        address = "file://" + path.decode()
 
         backup_record = self.user.new_backup(address, key,
                                              profile_id, server_id)

@@ -47,8 +47,11 @@ print(paths.make_relative(paths.sub_dir, paths.sub_dir.sub_file))
 """
 import re
 import os
-from os.path import join, realpath, dirname
-from typing import Self
+from os.path import join, realpath, dirname, exists
+from dataclasses import dataclass
+from typing import Self, Optional
+
+from utils import BaseAttrDict
 
 __all__ = ['make_relative', 'Paths', 'subdir']
 
@@ -76,34 +79,77 @@ def make_relative(base: str, path: str) -> str:
         up_count += 1
 
 
-class Paths(str):
+class PathsError(Exception):
+    pass
+
+class PathsBase(BaseAttrDict):
+
+    path: str
+    paths: Optional[list[str]] = None
+    paths_cls: Optional[list[Self]] = None
+
+
+@dataclass
+class Paths(PathsBase):
+    path: str
+    files: Optional[list[Self] | list[str]] = None
+    filesd: Optional[dict[str, str]] = None
+
     make_relative = staticmethod(make_relative)
 
-    files: list[str] = []
+    @staticmethod
+    def _check_path(path: str) -> str:
+        if exists(path):
+            if path.startswith('/'):
+                return path
+            else:
+                return realpath(path)
+        return ''
 
-    def __new__(cls, path: str, files: list[str] = []) -> Self:
-        return str.__new__(cls, path)
+    def __post_init__(self) -> None:
+        self.path = self._check_path(self.path)
 
-    def __init__(self, path: str, files: list[str] = []):
-        self.path = path
-        self.filesd: dict[str, str] = {}
+        if not self.path:
+            return None
 
-        def classfiles(cls) -> list[str]:
-            files = cls.files
-            for base in cls.__bases__:
-                if issubclass(base, Paths):
-                    files += classfiles(base)
+        if not self.files:
+            self.files = []
 
-            return files
+        if not self.filesd:
+            self.filesd = {}
 
-        for file in files + classfiles(self.__class__):
-            self.register(file)
+        self.dirs = []
+
+        for file in self.files:
+            if '/' in file:
+                file_split = file.split('/')
+                path_len = len(file_split)
+                if path_len == 2:
+                    dir_, file = file_split
+                if path_len > 4:
+                    raise PathsError(f"Max recursion reached while processing {file}")
+                else:
+                    dir_, file = file_split
+                    self.dirs.append(Paths(file_split[0], files=))
+                _dir, more_path = file.split('/', 1)
+
+                if len(more_path.split('/') == 1
+                self.dirs.append(Paths(_dir)
+
+             if '.' in file or '/' in file or '-' in file:
+            setattr(self, file, file)
+            if '.' in file or '/' in file or '-' in file:
+                new_attr = file.replace('.', '_').replace('/', '_').replace('-', '_')
+                setattr(self, new_attr, file)
 
     def __getattr__(self, name: str) -> str:
-        if name in self.filesd.keys():
+        if self.filesd and name in self.filesd.keys():
             return join(self.path, self.filesd[name])
 
         raise AttributeError("no such attribute: " + name)
+
+    def __str__(self) -> str:
+        return self.path
 
     @staticmethod
     def _fname2attr(fname: str) -> str:
@@ -111,7 +157,9 @@ class Paths(str):
 
     def listdir(self) -> list[str]:
         "Return a list containing the names of the entries in directory"""
-        return list(self.files)
+        if self.files:
+            return list(self.files)
+        return []
 
     def register(self, filename: str) -> None:
         if '/' in filename:

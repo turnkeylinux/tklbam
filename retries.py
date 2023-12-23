@@ -8,8 +8,9 @@ Usage examples:
 
 """
 from time import sleep
+from typing import Optional, Callable, Any
 
-def retry(retries, delay=1, backoff=0, fatal_exceptions=None):
+def retry(retries: int, delay: int = 1, backoff: int = 0, fatal_exceptions: Optional[list[type]] = None) -> Callable:
     """
     Argument:
 
@@ -18,23 +19,22 @@ def retry(retries, delay=1, backoff=0, fatal_exceptions=None):
         backoff             linear backoff factor (e.g., 0 = no backoff, 1 = 100% step increase)
         fatal_exc           fatal exceptions are unrecoverable, raised immediately
     """
-    def decorator(func):
+    def decorator(func: Callable) -> Callable:
 
         _fatal_exceptions = (SyntaxError, KeyboardInterrupt, SystemExit)
+
         if fatal_exceptions:
+            for exception in fatal_exceptions:
+                if issubclass(exception, Exception):
+                    _fatal_exceptions += (exception,)
 
-            if issubclass(fatal_exceptions, Exception):
-                _fatal_exceptions += (fatal_exceptions,)
-            else:
-                _fatal_exceptions += fatal_exceptions
-
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Callable:
             for attempt in range(retries + 1):
                 try:
                     return func(*args, **kwargs)
                 except _fatal_exceptions:
                     raise
-                except:
+                except:  # TODO fix bare except
                     if attempt < retries and delay:
                         sleep(delay + delay * attempt * backoff)
             else:

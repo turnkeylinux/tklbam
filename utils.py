@@ -10,14 +10,15 @@
 # the License, or (at your option) any later version.
 #
 import os
-from os.path import lexists, islink, isdir
+from os.path import lexists, islink, isdir, exists, realpath
 import subprocess
 from subprocess import Popen, PIPE
 
 import shutil
 import stat
 import datetime
-from typing import TypeVar
+from typing import Any
+from dataclasses import dataclass
 
 from io import StringIO
 
@@ -35,18 +36,34 @@ def remove_any(path: str) -> bool:
 
     return True
 
-_KT = TypeVar("_KT")
-_VT = TypeVar("_VT")
+@dataclass
+class BaseAttrDict:
+    def __getitem__(self, key: str) -> Any:
+        if hasattr(self, key):
+            return getattr(self, key)
+        raise ValueError(
+                f"{self.__class__.__name__}() has no attr '{key}'")
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def __repr__(self) -> str:
+        attrs = ''
+        for attr in sorted(dir(self)):
+            if not attr.startswith('_'):
+                value = getattr(self, attr)
+                if attrs:
+                    attrs = attrs + ','
+                attrs = attrs + f"\n\t{attr}={value}"
+        return f'{self.__class__.__name__}({attrs}\n\t)'
 
 
-class AttrDict(dict):
-    def __getattr__(self, name: _KT|str) -> _VT|str:
-        if name in self:
-            return self[name]
-        raise AttributeError("no such attribute '%s'" % name)
+def _check_path(path: str) -> str:
+    if exists(path):
+        return realpath(path)
+    else:
+        raise FileNotFoundError(f"Path not found: '{path}'")
 
-    def __setattr__(self, name: _KT|str, val: _VT,str) -> None:
-        self[name] = val
 
 def is_writeable(fpath: str) -> bool:
     try:

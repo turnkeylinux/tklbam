@@ -11,7 +11,8 @@ import termios
 import pty
 import pwd
 import grp
-from typing import IO, Optional
+from io import TextIOWrapper
+from typing import Optional
 
 try:
     MAXFD = os.sysconf('SC_OPEN_MAX')
@@ -24,7 +25,9 @@ SHELL = os.environ.get('SHELL', '/bin/sh')
 class CatchIOErrorWrapper:
     """wraps around a file handler and catches IOError exceptions"""
 
-    def __init__(self, fh: IO[str]) -> None:
+    fh: TextIOWrapper
+
+    def __init__(self, fh: TextIOWrapper) -> None:
         self.fh = fh
 
     def __del__(self) -> None:
@@ -35,6 +38,9 @@ class CatchIOErrorWrapper:
 
     def __getattr__(self, attr: str) -> str:
         return getattr(self.fh, attr)
+
+    def fileno(self) -> int:
+        return self.fh.fileno()
 
     def read(self, size: int = -1) -> str:
         try:

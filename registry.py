@@ -14,24 +14,83 @@
 
 import os
 import re
-from os.path import exists, basename, abspath, isdir
+from os.path import exists, basename, abspath, isdir, realpath, join
 from paths import Paths as _Paths
 import json
 
 from datetime import datetime
-from typing import Optional
+from dataclasses import dataclass
+from typing import Optional, Self
 
 import shutil
-from utils import AttrDict
+from utils import BaseAttrDict, _check_path
+
 import hub
 
 from version import TurnKeyVersion, detect_profile_id
-
+from paths import Paths
 import conf
 
-class UNDEFINED:
-    pass
+UNDEFINED_S = "TKLBAM UNDEFINED STRING"
+UNDEFINED_D = {UNDEFINED_S: UNDEFINED_S}
 
+IAMRole = hub.Credentials().IAMRole
+IAMUser = hub.Credentials().IAMUser
+
+ENV_VARNAME = "TKLBAM_REGISTRY"
+DEFAULT_PATH = '/var/lib/tklbam3'
+DATETIME_FORMAT =  "%Y-%m-%d %H:%M:%S"
+
+
+def get_default_path() -> str:
+    return os.environ.get(ENV_VARNAME, DEFAULT_PATH)
+
+
+class BackupSessionConf(BaseAttrDict):
+    def __init__(self, d: Optional[dict[str, str]] = None) -> None:
+        if not d:
+            d = {}
+        self.overrides = conf.Limits()
+        for key, value in d:
+            if key == 'overrides':
+                setattr(self, key, conf.Limits(value))
+            else:
+                setattr(self, key, value)
+
+
+class BaseRegisry(BaseAttrDict, dict):
+
+    date_time: Optional[datetime] = None
+
+    def __init__(self, d: Optional[dict[str, str]] = None) -> None:
+        if not d:
+            d = {}
+        for key, value in d:
+            setattr(self, key, value)
+
+    @property
+    def updated(self) -> Optional[str]:
+        if self.date_time:
+            return self.date_time.strftime(DATETIME_FORMAT)
+
+    @updated.setter
+    def updated(self, value: str | datetime) -> None:
+        if isinstance(value, datetime):
+            self.date_time = value
+        elif isinstance(value, str):
+            try:
+                self.date_time = datetime.strptime(value, DATETIME_FORMAT)
+            except ValueError as e:
+                raise ValueError(e)
+
+
+@dataclass
+class RegCredPaths(BaseAttrDict):
+    address: str = ''
+    backup_id: str = ''
+
+
+@dataclass
 class _Registry:
     class CachedProfile(Exception):
         pass
@@ -60,121 +119,153 @@ Also, if TKLBAM is linked to the Hub you can:
 Run "tklbam-init --help" for further details.
 """
 
-    ENV_VARNAME = "TKLBAM_REGISTRY"
-    DEFAULT_PATH = os.environ.get(ENV_VARNAME, '/var/lib/tklbam')
-
     EMPTY_PROFILE = "empty"
     CUSTOM_PROFILE = "custom"
 
-    class Paths(_Paths):
+    path: str = ''
+
+    _check_path = staticmethod(_check_path)
+
+    @dataclass
+    class RegPaths(Paths):
+        path: str
+        secret: Optional[str] = None
+        key: Optional[str] = None
+        credentials: Optional[str] = None
+        hbr: Optional[str] = None
+        backup_resume: bool = True
+        sub_apikey: str = ''
+
+        _check_path = staticmethod(_check_path)
+
+        profile_dir: str = ''
+
         files = ['restore.log', 'backup.log', 'backup.pid',
                  'backup-resume', 'sub_apikey', 'secret', 'key', 'credentials', 'hbr',
                  'profile', 'profile/stamp', 'profile/profile_id']
 
-    def __init__(self, path: Optional[str] = None):
-        if path is None:
-            path = os.environ.get(self.ENV_VARNAME, self.DEFAULT_PATH)
+        def __post_init__(self) -> None:
+            super().__post_init__()
 
-        if not exists(path):
-            os.makedirs(path)
-            os.chmod(path, 0o700)
+            self.path = self._check_path(self.path) or os.environ.get(ENV_VARNAME, DEFAULT_PATH)
+            if not self.path:
+                return None
+            if self.files:
+                for file in self.files:
+                    new_attr = file
+                    if '/' in file:
+                        setattr(self
+                    if '.' in file or '/' in file or '-' in file:
+                        new_attr = str(file).replace('.', '_').replace('/', '_').replace('-', '_')
+                    setattr(self, str(new_attr), str(file))
 
-        self.path = self.Paths(path)
+    def __post_init__(self):
+        if self.path == '':
+            self.path = os.environ.get(ENV_VARNAME, DEFAULT_PATH)
+        if not exists(self.path):
+            os.makedirs(self.path)
+            os.chmod(self.path, 0o700)
+        self.paths = self.Paths(self.path)
 
     @staticmethod
-    def _file_str(path: str, s: str type = UNDEFINED) -> Optional[str]:
-        if s is UNDEFINED:
+    def _file_str(path: Optional[str], s: str = UNDEFINED_S) -> Optional[str]:
+        if not path:
+            return None
+        if s == UNDEFINED_S:
             if not exists(path):
                 return None
-
             with open(path) as fob:
                 return fob.read().rstrip()
-
         else:
             if s is None:
                 if exists(path):
                     os.remove(path)
             else:
-                fh = open(path, "w")
-                os.chmod(path, 0o600)
-                print(s, file=fh)
-
+                with open(path, "w") as fob:
+                    os.chmod(path, 0o600)
+                    fob.write(f'{s}\n')
         return None
 
     @classmethod
-    def _file_tuple(cls, path: str, t: type = UNDEFINED) -> tuple[str, str, str]:
-        if t and t is not UNDEFINED:
+    def _file_tuple(cls, path: str, t: str = UNDEFINED_S) -> Optional[list[str]]:
+        if t and t != UNDEFINED_S:
             t = "\n".join([ str(v) for v in t ])
 
         retval = cls._file_str(path, t)
         if retval:
-            return tuple(retval.split('\n'))
+            return retval.split('\n')
         return None
 
     @classmethod
-    def _file_dict(cls, path: str, d: type = UNDEFINED) -> AttrDict:
-        if d and d is not UNDEFINED:
-            d = "\n".join([ "%s=%s" % (k, v) for k, v in list(d.items()) ])
-
-        retval = cls._file_str(path, d)
+    def _file_dict(cls, path: Optional[str], d: dict[str, str] | BaseRegisry = UNDEFINED_D) -> Optional[BaseRegisry]:
+        if not path:
+            return None
+        retval = None
+        retclass = BaseRegisry()
+        if d and d != UNDEFINED_D:
+            if isinstance(d, dict):
+                d_ = "\n".join([ "%s=%s" % (k, v) for k, v in list(d.items()) ])
+                retval = cls._file_str(path, *d_)
+            else:
+                return d
         if retval:
-            return AttrDict([ v.split("=", 1) for v in retval.split("\n") ])
+            for line in retval.split("\n"):
+                k, v = line.split("=", 1)
+                retclass[k] = v
+            return retclass
         return None
 
-    def sub_apikey(self, val: type = UNDEFINED) -> str:
-        return self._file_str(self.path.sub_apikey, val)
+    @property
+    def sub_apikey(self, val: str = UNDEFINED_S) -> Optional[str]:
+        return self._file_str(self.paths.sub_apikey, val)
 
-    sub_apikey = property(sub_apikey, sub_apikey)
+    @property
+    def secret(self, val: str = UNDEFINED_S) -> Optional[str]:
+        return self._file_str(self.paths.secret, val)
 
-    def secret(self, val: type = UNDEFINED) -> str:
-        return self._file_str(self.path.secret, val)
+    @property
+    def key(self, val: str = UNDEFINED_S) -> Optional[str]:
+        return self._file_str(self.paths.key, val)
 
-    secret = property(secret, secret)
-
-    def key(self, val: type = UNDEFINED) -> str:
-        return self._file_str(self.path.key, val)
-
-    key = property(key, key)
-
-    def credentials(self, val: type = UNDEFINED) -> str:
-        retval = self._file_dict(self.path.credentials, val)
+    @property
+    def credentials(self, val: dict[str, str] = UNDEFINED_D) -> Optional[IAMRole | IAMUser]:
+        retval = self._file_dict(self.paths.credentials, val)
         if retval:
             return hub.Credentials.from_dict(retval)
+        return None
 
-    credentials = property(credentials, credentials)
+    @property
+    def hbr(self, val: RegCredPaths = RegCredPaths(UNDEFINED_S)) -> Optional[BaseRegisry]:
+        # hbr getter setter
+        if val and val != UNDEFINED_S:
+            val_ = BaseRegisry({'address': val.address,
+                                'backup_id': val.backup_id,
+                                'updated': datetime.now()})
+        else:
+            val_ = BaseRegisry()
 
-    def hbr(self, val: type = UNDEFINED) -> str:
-        format = "%Y-%m-%d %H:%M:%S"
-        if val and val is not UNDEFINED:
-            val = AttrDict({'address': val.address,
-                            'backup_id': val.backup_id,
-                            'updated': datetime.now().strftime(format)})
-
-        retval = self._file_dict(self.path.hbr, val)
+        retval = self._file_dict(self.paths.hbr, val_)
         if retval:
-            if 'updated' not in retval:
-                retval.updated = None
-            else:
-                retval.updated = datetime.strptime(retval.updated, format)
+            if retval.updated:
+                retval.updated = retval.updated
             return retval
-
-    hbr = property(hbr, hbr)
+        return None
 
     @classmethod
     def _custom_profile_id(cls, path: str) -> str:
         name = basename(abspath(path))
         return "%s:%s" % (cls.CUSTOM_PROFILE, name)
 
-    def profile(self, val: type = UNDEFINED) -> str:
+    def profile_(self, val: Paths = Paths(UNDEFINED_S)) -> Optional[str]:
         if val is None:
             return shutil.rmtree(self.path.profile, ignore_errors=True)
 
-        if val is UNDEFINED:
+        if val == self.Paths(UNDEFINED_S):
             if not exists(self.path.profile.stamp):
                 return None
 
-            timestamp = int(os.stat(self.path.profile.stamp).st_mtime)
-            profile_id = self._file_str(self.path.profile.profile_id)
+            timestamp = str(os.stat(self.path.profile.stamp).st_mtime)  # type: ignore[arg-type]
+            profile_id = self._file_str(self.path.profile.profile_id)  # type: ignore[arg-type]
             if profile_id is None:
                 profile_id = detect_profile_id()
             return Profile(self.path.profile, profile_id, timestamp)
@@ -185,63 +276,63 @@ Run "tklbam-init --help" for further details.
             os.makedirs(self.path.profile)
 
             if val == self.EMPTY_PROFILE:
-                self._file_str(self.path.profile.profile_id, val)
-                open(self.path.profile.stamp, "w").close()
+                self._file_str(self.path.profile.profile_id, val)  # type: ignore[arg-type]
+                open(self.path.profile.stamp, "w").close()  # type: ignore[arg-type]
 
             elif isdir(str(val)):
                 self.profile = None
                 shutil.copytree(val, self.path.profile)
-                self._file_str(self.path.profile.profile_id, self._custom_profile_id(val))
-                open(self.path.profile.stamp, "w").close()
+                self._file_str(self.path.profile.profile_id, self._custom_profile_id(val))  # type: ignore[arg-type]
+                open(self.path.profile.stamp, "w").close()  # type: ignore[arg-type]
 
             else:
-                profile_archive.extract(self.path.profile)
-                open(self.path.profile.stamp, "w").close()
-                os.utime(self.path.profile.stamp, (0, profile_archive.timestamp))
-                self._file_str(self.path.profile.profile_id, profile_archive.profile_id)
+                profile_archive.extract(self.path.profile)  # type: ignore[operator]
+                open(self.path.profile.stamp, "w").close()  # type: ignore[arg-type]
+                os.utime(self.path.profile.stamp, (0, profile_archive.timestamp))  # type: ignore[arg-type]
+                self._file_str(self.path.profile.profile_id, profile_archive.profile_id)  # type: ignore[arg-type]
+        return None
 
-    profile = property(profile, profile)
+    profile = property(profile_, profile_)  # type: ignore[arg-type]
 
-    def backup_resume_conf(self, val: type = UNDEFINED) -> None:
+    def backup_resume_conf_(self, val: str = UNDEFINED_S) -> Optional[BackupSessionConf]:
         if val is None:
             if exists(self.path.backup_resume):
                 os.remove(self.path.backup_resume)
-            return
+            return None
 
-        if val is UNDEFINED:
+        if val == UNDEFINED_S:
             s = self._file_str(self.path.backup_resume)
             if s is None:
-                return
-
+                return None
             try:
                 return BackupSessionConf(json.loads(s))
-            except:
-                return
-
+            except:  # TODO bare exception
+                return None
         else:
             s = json.dumps(val)
             self._file_str(self.path.backup_resume, s)
+            return None
 
-    backup_resume_conf = property(backup_resume_conf, backup_resume_conf)
+    backup_resume_conf = property(backup_resume_conf_, backup_resume_conf_)  # type: ignore[arg-type]
 
-    def _update_profile(self, profile_id: str = None) -> None:
+    def _update_profile(self, profile_id: Optional[str] = None) -> None:
         """Get a new profile if we don't have a profile in the registry or the Hub
         has a newer profile for this appliance. If we can't contact the Hub raise
         an error if we don't already have profile."""
 
         if not profile_id:
             if self.profile:
-                profile_id = self.profile.profile_id
+                profile_id = self.profile.profile_id  #type: ignore[arg-type]
             else:
                 profile_id = detect_profile_id()
-
+        assert profile_id is not None
         if profile_id == self.EMPTY_PROFILE or isdir(profile_id):
             self.profile = profile_id
             return
 
         hub_backups = hub.Backups(self.sub_apikey)
-        if self.profile and self.profile.profile_id == profile_id:
-            profile_timestamp = self.profile.timestamp
+        if self.profile and self.profile.profile_id == profile_id:  #type: ignore[arg-type]
+            profile_timestamp = self.profile.timestamp  #type: ignore[arg-type]
         else:
             # forced profile is not cached in the self
             profile_timestamp = None
@@ -260,18 +351,18 @@ Run "tklbam-init --help" for further details.
             if errname == "BackupArchive.NotFound":
                 raise self.ProfileNotFound(desc)
 
-            if not self.profile or (self.profile.profile_id != profile_id):
+            if not self.profile or (self.profile.profile_id != profile_id):  #type: ignore[arg-type]
                 raise
 
             raise self.CachedProfile("using cached profile because of a Hub error: " + desc)
 
-    def update_profile(self, profile_id:str = None) -> None:
+    def update_profile(self, profile_id: Optional[str] = None) -> None:
         if profile_id is None:
             # don't attempt to update empty or custom profiles
             if self.profile and \
-               (self.profile.profile_id == registry.EMPTY_PROFILE or
-                self.profile.profile_id.startswith(registry.CUSTOM_PROFILE + ":")):
-                return
+               (self.profile.profile_id == registry.EMPTY_PROFILE or  #type: ignore[arg-type]
+                self.profile.profile_id.startswith(registry.CUSTOM_PROFILE + ":")):  #type: ignore[arg-type]
+                return None
 
         try:
             # look for exact match first
@@ -280,34 +371,44 @@ Run "tklbam-init --help" for further details.
             if profile_id:
                 if not re.match(r'^turnkey-', profile_id):
                     profile_id = "turnkey-" + profile_id
-
-                if not TurnKeyVersion.from_string(profile_id).is_complete():
+                check_profile = TurnKeyVersion.from_string(profile_id)
+                if check_profile and not check_profile.is_complete():
                     completed_profile_id = _complete_profile_id(profile_id)
                     if completed_profile_id:
                         try:
                             self._update_profile(completed_profile_id)
-                            return
+                            return None
                         except:
                             pass
 
             raise first_exception
 
-def _complete_profile_id(partial: str) -> str:
+def _complete_profile_id(partial: str) -> Optional[str]:
     partial_ver = TurnKeyVersion.from_string(partial)
     system = TurnKeyVersion.from_system()
     if not system:
-        return
-
+        return None
+    assert partial_ver is not None
     if partial_ver.arch is None:
         partial_ver.arch = system.arch
-
+    assert system.release is not None
     if partial_ver.release is None or system.release.startswith(partial_ver.release):
         partial_ver.release = system.release
 
     return str(partial_ver)
 
+
 class Profile(str):
-    def __new__(cls, path: str, profile_id: str, timestamp: str) -> str:
+
+    packages: str
+    dirindex: str
+    dirindex_conf: str
+    path: str
+
+    @classmethod
+    def __new__(cls, path: str, profile_id: str, timestamp: str) -> Self:
+        cls.profile_id = profile_id
+        cls.timestamp = timestamp
         return str.__new__(cls, path)
 
     def __init__(self, path: str, profile_id: str, timestamp: str):
@@ -316,12 +417,6 @@ class Profile(str):
         self.timestamp = timestamp
         self.profile_id = profile_id
 
-class BackupSessionConf(AttrDict):
-    def __init__(self, d: dict[str, str] = None):
-        if not d:
-            d = {}
-        AttrDict.__init__(self, d)
-        self.overrides = conf.Limits(self.overrides)
 
 registry = _Registry()
 
@@ -333,7 +428,7 @@ class NotInitialized(hub.Backups.NotInitialized):
 
         hub.Backups.NotInitialized.__init__(self, 'Hub link required, run "%s" first' % command)
 
-def update_profile(profile_id: str = None, strict: bool = True) -> None:
+def update_profile(profile_id: Optional[str] = None, strict: bool = True) -> None:
     import sys
     global registry
 
@@ -347,12 +442,10 @@ Creating an empty profile, which means:
 - We can't detect which files have changed since installation so we will
   indiscriminately backup all files in the included directories.
 """)
-
-
     if not strict:
         try:
             registry.update_profile(profile_id)
-        except:
+        except:  # TODO fix bare exception
             return
     else:
         try:
@@ -370,14 +463,13 @@ Creating an empty profile, which means:
             print("TurnKey Hub Error: %s" % str(e), file=sys.stderr)
             if not profile_id:
                 # be extra nice to people who aren't using --force-profile
-                print("\n" + e.__doc__, file=sys.stderr)
+                print(f"\n{e.__doc__}", file=sys.stderr)
 
             sys.exit(1)
-    os.environ['TKLBAM_PROFILE_ID'] = registry.profile.profile_id
+    if registry.profile:
+        os.environ['TKLBAM_PROFILE_ID'] = registry.profile.profile_id
 
 def hub_backups():
-    import sys
-
     try:
         hb = hub.Backups(registry.sub_apikey)
     except hub.Backups.NotInitialized:
