@@ -20,7 +20,7 @@ Arguments:
 
 Options:
     --dump=path/to/extract/        Dump a raw backup extract to path
-                                   Tip: tklbam-restore path/to/raw/extract/
+                                   Tip: tklbam3-restore path/to/raw/extract/
 
     --raw-upload=PATH              Use Duplicity to upload raw path contents to --address
 
@@ -99,27 +99,27 @@ Configuration file format ($CONF_PATH):
 Examples:
 
     # Full system-level backup
-    tklbam-backup
+    tklbam3-backup
 
     # Same result as above but in two steps: first dump to a directory, then upload it
-    tklbam-backup --dump=/tmp/mybackup
-    tklbam-backup --raw-upload=/tmp/mybackup
+    tklbam3-backup --dump=/tmp/mybackup
+    tklbam3-backup --raw-upload=/tmp/mybackup
 
     # Backup Duplicity archives to a custom address on the local filesystem
-    tklbam-backup --address=file:///mnt/backups/mybackup
-    tklbam-escrow this-keyfile-needed-to-restore-mybackup.escrow
+    tklbam3-backup --address=file:///mnt/backups/mybackup
+    tklbam3-escrow this-keyfile-needed-to-restore-mybackup.escrow
 
     # Simulate a backup that excludes the mysql customers DB and the 'emails' table in the webapp DB
-    # Tip: usually you'd want to configure excludes in /etc/tklbam/overrides
-    tklbam-backup --simulate -- -/srv -mysql:customers -mysql:webapp/emails
+    # Tip: usually you'd want to configure excludes in /etc/tklbam3/overrides
+    tklbam3-backup --simulate -- -/srv -mysql:customers -mysql:webapp/emails
 
     # Create separate backups with unique backup ids containing the previously excluded items
-    # Tip: use tklbam-status after tklbam-backup to determine the Hub backup ID
+    # Tip: use tklbam3-status after tklbam3-backup to determine the Hub backup ID
     export TKLBAM_REGISTRY=/var/lib/tklbam3.customers-and-webapp-emails
-    tklbam-backup --skip-files --skip-packages -- mysql:customers mysql:webapp/emails
+    tklbam3-backup --skip-files --skip-packages -- mysql:customers mysql:webapp/emails
 
     export TKLBAM_REGISTRY=/var/lib/tklbam3.raw-srv
-    tklbam-backup --raw-upload=/srv
+    tklbam3-backup --raw-upload=/srv
 
 """
 
@@ -153,8 +153,8 @@ from utils import is_writeable, fmt_title, fmt_timestamp, path_global_or_local
 
 import traceback
 
-PATH_LOGFILE = path_global_or_local("/var/log/tklbam-backup", registry.path.backup_log)
-PATH_PIDLOCK = path_global_or_local("/var/run/tklbam-backup.pid", registry.path.backup_pid)
+PATH_LOGFILE = path_global_or_local("/var/log/tklbam3-backup", registry.path.backup_log)
+PATH_PIDLOCK = path_global_or_local("/var/run/tklbam3-backup.pid", registry.path.backup_pid)
 
 def usage(e: Optional[str|getopt.GetoptError] = None) -> NoReturn:
     from paged import stdout
@@ -340,7 +340,7 @@ def main():
         try:
             update_profile(conf.force_profile)
         except hub.Backups.NotInitialized as e:
-            fatal("you need a profile to backup, run tklbam-init first")
+            fatal("you need a profile to backup, run tklbam3-init first")
 
     credentials = None
     if not conf.address and not dump_path:
@@ -349,7 +349,7 @@ def main():
             hb = hub_backups()
         except hub.Backups.NotInitialized as e:
             fatal(str(e) + "\n" +
-                  "tip: you can still use tklbam-backup with --dump or --address")
+                  "tip: you can still use tklbam3-backup with --dump or --address")
 
         try:
             registry.credentials = hb.get_credentials()

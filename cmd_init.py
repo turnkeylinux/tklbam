@@ -37,7 +37,7 @@ Options:
 
     --force-profile=empty          "empty" is a special profile_id value that creates an empty
                                    backup profile. Backup configurations will only be taken 
-                                   from /etc/tklbam.
+                                   from /etc/tklbam3.
 
     --force-profile=PATH           Path to a custom backup profile
                                    Details: tklbam-internal create-profile --help

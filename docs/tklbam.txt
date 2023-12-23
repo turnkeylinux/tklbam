@@ -14,7 +14,7 @@ TurnKey GNU/Linux Backup and Migration
 SYNOPSIS
 ========
 
-tklbam <command> [arguments]
+tklbam3 <command> [arguments]
 
 ENVIRONMENT VARIABLES
 =====================
@@ -184,12 +184,12 @@ the following commands::
     apt-get update
     apt-get install tklbam
 
-    # The API Key is needed to link tklbam to Alon's Hub account
-    tklbam-init QPINK3GD7HHT3A
+    # The API Key is needed to link tklbam3 to Alon's Hub account
+    tklbam3-init QPINK3GD7HHT3A
 
 On DevBox Alon runs a backup::
 
-    root@DevBox:~# tklbam-backup
+    root@DevBox:~# tklbam3-backup
 
 Behind the scenes, TKLBAM downoads from the Hub a profile for the
 version of TurnKey LAMP Alon is using. The profile describes the state
@@ -214,11 +214,11 @@ Backups section of his TurnKey Hub account.
 
 Now to restore the DevBox backup on CloudBox::
 
-    root@CloudBox:~# tklbam-list
+    root@CloudBox:~# tklbam3-list
     # ID  SKPP  Created     Updated     Size (GB)  Label
        1  No    2010-09-01  2010-09-01  0.02       TurnKey LAMP
 
-    root@CloudBox:~# tklbam-restore 1
+    root@CloudBox:~# tklbam3-restore 1
 
 When the restore is done Alon points his browser to CloudBox's IP
 address and is delighted to see his web application running there,
@@ -229,7 +229,7 @@ and restore process works. By default, the restore process reports what
 it's doing verbosely to the screen. But Alon had a hard time following
 the output in real time, because everything happened so fast!
 Thankfully, all the output is also saved to a log file at
-/var/log/tklbam-restore. 
+/var/log/tklbam3-restore. 
 
 Alon consults the log file and can see that only the files he added or
 changed on DevBox were restored to CloudBox. Database state was
@@ -247,5 +247,5 @@ FILES
 SEE ALSO
 ========
 
-``tklbam-faq`` (7)
+``tklbam3-faq`` (7)
 

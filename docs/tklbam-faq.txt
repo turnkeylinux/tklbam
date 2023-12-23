@@ -33,10 +33,10 @@ install it with the following shell command:
 
     wget -O - -q \
     https://raw.github.com/turnkeylinux/tklbam/master/contrib/ez-apt-install.sh \
-    | PACKAGE=tklbam /bin/bash
+    | PACKAGE=tklbam3 /bin/bash
 
 This adds the TurnKey package repository to your APT sources and uses
-APT to install the tklbam package and its dependencies.
+APT to install the tklbam3 package and its dependencies.
 
 Using TKLBAM on TurnKey GNU/Linux provides the best experience but it will
 also work well with any Debian or Ubuntu derived system and even with
@@ -57,7 +57,7 @@ What can I use for backup storage?
 Pretty much anything, though storing backups to Amazon S3 is easiest because
 authentication and key management are automatic. You just need to run::
 
-    tklbam-backup
+    tklbam3-backup
 
 But you can also backup to any storage target supported by TKLBAM's
 back-end Duplicity including the local filesystem, NFS, Rsync, SSH, FTP,
@@ -68,12 +68,12 @@ you don't need to mess around with authentication credentials.
 
 So assuming you want to store your backup at /mnt/otherdisk::
 
-    tklbam-backup --address file:///mnt/otherdisk/tklbam/backup
-    tklbam-escrow /mnt/otherdisk/tklbam/key
+    tklbam3-backup --address file:///mnt/otherdisk/tklbam/backup
+    tklbam3-escrow /mnt/otherdisk/tklbam/key
 
 And restore like this::
 
-    tklbam-restore --address file:///mnt/otherdisk/tklbam/backup \
+    tklbam3-restore --address file:///mnt/otherdisk/tklbam/backup \
                    --keyfile=/mnt/otherdisk/tklbam/key
 
 Not as easy as the Hub-enabled "automatic" mode, but still vastly easier than
@@ -101,7 +101,7 @@ How do I tune and optimize a TKLBAM backup?
 One of my favorite ways to do this::
 
     # step 1: generate a backup dump
-    tklbam-backup --dump=/tmp/mybackup
+    tklbam3-backup --dump=/tmp/mybackup
 
     # step 2: interactively review the dump's file contents & disk usage 
     cd /tmp/mybackup
@@ -112,7 +112,7 @@ One of my favorite ways to do this::
     vim /etc/tklbam/overrides
 
     # Everything perfect?
-    tklbam-backup --raw-upload=/tmp/mybackup
+    tklbam3-backup --raw-upload=/tmp/mybackup
 
 By default, TKLBAM will automatically determine what paths and databases need
 to be backed up on a given TurnKey system according to the backup profile it
@@ -137,7 +137,7 @@ contents of those paths which records timestamps, ownership and permissions.
 
 You can also generate your own custom profiles with the following command::
 
-    tklbam-internal create-profile
+    tklbam3-internal create-profile
 
 The backup profile is stored in /var/lib/tklbam3/profile and contains the
 following text files:
@@ -168,7 +168,7 @@ By adding a negative override to /etc/tklbam/overrides::
 
 You can also specify overrides on the command line at backup time::
 
-    tklbam-backup -- -/var/www/*/logs
+    tklbam3-backup -- -/var/www/*/logs
 
 How do I add a directory to my backup?
 --------------------------------------
@@ -179,7 +179,7 @@ By adding an override to /etc/tklbam/overrides::
 
 Or on the command line::
 
-    tklbam-backup /var/www/*/logs
+    tklbam3-backup /var/www/*/logs
 
 Make sure you understand the implications of doing this. For example, if
 you add a directory handled by package management this may break package
@@ -198,7 +198,7 @@ By adding a negative database override to /etc/tklbam/overrides::
 
 Or on the command line::
 
-    tklbam-backup -- -mysql:drupal6/page_cache
+    tklbam3-backup -- -mysql:drupal6/page_cache
 
 By default ALL databases are backed up so adding a negative database override
 excludes only that database or table from the backup.
@@ -218,7 +218,7 @@ Yes. For example, let's say your default TKLBAM backup is several gigabytes in
 size and you'd like to create a lighter 100 MB backup that will be updated more
 frequently and take less time to update/restore::
 
-    cp -a /etc/tklbam /etc/tklbam.light
+    cp -a /etc/tklbam3 /etc/tklbam.light
 
     echo -/var/www/\*/logs >> /etc/tklbam.light/overrides
     echo -/home/liraz/bigfiles >> /etc/tklbam.light/overrides
@@ -229,21 +229,21 @@ frequently and take less time to update/restore::
     mkdir /var/lib/tklbam3.light
     export TKLBAM_REGISTRY=/var/lib/tklbam3.light
 
-    tklbam-init
-    tklbam-backup
+    tklbam3-init
+    tklbam3-backup
 
 For convenience you may want to create a script that sets the TKLBAM_REGISTRY
 and TKLBAM_CONF environment variables::
 
-    cat > /usr/local/bin/tklbam-backup-light << EOF
+    cat > /usr/local/bin/tklbam3-backup-light << EOF
     #!/bin/bash
     export TKLBAM_CONF=/etc/tklbam.light
     export TKLBAM_REGISTRY=/var/lib/tklbam3.light
 
-    tklbam-backup
+    tklbam3-backup
     EOF
 
-    chmod +x /usr/local/bin/tklbam-backup-light
+    chmod +x /usr/local/bin/tklbam3-backup-light
 
 Can I use TKLBAM to only backup a single directory?
 ---------------------------------------------------
@@ -255,8 +255,8 @@ Yes. Here are a couple of recommended ways to do this:
     export TKLBAM_REGISTRY=/var/lib/tklbam3.srv
     export TKLBAM_CONF=/etc/tklbam.srv
 
-    tklbam-init --force-profile=empty
-    tklbam-backup --skip-packages --skip-database -- /srv
+    tklbam3-init --force-profile=empty
+    tklbam3-backup --skip-packages --skip-database -- /srv
 
 2) Use the --raw-upload option 
 
@@ -273,11 +273,11 @@ Yes. Here are a couple of recommended ways to do this:
    
         echo -/srv >> /etc/tklbam/overrides
         export TKLBAM_REGISTRY=/var/lib/tklbam3.srv-raw 
-        tklbam-backup --raw-upload=/srv
+        tklbam3-backup --raw-upload=/srv
 
    Later, you'll need to use the --raw-download option to restore::
 
-        tklbam-restore --raw-download=/srv <your-backup-id>
+        tklbam3-restore --raw-download=/srv <your-backup-id>
 
    If you don't use the raw-download option, TKLBAM will assume you are trying
    to restore a system-level backup and you'll get an error.
@@ -309,10 +309,10 @@ incremental.
 We recommend enabling the daily backup cron job so that daily
 incremental backups happen automatically::
 
-    chmod +x /etc/cron.daily/tklbam-backup
+    chmod +x /etc/cron.daily/tklbam3-backup
 
 You can override the default by setting the full-backup parameter in
-the tklbam configuration::
+the tklbam3 configuration::
 
     # create a full backup every 14 days
     echo full-backup 14D >> /etc/tklbam/conf
@@ -333,7 +333,7 @@ Note, if the system you backed up is still available, just log into it
 as root and change the passphrase (you don't need to know the old
 passphrase)::
 
-    tklbam-passphrase
+    tklbam3-passphrase
 
 AMAZON S3 QUESTIONS
 ===================
@@ -352,7 +352,7 @@ How can I throttle how much bandwidth TKLBAM uses?
 Here's one way to do it::
 
     apt-get install trickle
-    trickle -u 100  -d 100 tklbam-backup
+    trickle -u 100  -d 100 tklbam3-backup
 
 Do I have to store my backups in the Amazon S3 storage cloud?
 -------------------------------------------------------------
@@ -362,21 +362,21 @@ local / custom backup storage targets.
 
 There are two main alternatives to letting TKLBAM store a backup in the cloud:
 
-1) Low-level tklbam-backup --dump option: lets you dump the raw TKLBAM backup
+1) Low-level tklbam3-backup --dump option: lets you dump the raw TKLBAM backup
    extract to a directory, which you can then store anyway you like.
 
    For example here's how we'd a system backup into a simple unencrypted tarball::
    
        cd /tmp
        mkdir mybackup
-       tklbam-backup --dump=mybackup/
+       tklbam3-backup --dump=mybackup/
        tar jcvf mybackup.tar.bz2 mybackup/
    
    And later restore it like this::
    
        cd /tmp
        tar jxvf mybackup.tar.bz2
-       tklbam-restore mybackup/
+       tklbam3-restore mybackup/
    
    The --dump option bypasses Duplicity, which usually create a series of
    encrypted archive files that can be incrementally updated. These archive files
@@ -384,7 +384,7 @@ There are two main alternatives to letting TKLBAM store a backup in the cloud:
    with the --address option and specify any storage back-end supported by
    Duplicity (e.g., local directory, rsync over ssh, ftp, sftp, etc).
 
-2) High-level tklbam-backup --address option: lets you specify a custom backup
+2) High-level tklbam3-backup --address option: lets you specify a custom backup
    target URL that is passed on to Duplicity.
    
    It is highly recommended to rehearse a trial restore. Testing your backups
@@ -436,7 +436,7 @@ Amazon S3 cloud storage fees are around $0.15/GB per month.
 You can use simulation mode to calculate how much uncompressed data
 TKLBAM is going to store in a full backup::
 
-    $ tklbam-backup --simulate
+    $ tklbam3-backup --simulate
     CREATING /TKLBAM
     FULL UNCOMPRESSED FOOTPRINT: 148.30 MB in 6186 files
 
@@ -471,7 +471,7 @@ No, for a couple of reasons:
 1) After the initial setup, TKLBAM communicates directly with Amazon S3. Even
    if the Hub does down, backups will not be interrupted.
 
-2) You can use TKLBAM without linking it to the Hub at all. See the tklbam-init
+2) You can use TKLBAM without linking it to the Hub at all. See the tklbam3-init
    --solo option.
 
 If the Hub goes down, will my backup cron jobs still work?
@@ -494,7 +494,7 @@ steps by hand:
 
 2) specify the S3 address and the key manually when you restore.
 
-   For more details see the tklbam-restore documentation.
+   For more details see the tklbam3-restore documentation.
 
 If the Hub fails can I still create a new backup?
 -------------------------------------------------

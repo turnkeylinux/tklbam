@@ -47,5 +47,5 @@ backup-skip-database    False
 #       50% - 50% of free space in the restore-cache-path
 
 restore-cache-size 50%
-restore-cache-dir /var/cache/tklbam/restore
+restore-cache-dir /var/cache/tklbam3/restore
 

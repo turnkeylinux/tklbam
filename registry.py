@@ -109,14 +109,14 @@ in several ways:
 - Use an empty profile with --force-profile=empty
 - Use a custom profile with --force-profile=path/to/custom/profile/
 
-    tklbam-internal create-profile --help
+    tklbam3-internal create-profile --help
 
 Also, if TKLBAM is linked to the Hub you can:
 
 - Download a profile for another TurnKey system with --force-profile=codename (e.g., "core")
 - Download the all-purpose generic profile with --force-profile=generic
 
-Run "tklbam-init --help" for further details.
+Run "tklbam3-init --help" for further details.
 """
 
     EMPTY_PROFILE = "empty"
@@ -422,7 +422,7 @@ registry = _Registry()
 
 class NotInitialized(hub.Backups.NotInitialized):
     def __init__(self):
-        command = "tklbam-init"
+        command = "tklbam3-init"
         if registry.path != registry.DEFAULT_PATH:
             command = "%s=%s %s" % (registry.ENV_VARNAME, registry.path, command)
 
@@ -437,7 +437,7 @@ def update_profile(profile_id: Optional[str] = None, strict: bool = True) -> Non
 Creating an empty profile, which means:
 
 - We only backup files as included or excluded in the override paths specified
-  on the command line or configured in /etc/tklbam/overrides
+  on the command line or configured in /etc/tklbam3/overrides
 
 - We can't detect which files have changed since installation so we will
   indiscriminately backup all files in the included directories.

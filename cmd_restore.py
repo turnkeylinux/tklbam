@@ -39,7 +39,7 @@ Options / Duplicity:
               2M - 2 months ago
               1Y - 1 year ago
 
-    --keyfile=KEYFILE                 Path to tklbam-escrow created keyfile
+    --keyfile=KEYFILE                 Path to tklbam3-escrow created keyfile
                                       default: automatically retrieved from the Hub
 
     --address=TARGET_URL              custom backup target URL (needs --keyfile)
@@ -77,7 +77,7 @@ Options / System restore:
     --skip-packages                   Don't restore new packages
 
     --logfile=PATH                    Path to log file
-                                      default: /var/log/tklbam-restore
+                                      default: /var/log/tklbam3-restore
 
     --no-rollback                     Disable rollback
     --silent                          Disable feedback
@@ -109,24 +109,24 @@ Configuration file format ($CONF_PATH):
 Examples:
 
     # Restore Hub backup id 1
-    tklbam-restore 1
+    tklbam3-restore 1
 
     # Same result as above but in two steps: first download the extract, then apply it
-    tklbam-restore 1 --raw-download=/tmp/mybackup
-    tklbam-restore /tmp/mybackup
+    tklbam3-restore 1 --raw-download=/tmp/mybackup
+    tklbam3-restore /tmp/mybackup
 
-    # Restore backup created with tklbam-backup --raw-upload=/srv
-    tklbam-restore 2 --raw-download=/srv
+    # Restore backup created with tklbam3-backup --raw-upload=/srv
+    tklbam3-restore 2 --raw-download=/srv
 
     # Restore from Duplicity archives at a custom backup address on the local filesystem
-    tklbam-restore --address=file:///mnt/backups/mybackup --keyfile=mybackup.escrow
+    tklbam3-restore --address=file:///mnt/backups/mybackup --keyfile=mybackup.escrow
 
     # Simulate restoring Hub backup id 1 while excluding changes to the /root path,
     # mysql 'customers' DB, and the 'emails' table in the 'webapps' DB
-    tklbam-restore 1 --simulate --limits="-/root -mysql:customers -mysql:webapp/emails"
+    tklbam3-restore 1 --simulate --limits="-/root -mysql:customers -mysql:webapp/emails"
 
     # Simulate restoring only the /root files in Hub backup id 1
-    tklbam-restore 1 --simulate --skip-database --skip-packages --limits="/root"
+    tklbam3-restore 1 --simulate --skip-database --skip-packages --limits="/root"
 
 """
 
@@ -165,7 +165,7 @@ import backup
 
 logging.basicConfig(level=logging.DEBUG)
 
-PATH_LOGFILE = path_global_or_local("/var/log/tklbam-restore", registry.path.restore_log)
+PATH_LOGFILE = path_global_or_local("/var/log/tklbam3-restore", registry.path.restore_log)
 
 class Error(Exception):
     pass
@@ -362,7 +362,7 @@ def main():
             try:
                 keypacket.fingerprint(opt_key.encode())
             except keypacket.Error:
-                fatal("'%s' is not a valid keyfile created with tklbam-escrow" % val)
+                fatal("'%s' is not a valid keyfile created with tklbam3-escrow" % val)
 
         elif opt == '--address':
             opt_address = val
@@ -445,7 +445,7 @@ def main():
                     hbr = get_backup_record(arg)
                 except hub.Backups.NotInitialized as e:
                     print("error: " + str(e), file=sys.stderr)
-                    print("tip: you can still use tklbam-restore with --address or a backup extract", file=sys.stderr)
+                    print("tip: you can still use tklbam3-restore with --address or a backup extract", file=sys.stderr)
 
                     sys.exit(1)
 
@@ -477,7 +477,7 @@ def main():
                 fatal("a manual --address is incompatible with a <backup-id>")
 
             if not opt_key:
-                fatal("a manual --address needs a tklbam-escrow created --keyfile")
+                fatal("a manual --address needs a tklbam3-escrow created --keyfile")
 
         address = hbr.address if hbr else opt_address
 
@@ -502,7 +502,7 @@ def main():
             get_backup_extract()
             return
         else:
-            raw_download_path = TempDir(prefix=b"tklbam-")
+            raw_download_path = TempDir(prefix=b"tklbam3-")
             os.chmod(raw_download_path, 0o700)
 
     update_profile(conf.force_profile, strict=False)

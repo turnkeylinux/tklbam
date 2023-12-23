@@ -23,11 +23,11 @@ safe_overwrite() {
     fi
 }
 
-mkdir -p /var/cache/tklbam/restore
-chown proxy:proxy /var/cache/tklbam/restore
+mkdir -p /var/cache/tklbam3/restore
+chown proxy:proxy /var/cache/tklbam3/restore
 
 for freq in daily hourly weekly; do
-    safe_overwrite /etc/cron.$freq/tklbam-backup a655f5854491e9475ab7c553b8281164 /usr/share/tklbam/contrib/cron.sh
+    safe_overwrite /etc/cron.$freq/tklbam3-backup a655f5854491e9475ab7c553b8281164 /usr/share/tklbam/contrib/cron.sh
 done
 
 #DEBHELPER#

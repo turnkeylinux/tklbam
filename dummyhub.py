@@ -251,7 +251,7 @@ class _DummyDB:
 try:
     dummydb: _DummyDB
 except NameError:
-    dummydb = _DummyDB("/var/tmp/tklbam/dummyhub")
+    dummydb = _DummyDB("/var/tmp/tklbam3/dummyhub")
 
 class DummyProfileArchive(ProfileArchive):
     def __del__(self):

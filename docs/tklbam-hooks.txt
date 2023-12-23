@@ -40,17 +40,17 @@ output to see where the hook is executed.
 Outline of hook invocation in backup process::
 
     "pre" hook
-    tklbam creates "extras" (backup metadata)
+    tklbam3 creates "extras" (backup metadata)
     "inspect" hook: current working directory is /TKLBAM
-    tklbam runs duplicity to create/update backup archives
+    tklbam3 runs duplicity to create/update backup archives
     "post" hook
 
 Outline of hook invocation in restore process::
 
     "pre" hook
-    tklbam runs duplicity to get extras (backup metadata) + overlay
+    tklbam3 runs duplicity to get extras (backup metadata) + overlay
     "inspect" hook: current working directory is /tmp/<random-archive-path>/TKLBAM
-    tklbam applies restore to system
+    tklbam3 applies restore to system
     "post" hook
 
 Example hook
@@ -100,4 +100,4 @@ Default hooks
 
 - /etc/tklbam/hooks.d/example: disabled by default. When enabled this hook
   prints out "debugging" messages showing where the hook is being executed.
-  This is designed to illustrate how tklbam hooks work.
+  This is designed to illustrate how tklbam3 hooks work.

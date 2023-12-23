@@ -34,7 +34,7 @@ def _find_duplicity_pylib(path: str) -> Optional[str]:
 
     return None
 
-PATH_DEPS = os.environ.get('TKLBAM_DEPS', '/usr/lib/tklbam/deps')
+PATH_DEPS = os.environ.get('TKLBAM_DEPS', '/usr/lib/tklbam3/deps')
 PATH_DEPS_BIN = join(PATH_DEPS, "bin")
 PATH_DEPS_PYLIB = _find_duplicity_pylib(PATH_DEPS)
 
@@ -158,7 +158,7 @@ class Downloader:
     """High-level interface to Duplicity downloads"""
 
     CACHE_SIZE: str = "50%"
-    CACHE_DIR: str = "/var/cache/tklbam/restore"
+    CACHE_DIR: str = "/var/cache/tklbam3/restore"
 
     time: Optional[str] = None
     cache_size: str = CACHE_SIZE

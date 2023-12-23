@@ -1,5 +1,5 @@
 ===========
-tklbam-init
+tklbam3-init
 ===========
 
 -------------------------------------------------------------------------
@@ -14,7 +14,7 @@ Initialization: links TKLBAM to Hub account and downloads backup profile)
 SYNOPSIS
 ========
 
-tklbam-init [ --force ] [ `API-KEY` ]
+tklbam3-init [ --force ] [ `API-KEY` ]
 
 By default, this links TKLBAM to your Hub account and downloads an appropriate
 backup profile, which is used to calculate the list of system changes we need
@@ -49,22 +49,22 @@ OPTIONS
 
 --force-profile=PATH            Path to a custom backup profile
 
-                                Details: tklbam-internal create-profile --help
+                                Details: tklbam3-internal create-profile --help
 
 
 --solo                         Solo mode: disables link to Hub.
 
                                You'll need to --force-profile=empty or use a custom profile
 
-                               tklbam-backup will only work with --address or --dump options
+                               tklbam3-backup will only work with --address or --dump options
 
-                               tklbam-restore will only work with --address or a backup extract
+                               tklbam3-restore will only work with --address or a backup extract
 
 SECURITY WARNING
 ================
 
 Providing your Hub account's APIKEY as a command line argument is potentially less secure
-than allowing tklbam-init to prompt you for it interactively:
+than allowing tklbam3-init to prompt you for it interactively:
 
 * The shell may save the APIKEY to its history file (e.g., ~/.bash_history)
 * The APIKEY may briefly show up in the process list
@@ -75,18 +75,18 @@ USAGE EXAMPLES
 ::
 
     # initialize TKLBAM
-    tklbam-init
+    tklbam3-init
 
     # initialize TKLBAM with the core profile
-    tklbam-init --force-profile=core
+    tklbam3-init --force-profile=core
 
     # initialize TKLBAM with a non-default registry path
-    TKLBAM_REGISTRY=/var/lib/tklbam3_2 tklbam-init
+    TKLBAM_REGISTRY=/var/lib/tklbam3_2 tklbam3-init
 
     # initialize TKLBAM in solo mode with an empty profile
-    tklbam-init --solo --force-profile=empty
+    tklbam3-init --solo --force-profile=empty
 
 SEE ALSO
 ========
 
-``tklbam`` (8), ``tklbam-faq`` (7)
+``tklbam`` (8), ``tklbam3-faq`` (7)

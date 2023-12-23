@@ -1,5 +1,5 @@
 ==============
-tklbam-restore
+tklbam3-restore
 ==============
 
 ----------------
@@ -14,7 +14,7 @@ Restore a backup
 SYNOPSIS
 ========
 
-tklbam-restore [ -options ] [ <hub-backup> ]
+tklbam3-restore [ -options ] [ <hub-backup> ]
 
 ARGUMENTS
 =========
@@ -50,7 +50,7 @@ Duplicity related options
           2M - 2 months ago
           1Y - 1 year ago
 
---keyfile=KEYFILE                 Path to tklbam-escrow created keyfile
+--keyfile=KEYFILE                 Path to tklbam3-escrow created keyfile
                                   
                                   Default: automatically retrieved from the Hub
 
@@ -104,7 +104,7 @@ System restore options
 --skip-packages                   Don't restore new packages
 
 --logfile=PATH                    Path to log file.
-                                  Default: /var/log/tklbam-restore
+                                  Default: /var/log/tklbam3-restore
 
 --no-rollback                     Disable rollback
 --silent                          Disable feedback
@@ -120,7 +120,7 @@ Configurable options
                                   default: 50%
 
 --restore-cache-dir=PATH          The path to the download cache directory
-                                  default: /var/cache/tklbam/restore
+                                  default: /var/cache/tklbam3/restore
 
 Resolution order for configurable options:
 
@@ -138,33 +138,33 @@ USAGE EXAMPLES
 ::
 
     # Restore Hub backup id 1
-    tklbam-restore 1
+    tklbam3-restore 1
 
     # Same result as above but in two steps: first download the extract, then apply it
-    tklbam-restore 1 --raw-download=/tmp/mybackup
-    tklbam-restore /tmp/mybackup
+    tklbam3-restore 1 --raw-download=/tmp/mybackup
+    tklbam3-restore /tmp/mybackup
 
-    # Restore backup created with tklbam-backup --raw-upload=/srv
-    tklbam-restore 2 --raw-download=/srv
+    # Restore backup created with tklbam3-backup --raw-upload=/srv
+    tklbam3-restore 2 --raw-download=/srv
 
     # Restore from Duplicity archives at a custom backup address on the local filesystem
-    tklbam-restore --address=file:///mnt/backups/mybackup --keyfile=mybackup.escrow 
+    tklbam3-restore --address=file:///mnt/backups/mybackup --keyfile=mybackup.escrow 
 
     # Simulate restoring Hub backup id 1 while excluding changes to the /root path,
     # mysql 'customers' DB, and the 'emails' table in the 'webapps' DB
-    tklbam-restore 1 --simulate --limits="-/root -mysql:customers -mysql:webapp/emails"
+    tklbam3-restore 1 --simulate --limits="-/root -mysql:customers -mysql:webapp/emails"
 
     # Simulate restoring only the /root files in Hub backup id 1
-    tklbam-restore 1 --simulate --skip-database --skip-packages --limits="/root"
+    tklbam3-restore 1 --simulate --skip-database --skip-packages --limits="/root"
 
 FILES
 =====
 
 :Configuration files: /etc/tklbam/conf, /etc/tklbam/hooks.d
 
-:Restore cache: /var/cache/tklbam/restore (by default, see --restore-cache-dir=PATH option)
+:Restore cache: /var/cache/tklbam3/restore (by default, see --restore-cache-dir=PATH option)
 
 SEE ALSO
 ========
 
-``tklbam`` (8), ``tklbam-faq`` (7), ``tklbam-hooks`` (5)
+``tklbam`` (8), ``tklbam3-faq`` (7), ``tklbam3-hooks`` (5)

@@ -1,11 +1,11 @@
 #!/usr/bin/dh-exec
 
-contrib/example-conf => /etc/tklbam/conf
-contrib/example-overrides => /etc/tklbam/overrides
-contrib/fixclock-hook => /etc/tklbam/hooks.d/fixclock
-contrib/cron.sh => /etc/cron.daily/tklbam-backup
+contrib/example-conf => /etc/tklbam3/conf
+contrib/example-overrides => /etc/tklbam3/overrides
+contrib/fixclock-hook => /etc/tklbam3/hooks.d/fixclock
+contrib/cron.sh => /etc/cron.daily/tklbam3-backup
 
-contrib/example-hook => /etc/tklbam/hooks.d/example
-contrib/example-hook-pre-backup => /etc/tklbam/hooks.d/example-pre-backup
-contrib/example-hook-post-restore => /etc/tklbam/hooks.d/example-post-restore
-contrib/ez-apt-install.sh => /usr/share/tklbam/contrib/ez-apt-install.sh
+contrib/example-hook => /etc/tklbam3/hooks.d/example
+contrib/example-hook-pre-backup => /etc/tklbam3/hooks.d/example-pre-backup
+contrib/example-hook-post-restore => /etc/tklbam3/hooks.d/example-post-restore
+contrib/ez-apt-install.sh => /usr/share/tklbam3/contrib/ez-apt-install.sh

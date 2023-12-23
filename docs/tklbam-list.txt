@@ -1,5 +1,5 @@
 ===========
-tklbam-list
+tklbam3-list
 ===========
 
 -------------------
@@ -14,7 +14,7 @@ List backup records
 SYNOPSIS
 ========
 
-tklbam-list  [ <format> ]
+tklbam3-list  [ <format> ]
 
 ARGUMENTS
 =========
@@ -45,4 +45,4 @@ list "backup_id=%backup_id label=%label size=%{size}"
 SEE ALSO
 ========
 
-``tklbam`` (8), ``tklbam-faq`` (7)
+``tklbam`` (8), ``tklbam3-faq`` (7)

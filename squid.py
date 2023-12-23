@@ -6,8 +6,8 @@ from typing import Optional
 
 import command
 
-PATH_DEPS = os.environ.get('TKLBAM_DEPS', '/usr/lib/tklbam/deps')
-SQUID_BIN = os.path.join(PATH_DEPS, "usr/sbin/tklbam-squid")
+PATH_DEPS = os.environ.get('TKLBAM_DEPS', '/usr/lib/tklbam3/deps')
+SQUID_BIN = os.path.join(PATH_DEPS, "usr/sbin/tklbam3-squid")
 
 def _is_listening(localport: int) -> bool:
     sock = socket.socket()

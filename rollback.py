@@ -38,7 +38,7 @@ class Error(Exception):
 class Rollback:
     Error = Error
 
-    PATH = "/var/backups/tklbam-rollback"
+    PATH = "/var/backups/tklbam3-rollback"
     class Paths(_Paths):
         files = [ 'etc', 'etc/mysql',
                   'fsdelta', 'dirindex', 'originals',
