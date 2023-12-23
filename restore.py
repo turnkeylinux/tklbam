@@ -13,6 +13,7 @@ import sys
 
 import os
 from os.path import isdir, exists, join
+import logging
 
 import userdb
 import pkgman
@@ -37,6 +38,9 @@ class Error(Exception):
     pass
 
 
+logging.basicConfig(level=logging.DEBUG)
+logging.debug(f'*** {__file__=}')
+
 def system(command: str) -> int:
     sys.stdout.flush()
     sys.stderr.flush()
@@ -52,6 +56,10 @@ class Restore:
                  limits: list = [],
                  rollback: bool = True,
                  simulate: bool = False):
+        logging.debug(f'Restore.__init__(')
+        logging.debug(f'    {backup_extract_path=},')
+        logging.debug(f'    {limits=}, {rollback=}, {simulate=}')
+        logging.debug(')')
         self.extras = backup.ExtrasPaths(backup_extract_path)
         if not isdir(self.extras.path):
             raise self.Error("illegal backup_extract_path: can't find '%s'" % self.extras.path)
@@ -64,19 +72,24 @@ class Restore:
                     if exists(self.extras.backup_conf) else None
 
         self.simulate = simulate
+        logging.debug(f'creating rollback? {rollback}')
         self.rollback = Rollback.create() if rollback else None
         self.limits = conf.Limits(limits)
         self.backup_extract_path = backup_extract_path
+        logging.debug('__init__ complete: {self.limits=}, {self.backup_extract_path=}')
 
     def database(self) -> None:
+        logging.debug(f'database()')
         if not exists(self.extras.myfs) and not exists(self.extras.pgfs):
+            logging.debug(f'* bailing...')
             return
 
         if self.rollback:
+            logging.debug('* saving rollback')
             self.rollback.save_database()
 
         if exists(self.extras.myfs):
-
+            logging.debug('* self.extras.myfs exists')
             print(fmt_title("DATABASE - unserializing MySQL databases from " + self.extras.myfs))
 
             try:
@@ -100,8 +113,10 @@ class Restore:
 
             except pgsql.Error as e:
                 print("SKIPPING PGSQL DATABASE RESTORE: " + str(e))
+        logging.debug('* done')
 
     def packages(self) -> None:
+        logging.debug(f'packages()')
         newpkgs_file = self.extras.newpkgs
         if not exists(newpkgs_file):
             return
@@ -157,6 +172,7 @@ class Restore:
 
     @staticmethod
     def _userdb_merge(old_etc: str, new_etc: str) -> tuple[Base, Base, dict[str, str], dict[str, str]]:
+        logging.debug(f' _userdb_merge( {old_etc=}, {new_etc=} )')
         old_passwd = join(old_etc, "passwd")
         new_passwd = join(new_etc, "passwd")
 
@@ -172,6 +188,7 @@ class Restore:
 
     @staticmethod
     def _get_fsdelta_olist(fsdelta_olist_path: str, limits: list[str] = []) -> list[str]:
+        logging.debug(f'_get_fsdelta_olist( {fsdelta_olist_path=}, {limits=}')
         pathmap = PathMap(limits)
         with open(fsdelta_olist_path) as fob:
             return [ fpath
@@ -180,15 +197,19 @@ class Restore:
 
     @staticmethod
     def _apply_overlay(src: str, dst: str, olist: list[str]) -> None:
+        logging.debug(f'_apply_overlay( {src=}, {dst=}, {olist=}')
         tmp = TempFile("fsdelta-olist-")
         for fpath in olist:
+            logging.debug(f'1 {fpath=} (type={type(fpath)}) {tmp=} (type={type(tmp)})')
             fpath = fpath.lstrip('/')
             tmp.write(f'{fpath}\n'.encode())
+            logging.debug(f'2 {fpath=} ({type(fpath)=}) {tmp=} ({type(tmp)=})')
         tmp.close()
 
         apply_overlay(src, dst, tmp.path)
 
     def files(self) -> None:
+        logging.debug(f'files()')
         extras = self.extras
         if not exists(extras.fsdelta):
             return
@@ -199,6 +220,7 @@ class Restore:
         limits = self.limits.fs
 
         print(fmt_title("FILES - restoring files, ownership and permissions", '-'))
+        logging.debug(f'about to merge {extras.etc=} & /etc' )
         passwd, group, uidmap, gidmap = self._userdb_merge(extras.etc, "/etc")
         if uidmap or gidmap:
             print("MERGING USERS AND GROUPS:\n")
@@ -210,11 +232,23 @@ class Restore:
 
             print()
 
+        logging.debug(f'{extras.fsdelta=}')
+        logging.debug(f'{limits=}')
+        logging.debug('about to do changes')
         changes = Changes.fromfile(extras.fsdelta, limits)
+        logging.debug(f'{bool(changes)=}')
         deleted = list(changes.deleted())
+        logging.debug(f'{changes=}')
+        logging.debug(f'{deleted=}')
+        logging.debug(f'{rollback=}')
         if rollback:
+            logging.info(f'saving rollback info to {overlay=}')
             rollback.save_files(changes, overlay)
+            logging.info('saved')
+        logging.debug(f'{extras.fsdelta_olist=}')
+        logging.debug(f'{limits=}')
         fsdelta_olist = self._get_fsdelta_olist(extras.fsdelta_olist, limits)
+        logging.debug(f'{fsdelta_olist=}')
         if fsdelta_olist:
             print("OVERLAY:\n")
             for fpath in fsdelta_olist:
