@@ -208,6 +208,10 @@ class Credentials:
 
         return(creds_types[creds_type](**kwargs))
 
+def credentials_expired(credentials):
+    ''' Checks if credentials object has expired, expects credentials to be non None '''
+    return datetime.strptime(credentials['expiration'], '%Y-%m-%dT%H:%M:%SZ') <= datetime.now()
+
 class Backups:
     API_URL = os.getenv('TKLBAM_APIURL', 'https://hub.turnkeylinux.org/api/backup/')
     Error = Error

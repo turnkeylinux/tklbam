@@ -36,7 +36,7 @@ class CliWrapper(CliWrapper):
     PATH = [ dirname(realpath(__file__)) ]
     COMMANDS_USAGE_ORDER = ['init',
                             '',
-                            'passphrase', 'escrow',
+                            'passphrase', 'escrow', 'set-fallback',
                             '',
                             'backup', 'list', 'restore', 'restore-rollback',
                             '',

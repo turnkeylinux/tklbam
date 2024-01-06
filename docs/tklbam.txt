@@ -151,6 +151,7 @@ COMMANDS
 :list:               List backup records
 :restore:            Restore a backup
 :restore-rollback:   Rollback last restore
+:set-fallback:       Sets additional fallback keys for S3
 
 EXAMPLE USAGE SCENARIO
 ======================
