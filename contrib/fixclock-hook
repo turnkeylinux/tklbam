@@ -90,7 +90,7 @@ def is_container() -> Optional[str]:
         return None
     else:
         # container - return type
-        return stdout
+        return stdout.strip()
 
 
 def fixclock() -> None:
@@ -104,7 +104,7 @@ def fixclock() -> None:
 
 
 def dont_fixclock(container: str) -> None:
-    msg = Template(CONT_TPL).substitute(CONTAINER=container)
+    msg = Template(CONT_TPL).substitute(CONTAINER=container.strip())
     echo(msg, stderr=True)
 
 
