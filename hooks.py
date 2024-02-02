@@ -7,8 +7,10 @@ from registry import registry
 
 from conf import Conf
 
+
 class HookError(Exception):
     pass
+
 
 def _is_signed(fpath: str, keyring: str) -> bool:
     fpath_sig = fpath + ".sig"
@@ -20,6 +22,7 @@ def _is_signed(fpath: str, keyring: str) -> bool:
         return True
     else:
         return False
+
 
 def _run_hooks(path, args, keyring: Optional[str] = None) -> None:
     if not isdir(path):
@@ -38,8 +41,9 @@ def _run_hooks(path, args, keyring: Optional[str] = None) -> None:
 
         p = subprocess.run([fpath, *args])
         if p.returncode != 0:
-            raise HookError("`%s %s` non-zero exitcode (%d)" % \
-                            (fpath, " ".join(args), p.returncode))
+            raise HookError(f"`{fpath} {' '.join(args)}` non-zero exitcode"
+                            f" (p.returncode)")
+
 
 class Hooks:
     """
@@ -61,7 +65,8 @@ class Hooks:
 
     """
     BASENAME = "hooks.d"
-    LOCAL_HOOKS = os.environ.get("TKLBAM_HOOKS", join(Conf.DEFAULT_PATH, BASENAME))
+    LOCAL_HOOKS = os.environ.get("TKLBAM_HOOKS", join(Conf.DEFAULT_PATH,
+                                                      BASENAME))
 
     PROFILE_KEYRING = "/etc/apt/trusted.gpg.d/turnkey.gpg"
 
@@ -72,7 +77,8 @@ class Hooks:
 
         _run_hooks(self.LOCAL_HOOKS, (self.name, state))
         if registry.profile:
-            _run_hooks(join(registry.profile, self.BASENAME), (self.name, state), keyring=self.PROFILE_KEYRING)
+            _run_hooks(join(registry.profile, self.BASENAME),
+                       (self.name, state), keyring=self.PROFILE_KEYRING)
 
     def pre(self) -> None:
         self._run("pre")
@@ -86,6 +92,7 @@ class Hooks:
         os.chdir(extras_path)
         self._run("inspect")
         os.chdir(orig_cwd)
+
 
 backup = Hooks("backup")
 restore = Hooks("restore")

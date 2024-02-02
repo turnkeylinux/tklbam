@@ -31,17 +31,23 @@ import keypacket
 from registry import registry
 from passphrase import random_passphrase, get_passphrase
 
-def usage(e: Optional[str|getopt.GetoptError] = None) -> NoReturn:
+
+def usage(e: Optional[str | getopt.GetoptError] = None) -> NoReturn:
     if e:
         print("error: " + str(e), file=sys.stderr)
 
-    print("Usage: %s [-options] KEYFILE" % sys.argv[0], file=sys.stderr)
+    print(f"Usage: {sys.argv[0]} [-options] KEYFILE", file=sys.stderr)
     print(__doc__, file=sys.stderr)
     sys.exit(1)
 
+
 def main():
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], "hRP", ["help", "no-passphrase", "random-passphrase"])
+        opts, args = getopt.gnu_getopt(sys.argv[1:],
+                                       "hRP",
+                                       ["help",
+                                        "no-passphrase",
+                                        "random-passphrase"])
     except getopt.GetoptError as e:
         usage(e)
 
@@ -67,7 +73,8 @@ def main():
             opt_random_passphrase = True
 
     if opt_no_passphrase and opt_random_passphrase:
-        print("error: --no-passphrase and --random-passphrase are incompatible options", file=sys.stderr)
+        print("error: --no-passphrase and --random-passphrase are incompatible"
+              " options", file=sys.stderr)
         sys.exit(1)
 
     if not registry.secret:
@@ -95,6 +102,7 @@ def main():
         os.chmod(keyfile, 0o600)
 
     print(key, file=fh)
+
 
 if __name__ == "__main__":
     main()

@@ -30,6 +30,7 @@ from typing import Optional, NoReturn
 
 from registry import registry
 
+
 class Status:
     OK = 0
     NO_BACKUP = 10
@@ -47,7 +48,8 @@ class Status:
         else:
             return cls.OK
 
-def usage(e: Optional[str|getopt.GetoptError] = None) -> NoReturn:
+
+def usage(e: Optional[str | getopt.GetoptError] = None) -> NoReturn:
     if e:
         print("error: " + str(e), file=sys.stderr)
 
@@ -56,15 +58,16 @@ def usage(e: Optional[str|getopt.GetoptError] = None) -> NoReturn:
 
     sys.exit(1)
 
+
 def main():
     opts = None
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], "h",
-                                       [ "short", "help" ])
+                                       ["short", "help"])
     except getopt.GetoptError as e:
         usage(e)
 
-    assert opts != None
+    assert opts is not None
     opt_short = False
     for opt, val in opts:
         if opt in ('-h', '--help'):
@@ -79,8 +82,10 @@ def main():
         print("TKLBAM (Backup and Migration):  NOT INITIALIZED")
         if not opt_short:
             print()
-            print('  To initialize TKLBAM, run the "tklbam-init" command to link this')
-            print('  system to your TurnKey Hub account. For details see the man page or')
+            print('  To initialize TKLBAM, run the "tklbam-init" command to'
+                  ' link this')
+            print('  system to your TurnKey Hub account. For details see the'
+                  ' man page or')
             print('  go to:')
             print()
             print('      https://www.turnkeylinux.org/tklbam')
@@ -89,7 +94,8 @@ def main():
         print("TKLBAM (Backup and Migration):  NO BACKUPS")
         if not opt_short:
             print()
-            print('  To backup for the first time run the "tklbam-backup" command. For')
+            print('  To backup for the first time run the "tklbam-backup"'
+                  ' command. For')
             print('  details see the man page or go to:')
             print()
             print('      https://www.turnkeylinux.org/tklbam')
@@ -103,6 +109,7 @@ def main():
         print(s)
 
     sys.exit(status)
+
 
 if __name__ == "__main__":
     main()

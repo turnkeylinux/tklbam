@@ -39,12 +39,12 @@ import getopt
 import string
 from typing import Optional, NoReturn
 
-import hub
 import keypacket
 
-from registry import registry, hub_backups
+from registry import hub_backups
 
-def usage(e: Optional[str|getopt.GetoptError] = None) -> NoReturn:
+
+def usage(e: Optional[str | getopt.GetoptError] = None) -> NoReturn:
     if e:
         print("error: " + str(e), file=sys.stderr)
 
@@ -52,6 +52,7 @@ def usage(e: Optional[str|getopt.GetoptError] = None) -> NoReturn:
     print(__doc__, file=sys.stderr)
 
     sys.exit(1)
+
 
 class Formatter:
     def __init__(self, format: str):
@@ -70,6 +71,7 @@ class Formatter:
         hbr['turnkey_version'] = hbr['profile_id']
         return self.tpl.substitute(**hbr)
 
+
 def key_has_passphrase(key: str) -> bool:
     try:
         keypacket.parse(key.encode(), b"")
@@ -77,8 +79,10 @@ def key_has_passphrase(key: str) -> bool:
     except keypacket.Error:
         return True
 
+
 def fmt_skpp(key: bytes) -> str:
     return "Yes" if key_has_passphrase(key.decode()) else "No"
+
 
 def fmt_size(bytes_: int) -> str:
     if bytes_ < (10 * 1024):
@@ -87,6 +91,7 @@ def fmt_size(bytes_: int) -> str:
         return "%d" % (bytes_ / (1024 * 1024))
     else:
         return "%-.2f" % (bytes_ / (1024 * 1024.0))
+
 
 def main():
     try:
@@ -119,8 +124,8 @@ def main():
     elif hbrs:
         print("# ID  SKPP  Created     Updated     Size (MB)  Label")
         for hbr in hbrs:
-            assert hbr.created != None
-            print("%4s  %-3s   %s  %-10s  %-8s   %s" % \
+            assert hbr.created is not None
+            print("%4s  %-3s   %s  %-10s  %-8s   %s" %
                     (hbr.backup_id, fmt_skpp(hbr.key),
                      hbr.created.strftime("%Y-%m-%d"),
 
@@ -129,6 +134,7 @@ def main():
 
                      fmt_size(hbr.size),
                      hbr.label))
+
 
 if __name__ == "__main__":
     main()

@@ -1,15 +1,15 @@
 #!/usr/bin/python3
-# 
+#
 # Copyright (c) 2010-2012 Liraz Siri <liraz@turnkeylinux.org>
 # Copyright (c) 2023 TurnKey GNU/Linux <admin@turnkeylinux.org>
-# 
+#
 # This file is part of TKLBAM (TurnKey GNU/Linux BAckup and Migration).
-# 
+#
 # TKLBAM is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
-# 
+#
 """
 Map a MySQL dump to a filesystem path.
 
@@ -22,7 +22,7 @@ Options:
 
 Supports the following subset of mysqldump(1) options:
 
-    -u --user=USER 
+    -u --user=USER
     -p --password=PASS
 
        --defaults-file=PATH
@@ -39,23 +39,28 @@ from typing import Optional, NoReturn
 
 import mysql
 
+
 def fatal(e):
     print("fatal: " + str(e), file=sys.stderr)
     sys.exit(1)
+
 
 def usage(e: Optional[str | getopt.GetoptError] = None) -> NoReturn:
     if e:
         print("error: " + str(e), file=sys.stderr)
 
-    print("Syntax: %s [-options] path/to/output [ -?database/table ... ] " % sys.argv[0], file=sys.stderr)
+    print(f"Syntax: {sys.argv[0]} [-options] path/to/output"
+          " [ -?database/table ... ] ", file=sys.stderr)
     print(__doc__.strip(), file=sys.stderr)
     sys.exit(1)
 
+
 def main():
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], 'Du:p:v', 
+        opts, args = getopt.gnu_getopt(sys.argv[1:], 'Du:p:v',
                                        ['verbose', 'delete', 'fromfile=',
-                                        'user=', 'password=', 'defaults-file=', 'host='])
+                                        'user=', 'password=',
+                                        'defaults-file=', 'host='])
     except getopt.GetoptError as e:
         usage(e)
 
@@ -111,6 +116,7 @@ def main():
         callback = mysql.cb_print()
 
     mysql.mysql2fs(mysqldump_fh, outdir, limits, callback)
+
 
 if __name__ == "__main__":
     main()

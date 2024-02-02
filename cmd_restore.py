@@ -19,12 +19,14 @@ Arguments:
 
 Options / General:
 
-    --raw-download=PATH               Use Duplicity to download raw backup extract
-                                      without performing a system restore
+    --raw-download=PATH               Use Duplicity to download raw backup
+                                      extract without performing a system
+                                      restore
 
 Options / Duplicity:
 
-    --time=TIME                       Time to restore Duplicity backup archive from
+    --time=TIME                       Time to restore Duplicity backup archive
+                                      from
 
       TIME := YYYY-MM-DD | YYYY-MM-DDThh:mm:ss | <int>[mhDWMY]
 
@@ -40,10 +42,13 @@ Options / Duplicity:
               1Y - 1 year ago
 
     --keyfile=KEYFILE                 Path to tklbam3-escrow created keyfile
-                                      default: automatically retrieved from the Hub
+                                      default: automatically retrieved from
+                                               the Hub
 
-    --address=TARGET_URL              custom backup target URL (needs --keyfile)
-                                      default: S3 storage bucket automatically provided by Hub
+    --address=TARGET_URL              custom backup target URL (needs
+                                      --keyfile)
+                                      default: S3 storage bucket automatically
+                                               provided by Hub
 
       Supported storage backends and their URL formats:
 
@@ -66,11 +71,14 @@ Options / Duplicity:
 
 Options / System restore:
 
-    --simulate                        Do a dry run simulation of the system restore
+    --simulate                        Do a dry run simulation of the system
+                                      restore
 
-    --limits="LIMIT-1 .. LIMIT-N"     Restore filesystem or database limitations
+    --limits="LIMIT-1 .. LIMIT-N"     Restore filesystem or database
+                                      limitations
 
-      LIMIT := -?( /path/to/include/or/exclude | mysql:database[/table] | pgsql:database[/table] )
+      LIMIT := -?( /path/to/include/or/exclude | mysql:database[/table]\
+ | pgsql:database[/table] )
 
     --skip-files                      Don't restore filesystem
     --skip-database                   Don't restore databases
@@ -86,7 +94,8 @@ Options / System restore:
     --noninteractive                  Disable interactive user prompts
     --force                           Disable sanity checking
 
-    --debug                           Run interactive shell before Duplicity and before system restore
+    --debug                           Run interactive shell before Duplicity
+                                      and before system restore
 
 Options / Configurable (see resolution order below):
 
@@ -111,22 +120,27 @@ Examples:
     # Restore Hub backup id 1
     tklbam3-restore 1
 
-    # Same result as above but in two steps: first download the extract, then apply it
+    # Same result as above but in two steps: first download the extract, then
+    # apply it
     tklbam3-restore 1 --raw-download=/tmp/mybackup
     tklbam3-restore /tmp/mybackup
 
     # Restore backup created with tklbam3-backup --raw-upload=/srv
     tklbam3-restore 2 --raw-download=/srv
 
-    # Restore from Duplicity archives at a custom backup address on the local filesystem
-    tklbam3-restore --address=file:///mnt/backups/mybackup --keyfile=mybackup.escrow
+    # Restore from Duplicity archives at a custom backup address on the local
+    # filesystem
+    tklbam3-restore --address=file:///mnt/backups/mybackup\
+ --keyfile=mybackup.escrow
 
-    # Simulate restoring Hub backup id 1 while excluding changes to the /root path,
-    # mysql 'customers' DB, and the 'emails' table in the 'webapps' DB
-    tklbam3-restore 1 --simulate --limits="-/root -mysql:customers -mysql:webapp/emails"
+    # Simulate restoring Hub backup id 1 while excluding changes to the /root
+    # path, mysql 'customers' DB, and the 'emails' table in the 'webapps' DB
+    tklbam3-restore 1 --simulate --limits="-/root -mysql:customers\
+ -mysql:webapp/emails"
 
     # Simulate restoring only the /root files in Hub backup id 1
-    tklbam3-restore 1 --simulate --skip-database --skip-packages --limits="/root"
+    tklbam3-restore 1 --simulate --skip-database --skip-packages\
+ --limits="/root"
 
 """
 
@@ -165,19 +179,26 @@ import backup
 
 logging.basicConfig(level=logging.DEBUG)
 
-PATH_LOGFILE = path_global_or_local("/var/log/tklbam3-restore", registry.path.restore_log)
+PATH_LOGFILE = path_global_or_local("/var/log/tklbam3-restore",
+                                    registry.path.restore_log)
+
 
 class Error(Exception):
     pass
+
 
 class ExitCode:
     OK = 0
     INCOMPATIBLE = 10
     BADPASSPHRASE = 11
 
-def do_compatibility_check(backup_profile_id: str, interactive: bool = True) -> None:
+
+def do_compatibility_check(backup_profile_id: str,
+                           interactive: bool = True
+                           ) -> None:
     # unless both backup and restore are TurnKey skip compatibility check
-    logging.info(f"do_compatibility_check({backup_profile_id=}, {interactive=})")
+    logging.info(f"do_compatibility_check({backup_profile_id=}"
+                 f", {interactive=})")
 
     try:
         bkup = TurnKeyVersion.from_string(backup_profile_id)
@@ -204,8 +225,10 @@ def do_compatibility_check(backup_profile_id: str, interactive: bool = True) -> 
     print("WARNING: INCOMPATIBLE APPLIANCE BACKUP")
     print("======================================")
     print()
-    print("Restoring a %s backup to a %s appliance may create complications." % (backup_codename, local_codename))
-    print("For best results try restoring instead to a fresh %s installation." % backup_codename)
+    print(f"Restoring a {backup_codename} backup to a {local_codename}"
+          " appliance may create complications.")
+    print(f"For best results try restoring instead to a fresh"
+          f" {backup_codename} installation.")
 
     if not interactive:
         sys.exit(ExitCode.INCOMPATIBLE)
@@ -221,6 +244,7 @@ def do_compatibility_check(backup_profile_id: str, interactive: bool = True) -> 
 
     if answer.lower() not in ('y', 'yes'):
         fatal("You didn't answer 'yes'. Aborting!")
+
 
 def get_backup_record(arg: str) -> hub.BackupRecord:
     logging.info(f"get_backup_record({arg=})")
@@ -238,12 +262,13 @@ def get_backup_record(arg: str) -> hub.BackupRecord:
                if re.search(arg, hbr.label, re.IGNORECASE)]
 
     if not matches:
-        raise Error("'%s' doesn't match any backup labels" % arg)
+        raise Error(f"'{arg}' doesn't match any backup labels")
 
     if len(matches) > 1:
-        raise Error("'%s' matches more than one backup label" % arg)
+        raise Error(f"'{arg}' matches more than one backup label")
 
     return matches[0]
+
 
 def decrypt_key(key: str, interactive: bool = True) -> bytes:
     logging.info(f"decrypt_key({key=}, {interactive=})")
@@ -269,29 +294,36 @@ def decrypt_key(key: str, interactive: bool = True) -> bytes:
 
             print("Incorrect passphrase, try again", file=sys.stderr)
 
+
 def warn(e: str) -> None:
     print("warning: " + str(e), file=sys.stderr)
 
-def fatal(e: str|Error) -> NoReturn:
+
+def fatal(e: str | Error) -> NoReturn:
     print("error: " + str(e), file=sys.stderr)
     sys.exit(1)
 
-def usage(e: Optional[str|getopt.GetoptError] = None) -> NoReturn:
+
+def usage(e: Optional[str | getopt.GetoptError] = None) -> NoReturn:
     from paged import stdout
 
     if e:
         print("error: " + str(e), file=stdout)
 
-    print("Usage: %s [ -options ] <hub-backup>" % sys.argv[0], file=stdout)
-    print("Usage: %s [ -options ] --address=<address> --keyfile=path/to/key.escrow" % sys.argv[0], file=stdout)
+    print(f"Usage: {sys.argv[0]} [ -options ] <hub-backup>", file=stdout)
+    print(f"Usage: {sys.argv[0]} [ -options ] --address=<address>"
+          " --keyfile=path/to/key.escrow", file=stdout)
 
     tpl = Template(__doc__.strip())
     conf = Conf()
     print(tpl.substitute(CONF_PATH=conf.paths.conf,
-                                    CONF_RESTORE_CACHE_SIZE=conf.restore_cache_size,
-                                    CONF_RESTORE_CACHE_DIR=conf.restore_cache_dir), file=stdout)
+                         CONF_RESTORE_CACHE_SIZE=conf.restore_cache_size,
+                         CONF_RESTORE_CACHE_DIR=conf.restore_cache_dir
+                         ),
+          file=stdout)
 
     sys.exit(1)
+
 
 def main():
     logging.info('main()')
@@ -321,15 +353,19 @@ def main():
                                        ['raw-download=',
                                         'help',
                                         'simulate',
-                                        'limits=', 'address=', 'keyfile=',
+                                        'limits=', 'address=',
+                                        'keyfile=',
                                         'logfile=',
-                                        'restore-cache-size=', 'restore-cache-dir=',
+                                        'restore-cache-size=',
+                                        'restore-cache-dir=',
                                         'force',
                                         'time=',
                                         'silent',
                                         'noninteractive',
                                         'debug',
-                                        'skip-files', 'skip-database', 'skip-packages',
+                                        'skip-files',
+                                        'skip-database',
+                                        'skip-packages',
                                         'no-rollback'])
     except getopt.GetoptError as e:
         usage(e)
@@ -355,14 +391,15 @@ def main():
             opt_limits += shlex.split(val)
         elif opt == '--keyfile':
             if not isfile(val):
-                fatal("keyfile %s does not exist or is not a file" % repr(val))
+                fatal(f"keyfile {repr(val)} does not exist or is not a file")
 
             with open(val) as fob:
                 opt_key = fob.read()
             try:
                 keypacket.fingerprint(opt_key.encode())
             except keypacket.Error:
-                fatal("'%s' is not a valid keyfile created with tklbam3-escrow" % val)
+                fatal(f"'{val}' is not a valid keyfile created with"
+                      " tklbam3-escrow")
 
         elif opt == '--address':
             opt_address = val
@@ -423,7 +460,8 @@ def main():
 
     if raw_download_path:
         if not opt_force and os.listdir(raw_download_path) != []:
-            fatal("--raw-download=%s is not an empty directory, use --force if that is ok" % raw_download_path)
+            fatal(f"--raw-download={raw_download_path} is not an empty"
+                  " directory, use --force if that is ok")
 
     restore_cache_size = conf.restore_cache_size
     restore_cache_dir = conf.restore_cache_dir
@@ -445,11 +483,14 @@ def main():
                     hbr = get_backup_record(arg)
                 except hub.Backups.NotInitialized as e:
                     print("error: " + str(e), file=sys.stderr)
-                    print("tip: you can still use tklbam3-restore with --address or a backup extract", file=sys.stderr)
+                    print("tip: you can still use tklbam3-restore with"
+                          " --address or a backup extract",
+                          file=sys.stderr)
 
                     sys.exit(1)
 
-                credentials = hub.Backups(registry.sub_apikey).get_credentials()
+                credentials = hub.Backups(registry.sub_apikey
+                                          ).get_credentials()
             except Error as e:
                 fatal(e)
 
@@ -458,18 +499,25 @@ def main():
             usage()
 
     def get_backup_extract() -> str:
-        print(fmt_title("Executing Duplicity to download %s to %s " % (address, raw_download_path)))
+        print(fmt_title(f"Executing Duplicity to download {address} to"
+                        f" {raw_download_path} "))
         if not raw_download_path:
             raise Error('raw_download_path not set')
-        downloader(raw_download_path, target, log=print if not silent else None, debug=opt_debug, force=opt_force)
+        downloader(raw_download_path,
+                   target,
+                   log=print if not silent else None,
+                   debug=opt_debug,
+                   force=opt_force)
         if raw_download_path:
             return raw_download_path
         return ''
 
     if backup_extract_path:
         for opt, val in opts:
-            if opt[2:] in ('time', 'keyfile', 'address', 'restore-cache-size', 'restore-cache-dir'):
-                fatal("%s is incompatible with restoring from path %s" % (opt, backup_extract_path))
+            if opt[2:] in ('time', 'keyfile', 'address',
+                           'restore-cache-size', 'restore-cache-dir'):
+                fatal(f"{opt} is incompatible with restoring from path"
+                      f" {backup_extract_path}")
 
     else:
         if opt_address:
@@ -477,7 +525,8 @@ def main():
                 fatal("a manual --address is incompatible with a <backup-id>")
 
             if not opt_key:
-                fatal("a manual --address needs a tklbam3-escrow created --keyfile")
+                fatal("a manual --address needs a tklbam3-escrow created"
+                      " --keyfile")
 
         address = hbr.address if hbr else opt_address
 
@@ -486,8 +535,9 @@ def main():
                 do_compatibility_check(hbr.profile_id, interactive)
 
             if opt_key and \
-               keypacket.fingerprint(hbr.key.encode()) != keypacket.fingerprint(opt_key.encode()):
-
+               keypacket.fingerprint(hbr.key.encode()
+                                     ) != keypacket.fingerprint(
+                                            opt_key.encode()):
                 fatal("invalid escrow key for the selected backup")
         else:
             raise Error('hbr not set')
@@ -496,7 +546,8 @@ def main():
         secret = decrypt_key(key, interactive)
 
         target = duplicity.Target(address, credentials, secret.decode())
-        downloader = duplicity.Downloader(opt_time, restore_cache_size, restore_cache_dir)
+        downloader = duplicity.Downloader(opt_time, restore_cache_size,
+                                          restore_cache_dir)
 
         if raw_download_path:
             get_backup_extract()
@@ -523,15 +574,18 @@ def main():
     extras_paths = backup.ExtrasPaths(backup_extract_path)
 
     if not isdir(extras_paths.path):
-        fatal("missing %s directory - this doesn't look like a system backup" % extras_paths.path)
+        fatal(f"missing {extras_paths.path} directory - this doesn't look"
+              " like a system backup")
 
-    assert backup_extract_path != None
+    assert backup_extract_path is not None
     os.environ['TKLBAM_BACKUP_EXTRACT_PATH'] = backup_extract_path
 
     if not silent:
-        print(fmt_title("Restoring system from backup extract at " + backup_extract_path))
+        print(fmt_title("Restoring system from backup extract at "
+                        + backup_extract_path))
 
-    restore = Restore(backup_extract_path, limits=opt_limits, rollback=not no_rollback, simulate=opt_simulate)
+    restore = Restore(backup_extract_path, limits=opt_limits,
+                      rollback=not no_rollback, simulate=opt_simulate)
 
     if restore.conf:
         os.environ['TKLBAM_RESTORE_PROFILE_ID'] = restore.conf.profile_id
@@ -564,7 +618,9 @@ To exit from the shell and abort the restore run "exit 1".
     hooks.restore.post()
 
     if not silent:
-        print("We're done. You may want to reboot now to reload all service configurations.")
+        print("We're done. You may want to reboot now to reload all service"
+              " configurations.")
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     main()

@@ -1,6 +1,5 @@
-#
 # Copyright (c) 2007-2013 Liraz Siri <liraz@turnkeylinux.org>
-# Copyright (c) 2023 TurnKey GNU/Linux <admin@turnkeylinux.org>
+# Copyright (c) 2023, 2024 TurnKey GNU/Linux <admin@turnkeylinux.org>
 #
 # This file is part of turnkey-pylib.
 #
@@ -8,7 +7,7 @@
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
-#
+
 """
 Module that contains classes for capturing stdout/stderr.
 
@@ -81,6 +80,7 @@ from io import StringIO
 import signal
 from typing import IO, Callable, Optional
 
+
 class Error(Exception):
     pass
 
@@ -111,7 +111,8 @@ class Splicer:
                 usepty: bool, transparent: bool,
                 tee: Optional[list[str]] = None
                 ) -> tuple[int, IO[str], int]:
-        """splice into spliced_fd -> (splicer_pid, splicer_reader, orig_fd_dup)"""
+        """splice into spliced_fd -> (splicer_pid, splicer_reader, orig_fd_dup)
+        """
 
         if not tee:
             tee = []
@@ -217,7 +218,12 @@ class Splicer:
 
         os._exit(0)
 
-    def __init__(self, spliced_fd: int, usepty: bool = False, transparent: bool = False, tee: Optional[IO[str]|list[str]] = None):
+    def __init__(self,
+                 spliced_fd: int,
+                 usepty: bool = False,
+                 transparent: bool = False,
+                 tee: Optional[IO[str] | list[str]] = None
+                 ) -> None:
         if tee is None:
             tee = []
 
@@ -256,19 +262,9 @@ class SignalEvent:
     def _sighandler(self, sig: signal.Signals, frame: bytes) -> None:
         self.value = True
 
-
-    def __init__(self):
+    def __init__(self) -> None:
         self.value = False
         signal.signal(self.SIG, self._sighandler)
-        # E ▎Argument of type "(sig: Signals, frame: bytes) -> None" cannot be assigned to parameter "handler" of type "_HANDLER" in function "signal" 
-        #    Type "(sig: Signals, frame: bytes) -> None" cannot be assigned to type "_HANDLER"
-        #        Type "(sig: Signals, frame: bytes) -> None" cannot be assigned to type "(int, FrameType | None) -> Any"
-        #    Parameter 1: type "int" cannot be assigned to type "Signals"
-        #        "int" is incompatible with "Signals"
-        #    Parameter 2: type "FrameType | None" cannot be assigned to type "bytes"
-        #        Type "FrameType | None" cannot be assigned to type "bytes"
-        #        "FrameType" is incompatible with "bytes"
-        #    "function" is incompatible with "int"
 
     def isSet(self):
         return self.value
@@ -279,6 +275,7 @@ class SignalEvent:
 
 class Pipe:
     fileno: Callable
+
     def __init__(self):
         r, w = os.pipe()
         self.r = os.fdopen(r, "r")
@@ -294,7 +291,7 @@ def set_blocking(fd: int, block: bool) -> None:
 
 
 class Sink:
-    def __init__(self, fd: int|Pipe):
+    def __init__(self, fd: int | Pipe):
         if isinstance(fd, Pipe):
             if hasattr(fd, 'fileno'):
                 fd = fd.fileno()
@@ -312,7 +309,7 @@ class Sink:
             raise Error("fd is not int or Pipe")
         try:
             written = os.write(self.fd, self.data)
-        except:
+        except:  # TODO don't use bare except
             return False
 
         self.data = self.data[written:]
@@ -322,7 +319,11 @@ class Sink:
 
 
 class UnitedStdTrap:
-    def __init__(self, usepty: bool = False, transparent: bool = False, tee: Optional[IO[str]|list[str]] = None):
+    def __init__(self,
+                 usepty: bool = False,
+                 transparent: bool = False,
+                 tee: Optional[IO[str] | list[str]] = None
+                 ) -> None:
         if not tee:
             tee = []
         self.usepty = usepty
@@ -426,7 +427,7 @@ def tests() -> None:
                     print(i)
             finally:
                 trap.close()
-            assert trap.std != None
+            assert trap.std is not None
             trapped_output = trap.std.read()
 
         with open('/tmp/log', 'r') as fob:

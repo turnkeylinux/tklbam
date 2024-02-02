@@ -1,4 +1,3 @@
-#
 # Copyright (c) 2007-2010 Liraz Siri <liraz@turnkeylinux.org>
 #               2019 TurnKey GNU/Linux <admin@turnkeylinux.org>
 #
@@ -46,7 +45,6 @@ print(paths.make_relative(paths.sub_dir, paths.sub_dir.sub_file))
 
 """
 import re
-import os
 from os.path import join, realpath, dirname, exists
 from dataclasses import dataclass
 from typing import Self, Optional
@@ -82,6 +80,7 @@ def make_relative(base: str, path: str) -> str:
 class PathsError(Exception):
     pass
 
+
 class PathsBase(BaseAttrDict):
 
     path: str
@@ -93,7 +92,6 @@ class PathsBase(BaseAttrDict):
 class Paths(PathsBase):
     path: str
     files: Optional[list[Self] | list[str]] = None
-    filesd: Optional[dict[str, str]] = None
 
     make_relative = staticmethod(make_relative)
 
@@ -101,12 +99,12 @@ class Paths(PathsBase):
     def _check_path(path: str) -> str:
         if exists(path):
             if path.startswith('/'):
-                return path
+                return make_relative(path)
             else:
-                return realpath(path)
+                return path
         return ''
 
-    def __post_init__(self) -> None:
+    def __post_init__(self):
         self.path = self._check_path(self.path)
 
         if not self.path:
@@ -115,31 +113,30 @@ class Paths(PathsBase):
         if not self.files:
             self.files = []
 
-        if not self.filesd:
-            self.filesd = {}
-
-        self.dirs = []
-
         for file in self.files:
+            if isinstance(file, self):
+                file = str()
             if '/' in file:
                 file_split = file.split('/')
                 path_len = len(file_split)
                 if path_len == 2:
                     dir_, file = file_split
                 if path_len > 4:
-                    raise PathsError(f"Max recursion reached while processing {file}")
+                    raise PathsError(
+                            f"Max recursion reached while processing {file}")
                 else:
                     dir_, file = file_split
                     self.dirs.append(Paths(file_split[0], files=))
                 _dir, more_path = file.split('/', 1)
 
-                if len(more_path.split('/') == 1
-                self.dirs.append(Paths(_dir)
+                if len(more_path.split('/')) == 1:
+                    self.dirs.append(Paths(_dir))
 
-             if '.' in file or '/' in file or '-' in file:
-            setattr(self, file, file)
             if '.' in file or '/' in file or '-' in file:
-                new_attr = file.replace('.', '_').replace('/', '_').replace('-', '_')
+                setattr(self, file, file)
+            if '.' in file or '/' in file or '-' in file:
+                new_attr = file.replace('.', '_'
+                                        ).replace('/', '_').replace('-', '_')
                 setattr(self, new_attr, file)
 
     def __getattr__(self, name: str) -> str:

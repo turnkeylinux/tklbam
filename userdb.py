@@ -1,6 +1,5 @@
-#
 # Copyright (c) 2010-2016 Liraz Siri <liraz@turnkeylinux.org>
-# Copyright (c) 2023 TurnKey GNU/Linux <admin@turnkeylinux.org>
+# Copyright (c) 2023, 2024 TurnKey GNU/Linux <admin@turnkeylinux.org>
 #
 # This file is part of TKLBAM (TurnKey GNU/Linux BAckup and Migration).
 #
@@ -8,11 +7,13 @@
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
-#
 
 from collections import OrderedDict
 from typing import Optional, Self
 from functools import cmp_to_key
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
 
 
 class Error(Exception):
@@ -53,7 +54,7 @@ class Base(OrderedDict):
             else:
                 names = list(db.keys())
                 if not names:
-                    return None # empty db, nothing we can do.
+                    return None  # empty db, nothing we can do.
 
                 altroot = db[names.pop()].copy()
                 altroot.id = 0
@@ -64,7 +65,7 @@ class Base(OrderedDict):
         self['root'] = get_altroot(self)
         return None
 
-    def __init__(self, arg: Optional[str|dict[str, str]] = None):
+    def __init__(self, arg: Optional[str | dict[str, str]] = None):
         super().__init__()
 
         if not arg:
@@ -75,7 +76,9 @@ class Base(OrderedDict):
                 vals = line.split(':')
                 if self.Ent.LEN:
                     if len(vals) != self.Ent.LEN:
-                        raise Error("line with incorrect field count (%d != %d) '%s'" % (len(vals), self.Ent.LEN, line))
+                        raise Error("line with incorrect field count:"
+                                    f" ({len(vals)} != {self.Ent.LEN})"
+                                    f" '{line}'")
 
                 name = vals[0]
                 self[name] = self.Ent(vals)
@@ -89,7 +92,7 @@ class Base(OrderedDict):
         ents = list(self.values())
         ents.sort(key=lambda ent: ent.id)
 
-        return "\n".join([ ':'.join(ent) for ent in ents ]) + "\n"
+        return "\n".join([':'.join(ent) for ent in ents]) + "\n"
 
     @property
     def ids(self):
@@ -133,8 +136,8 @@ class Base(OrderedDict):
 
     @staticmethod
     def _merge_get_entry(name: str,
-                         db_old : Ent,
-                         db_new : Ent,
+                         db_old: Ent,
+                         db_new: Ent,
                          merged_ids: Optional[list[str]] = None
                          ) -> Optional[str]:
         """get merged db entry (without side effects)"""
@@ -171,8 +174,8 @@ class Base(OrderedDict):
 
     @classmethod
     def merge(cls, db_old, db_new
-              #db_old: Base,
-              #db_new: Base
+              # db_old: Base,
+              # db_new: Base
               ):  # -> tuple[Base, dict[str, str]]:
 
         db_merged = cls()
@@ -185,9 +188,12 @@ class Base(OrderedDict):
 
             ent = cls._merge_get_entry(name, db_old, db_new, db_merged.ids)
             assert ent is not None
-            #if name in db_old and db_old[name].id != ent.id:
-            #if name in db_old and isinstance(db_old[name], str) and hasattr(ent, 'id') and db_old[name].id != ent.id:
-            if name in db_old and isinstance(db_old[name], str) and db_old[name].id != ent.id:
+            # if name in db_old and db_old[name].id != ent.id:
+            # if name in db_old and isinstance(db_old[name], str) \
+            #    and hasattr(ent, 'id') and db_old[name].id != ent.id:
+            if (name in db_old
+                    and isinstance(db_old[name], str)
+                    and db_old[name].id != ent.id):
                 old2newids[db_old[name].id] = ent.id
 
             db_merged[name] = ent
@@ -212,7 +218,8 @@ class Base(OrderedDict):
             a_has_common_uid = a in db_new and db_new[a].id == db_old[a].id
             b_has_common_uid = b in db_new and db_new[b].id == db_old[b].id
 
-            comparison = (b_has_common_uid > a_has_common_uid) - (b_has_common_uid < a_has_common_uid)
+            comparison = ((b_has_common_uid > a_has_common_uid)
+                          - (b_has_common_uid < a_has_common_uid))
             if comparison != 0:
                 return comparison
 
@@ -222,7 +229,7 @@ class Base(OrderedDict):
             a_is_common = a in db_old and a in db_new
             b_is_common = b in db_old and b in db_new
 
-            #return cmp(b_is_common, a_is_common)
+            # return cmp(b_is_common, a_is_common)
             return (b_is_common > a_is_common) - (b_is_common < a_is_common)
 
         logging.info(f'Sorting aliased:\n{aliased=}\n{aliased_sort=}')
@@ -256,7 +263,8 @@ class Base(OrderedDict):
 
                 if name in db_new and db_new[name].id != ent.id:
 
-                    # we can't remap ids in new, so merge new entry as *_copy of itself
+                    # we can't remap ids in new, so merge new entry as
+                    # *_copy of itself
                     new_ent = cls.Ent(db_new[name])
                     new_ent.name = new_ent.name + '_orig'
 
@@ -266,10 +274,12 @@ class Base(OrderedDict):
         logging.debug(f'{bool(old2newids)=}')
         return db_merged, old2newids
 
+
 class EtcGroup(Base):
     class Ent(Base.Ent):
         LEN = 4
         gid = Base.Ent.id
+
 
 class EtcPasswd(Base):
     class Ent(Base.Ent):
@@ -278,6 +288,7 @@ class EtcPasswd(Base):
 
         def _getter(self) -> Optional[str]:
             return self._field(0)
+
         def _setter(self, val: Optional[int]) -> None:
             self._field(0, val)
 
@@ -289,8 +300,11 @@ class EtcPasswd(Base):
             if oldgid in gidmap:
                 self[name].gid = gidmap[oldgid]
 
-def merge(old_passwd: str, old_group: str, new_passwd: str, new_group: str) -> tuple[Base, Base, dict[str, str], dict[str, str]]:
-    logging.debug(f'\nmerge(\n\t{old_passwd=},\n\t{old_group=},\n\t{new_passwd=},\n\t{new_group=})')
+
+def merge(old_passwd: str, old_group: str, new_passwd: str, new_group: str
+          ) -> tuple[Base, Base, dict[str, str], dict[str, str]]:
+    logging.debug(f'\nmerge(\n\t{old_passwd=},\n\t{old_group=},'
+                  f'\n\t{new_passwd=},\n\t{new_group=})')
     g1 = EtcGroup(old_group)
     g2 = EtcGroup(new_group)
 

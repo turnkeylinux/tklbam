@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from hub import Credentials, ProfileArchive
 from hub import Error, NotSubscribed, InvalidBackupError
 
+
 @dataclass
 class APIKey(dict):
     apikey: str
@@ -26,7 +27,8 @@ class APIKey(dict):
 
         padded = "A" * (20 - len(apikey)) + apikey
         try:
-            uid, secret = struct.unpack("!L8s", base64.b32decode(padded + "=" * 4))
+            uid, secret = struct.unpack("!L8s",
+                                        base64.b32decode(padded + "=" * 4))
         except TypeError:
             raise Error("Invalid characters in API-KEY")
 
@@ -54,15 +56,17 @@ class APIKey(dict):
     def __repr__(self) -> str:
         return "APIKey(%s)" % repr(str(self))
 
-    def __eq__(self, other: object|Self) -> bool:
-        # a bit of typing hackery - to avoid 'supertype defines the argument type as "object"'
+    def __eq__(self, other: object | Self) -> bool:
+        # a bit of typing hackery - to avoid 'supertype defines the argument
+        # type as "object"'
         if hasattr(other, 'encoded'):
             assert isinstance(other, type(self))
             return self.encoded == other.encoded
         return False
 
-    def __ne__(self, other: object|Self) -> bool:
+    def __ne__(self, other: object | Self) -> bool:
         return not self.__eq__(other)
+
 
 @dataclass
 class DummyBackupRecord(dict):
@@ -77,7 +81,7 @@ class DummyBackupRecord(dict):
     def __post_init__(self) -> None:
 
         self.created = datetime.now()
-        self.updated:Optional[datetime] = None
+        self.updated: Optional[datetime] = None
 
         # in MBs
         self.size = 0
@@ -87,13 +91,13 @@ class DummyBackupRecord(dict):
         self.sessions: list[Self] = []
 
     def update(self, **kwargs: Any) -> None:
-        # kwargs not actually used - more type hacking - to avoid "update" incompatible with supertype 
+        # kwargs not actually used - more type hacking - to avoid "update"
+        # incompatible with supertype
         self.updated = datetime.now()
 
         path = self.address[len("file://"):]
 
-        # silly mypy: "List[DummyBackupRecord]", variable has type "List[Self]"
-        self.sessions = _parse_duplicity_sessions(path)  #type: ignore[assignment]
+        self.sessions = _parse_duplicity_sessions(path)
         self.size = sum([session.size for session in self.sessions])
 
 
@@ -110,8 +114,15 @@ class DummyUser:
     def subscribe(self) -> None:
         accesskey = base64.b64encode(sha(b"%d" % self.uid).digest())[:20]
         secretkey = base64.b64encode(os.urandom(30))[:40]
-        producttoken = b"{ProductToken}" + base64.b64encode(b"\x00" + os.urandom(2) + b"AppTkn" + os.urandom(224))
-        usertoken = b"{UserToken}" + base64.b64encode(b"\x00" + os.urandom(2) + b"UserTkn" + os.urandom(288))
+        producttoken = (b"{ProductToken}"
+                        + base64.b64encode(b"\x00"
+                                           + os.urandom(2)
+                                           + b"AppTkn"
+                                           + os.urandom(224)))
+        usertoken = (b"{UserToken}" + base64.b64encode(b"\x00"
+                                                       + os.urandom(2)
+                                                       + b"UserTkn"
+                                                       + os.urandom(288)))
 
         self.credentials = Credentials({'accesskey': accesskey,
                                         'secretkey': secretkey,
@@ -121,16 +132,19 @@ class DummyUser:
     def unsubscribe(self) -> None:
         self.credentials = None
 
-    def new_backup(self, address: str, key: str, profile_id: str, server_id: Optional[str] = None) -> DummyBackupRecord:
+    def new_backup(self, address: str, key: str, profile_id: str,
+                   server_id: Optional[str] = None
+                   ) -> DummyBackupRecord:
         self.backups_max += 1
 
         id = str(self.backups_max)
-        backup_record = DummyBackupRecord(id, address, key, \
+        backup_record = DummyBackupRecord(id, address, key,
                                           profile_id, server_id)
 
         self.backups[id] = backup_record
 
         return backup_record
+
 
 class DuplicityFile:
     @classmethod
@@ -160,11 +174,13 @@ class DuplicityFile:
         self.type = type_
         self.timestamp = timestamp
 
+
 class DummySession:
     def __init__(self, type_: str, timestamp: datetime, size: int = 0):
         self.type = type_
         self.timestamp = timestamp
         self.size = size
+
 
 def _parse_duplicity_sessions(path: str) -> list[DummyBackupRecord]:
     sessions = {}
@@ -176,15 +192,17 @@ def _parse_duplicity_sessions(path: str) -> list[DummyBackupRecord]:
         if not df:
             continue
 
-        if not df.timestamp in sessions:
+        if df.timestamp not in sessions:
             sessions[df.timestamp] = DummySession(df.type, df.timestamp, fsize)
         else:
             sessions[df.timestamp].size += fsize
 
     return list(sessions.values())
 
+
 class _DummyDB:
     users: APIKey
+
     class Paths(Paths):
         files = ['users', 'profiles']
 
@@ -204,7 +222,7 @@ class _DummyDB:
         try:
             with open(path, 'rb') as fob:
                 return pickle.load(fob)
-        except:
+        except:  # TODO don't use bare except
             return default
 
     def save(self) -> None:
@@ -242,20 +260,23 @@ class _DummyDB:
         return user
 
     def get_profile(self, profile_id):
-        matches = glob.glob("%s/%s.tar.*" % (self.path.profiles, profile_id))
+        matches = glob.glob(f"{self.path.profiles}/{profile_id}.tar.*")
         if not matches:
             return None
 
         return matches[0]
+
 
 try:
     dummydb: _DummyDB
 except NameError:
     dummydb = _DummyDB("/var/tmp/tklbam3/dummyhub")
 
+
 class DummyProfileArchive(ProfileArchive):
     def __del__(self):
         pass
+
 
 class Backups:
     # For simplicity's sake this implements a dummy version of both
@@ -266,6 +287,7 @@ class Backups:
     # operations remain.
 
     Error = Error
+
     class NotInitialized(Error):
         pass
 
@@ -278,13 +300,14 @@ class Backups:
         user = dummydb.get_user(apikey_.uid)
 
         if not user or user.apikey != apikey_:
-            raise Error("invalid APIKey: %s" % apikey)
+            raise Error(f"invalid APIKey: {apikey}")
 
         return apikey_.subkey(cls.SUBKEY_NS)
 
     def __init__(self, subkey):
         if subkey is None:
-            raise self.NotInitialized("no APIKEY - tklbam not linked to the Hub")
+            raise self.NotInitialized("no APIKEY - tklbam not linked to the"
+                                      " Hub")
 
         subkey_ = APIKey(subkey)
 
@@ -293,7 +316,10 @@ class Backups:
         # the subkey should probably be passed as an authentication header.
 
         user = dummydb.get_user(subkey_.uid)
-        if not user or (not isinstance(user.apikey, str) and subkey_ != user.apikey.subkey(self.SUBKEY_NS)):
+        if (not user
+            or (not isinstance(user.apikey, str)
+                and subkey_ != user.apikey.subkey(self.SUBKEY_NS)
+                )):
             raise Error("invalid authentication subkey: %s" % subkey)
 
         self.user = user
@@ -323,7 +349,8 @@ class Backups:
 
         archive = dummydb.get_profile(profile_id)
         if not archive:
-            raise Error(404, 'BackupArchive.NotFound', 'Backup profile archive not found: ' + profile_id)
+            raise Error(404, 'BackupArchive.NotFound',
+                        'Backup profile archive not found: ' + profile_id)
 
         archive_timestamp = int(os.stat(archive).st_mtime)
         if profile_timestamp and profile_timestamp >= archive_timestamp:
@@ -331,7 +358,9 @@ class Backups:
 
         return DummyProfileArchive(profile_id, archive, archive_timestamp)
 
-    def new_backup_record(self, key: str, profile_id: str, server_id: Optional[str] = None) -> str:
+    def new_backup_record(self, key: str, profile_id: str,
+                          server_id: Optional[str] = None
+                          ) -> str:
         # in the real implementation the hub would create a bucket not a dir...
         # the real implementation would have to make sure this is unique
         path = b"/var/tmp/duplicity/" + base64.b32encode(os.urandom(10))
@@ -353,6 +382,7 @@ class Backups:
 
     def list_backups(self):
         backups = list(self.user.backups.values())
+        # XXX below needs fixing!!!
         return sorted(list(self.user.backups.values()),
                       lambda a,b: cmp(int(a.backup_id), int(b.backup_id)))
 
@@ -369,5 +399,3 @@ class Backups:
 
     def set_backup_inprogress(self, backup_id, bool):
         pass
-
-

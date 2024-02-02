@@ -19,8 +19,10 @@ from pathmap import PathMap
 from dataclasses import dataclass
 from typing import Optional, Self, Generator, IO
 
+
 class Error(Exception):
     pass
+
 
 class DirIndex(dict):
     @dataclass
@@ -37,8 +39,9 @@ class DirIndex(dict):
         def frompath(cls, path: str) -> Self:
             st = os.lstat(path)
 
-            symlink = os.readlink(path) \
-                      if stat.S_ISLNK(st.st_mode) else None
+            symlink = (os.readlink(path)
+                       if stat.S_ISLNK(st.st_mode)
+                       else None)
 
             rec = cls(path,
                       st.st_mode,
@@ -76,8 +79,9 @@ class DirIndex(dict):
             return "\t".join(map(str, vals))
 
         def __repr__(self) -> str:
-            return "DirIndex.Record(%s, mod=%s, uid=%d, gid=%d, size=%d, mtime=%d)" % \
-                    (repr(self.path), oct(self.mod), self.uid, self.gid, self.size, self.mtime)
+            return (f"DirIndex.Record({repr(self.path)}, mod={oct(self.mod)},"
+                    f" uid={self.uid}, gid={self.gid}, size={self.size},"
+                    f" mtime=self.mtime)")
 
     @classmethod
     def create(cls, path_index: str, paths: list[str]) -> Self:
@@ -141,7 +145,7 @@ class DirIndex(dict):
 
         pathmap = PathMap(list(paths))
         for path in list(self.keys()):
-            if not path in pathmap:
+            if path not in pathmap:
                 del self[path]
 
     def save(self, tofile: str) -> None:
@@ -180,8 +184,8 @@ class DirIndex(dict):
 
             return True
 
-        def symlink_equal(a, #: Self,
-                          b #: Self
+        def symlink_equal(a,  #: Self,
+                          b  #: Self
                           ) -> bool:
             if a.symlink and (a.symlink == b.symlink):
                 return True
@@ -201,7 +205,9 @@ class DirIndex(dict):
 
         return files_new, files_edited, paths_stat
 
+
 create = DirIndex.create
+
 
 def read_paths(fh: IO[str]) -> list[str]:
     paths = []

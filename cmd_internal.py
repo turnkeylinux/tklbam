@@ -20,14 +20,18 @@ from cliwrapper import CliWrapper as CliWrapper_
 
 import cmd_internals
 
+
 class TklbamCliError(Exception):
     pass
+
 
 class CliWrapper(CliWrapper_):
     DESCRIPTION = __doc__
     PATH = list(cmd_internals.__path__)
 
+
 main = CliWrapper.main
+
 
 def _split(string: str) -> list[str]:
     if '|' in string or '>' in string:
@@ -36,7 +40,8 @@ def _split(string: str) -> list[str]:
         return shlex.split(string)
     return [string,]
 
-def fmt_internal_command(command: str, *args: list[str]|str) -> list[str]:
+
+def fmt_internal_command(command: str, *args: list[str] | str) -> list[str]:
     command_, *args_ = _split(command)
     for arg in args:
         if isinstance(arg, list):
@@ -46,6 +51,7 @@ def fmt_internal_command(command: str, *args: list[str]|str) -> list[str]:
 
     internal_command = [realpath(__file__), command_, *args_]
     return ["python3", *internal_command]
+
 
 if __name__ == "__main__":
     CliWrapper.main()

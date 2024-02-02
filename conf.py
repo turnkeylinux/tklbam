@@ -30,7 +30,6 @@ class Limits(list):
                 return True
             return False
 
-
         try:
             with open(inputfile) as fob:
                 for line in fob.readlines():
@@ -87,6 +86,7 @@ class Limits(list):
         cls = type(self)
         return cls(list.__add__(self, b))
 
+
 @dataclass
 class ConfDir:
     DEFAULT_PATH = DEFAULT_PATH
@@ -120,7 +120,7 @@ class Conf:
     address: str = ''
 
     @staticmethod
-    def _validate_bool(opt: str, value: str|bool) -> str|bool:
+    def _validate_bool(opt: str, value: str | bool) -> str | bool:
         """Returns value if valid, otherwise raise exception"""
         if value in (True, False):
             val = value
@@ -174,7 +174,7 @@ class Conf:
                     opt = opt.replace('-', '_')
                     if opt in ('full_backup', 'restore_cache_size'):
                         if opt == 'full_backup':
-                            regex =  r'^now$|^\d+[mhDWMY]'
+                            regex = r'^now$|^\d+[mhDWMY]'
                         else:
                             regex = r'^\d+(%|mb?|gb?)?$'
                         value = cls._validate_string(opt, regex, value)
@@ -182,7 +182,8 @@ class Conf:
                         value = cls._validate_int(opt, value)
                     elif opt in ('restore_cache_dir', 'force_profile'):
                         value = cls._validate_path(opt, value)
-                    elif opt in ('backup_skip_files', 'backup_skip_packages', 'backup_skip_database'):
+                    elif opt in ('backup_skip_files', 'backup_skip_packages',
+                                 'backup_skip_database'):
                         value = cls._validate_bool(opt, value)
                     elif opt == 'force_profile':
                         value = str(value).lower()

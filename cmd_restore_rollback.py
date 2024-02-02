@@ -24,17 +24,19 @@ from typing import Optional, NoReturn
 
 from rollback import Rollback
 
+
 def fatal(e: str) -> NoReturn:
     print("error: " + str(e), file=sys.stderr)
     sys.exit(1)
 
-def usage(e: Optional[str|getopt.GetoptError] = None) -> NoReturn:
+def usage(e: Optional[str | getopt.GetoptError] = None) -> NoReturn:
     if e:
         print("error: " + str(e), file=sys.stderr)
 
     print("Usage: %s" % sys.argv[0], file=sys.stderr)
     print(__doc__.strip(), file=sys.stderr)
     sys.exit(1)
+
 
 def main():
     try:
@@ -59,7 +61,8 @@ def main():
         fatal("nothing to rollback")
 
     if not opt_force:
-        print("DATA LOSS WARNING: this will rollback your system to the pre-restore")
+        print("DATA LOSS WARNING: this will rollback your system to the"
+              " pre-restore")
         print("snapshot from " + rollback.timestamp.ctime())
         print()
 
@@ -74,5 +77,6 @@ def main():
 
     rollback.rollback()
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     main()

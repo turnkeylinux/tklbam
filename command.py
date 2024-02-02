@@ -42,7 +42,7 @@ def fmt_argv(argv: list[str]) -> str:
     return argv[0] + " " + " ".join(args)
 
 
-def get_blocking(fd: int|TextIOWrapper) -> bool:
+def get_blocking(fd: int | TextIOWrapper) -> bool:
     import fcntl
     flags = fcntl.fcntl(fd, fcntl.F_GETFL, 0)
     if flags & os.O_NONBLOCK:
@@ -51,7 +51,7 @@ def get_blocking(fd: int|TextIOWrapper) -> bool:
         return True
 
 
-def set_blocking(fd: int|TextIOWrapper, blocking: bool) -> None:
+def set_blocking(fd: int | TextIOWrapper, blocking: bool) -> None:
     import fcntl
     flags = fcntl.fcntl(fd, fcntl.F_GETFL, 0)
     if flags == -1:
@@ -70,7 +70,8 @@ class FileEnhancedRead:
     def __getattr__(self, attr: str) -> str:
         return getattr(self.fh, attr)
 
-    def read(self, size: int = -1, timeout: Optional[float] = None) -> Optional[str]:
+    def read(self, size: int = -1, timeout: Optional[float] = None
+             ) -> Optional[str]:
         """A better read where you can (optionally) configure how long to wait
         for data.
 
@@ -227,7 +228,8 @@ class Command:
         if self._debug:
             print(msg, file=sys.stderr)
 
-    def terminate(self, gracetime: int = 0, sig: Signals = signal.SIGTERM) -> None:
+    def terminate(self, gracetime: int = 0, sig: Signals = signal.SIGTERM
+                  ) -> None:
         """terminate command. kills command with 'sig', then sleeps for
         'gracetime', before sending SIGKILL
         """
@@ -235,11 +237,12 @@ class Command:
         if self.running:
             assert self._child is not None
             if self._child.pty:
-                # XXX shouldn't be a string? Should be popen4.CatchIOErrorWrapper!?
-                cc_magic = termios.tcgetattr(self._child.tochild.fileno())[-1]  #type: ignore[operator]
+                # XXX shouldn't be a string?
+                # Should be popen4.CatchIOErrorWrapper!?
+                cc_magic = termios.tcgetattr(self._child.tochild.fileno())[-1]
                 ctrl_c = cc_magic[termios.VINTR]
                 # and again ...
-                self._child.tochild.write(ctrl_c)  #type: ignore[operator]
+                self._child.tochild.write(ctrl_c)
 
             pid = self.pid
             if self._setpgrp and pid is not None:
@@ -261,7 +264,7 @@ class Command:
                     return
                 time.sleep(1)
 
-            if self.running and pid != None:
+            if self.running and pid is not None:
                 os.kill(pid, signal.SIGKILL)
 
                 if not self.wait(timeout=3, poll_interval=0.1):
@@ -302,7 +305,9 @@ class Command:
 
     exitcode = property(exitcode_)
 
-    def wait(self, timeout: Optional[int] = None, poll_interval: float = 0.2, callback: Optional[Callable] = None) -> bool:
+    def wait(self, timeout: Optional[int] = None, poll_interval: float = 0.2,
+             callback: Optional[Callable] = None
+             ) -> bool:
         """wait for process to finish executing.
         'timeout': how long we wait in seconds (None is forever)
         'poll_interval': how long we sleep between checks to see if process has
@@ -332,7 +337,7 @@ class Command:
 
             return False
 
-    def output_(self) -> str|None:
+    def output_(self) -> Optional[str]:
         if len(self._output):
             return self._output.getvalue()
 
@@ -346,7 +351,7 @@ class Command:
 
     output = property(output_)
 
-    def fromchild_(self) -> Optional[FileEventAdaptor|FileEnhancedRead]:
+    def fromchild_(self) -> Optional[FileEventAdaptor | FileEnhancedRead]:
         """return the command's filehandler.
 
         NOTE: this file handler magically updates self._output"""
@@ -364,10 +369,10 @@ class Command:
     fromchild = property(fromchild_)
 
     def outputsearch(self,
-                     p: re.Pattern|str|list[re.Pattern|str],
+                     p: re.Pattern | str | list[re.Pattern | str],
                      timeout: Optional[int] = None,
                      linemode: bool = False
-                     ) -> Optional[tuple[re.Pattern|str, re.Match]]:
+                     ) -> Optional[tuple[re.Pattern | str, re.Match]]:
         """Search for 'p' in the command's output, while listening for more
         output from command, within 'timeout'
 
@@ -390,7 +395,7 @@ class Command:
         - Output is collected and can be accessed by the output attribute [*]
         """
 
-        patterns: list[str|re.Pattern] = []
+        patterns: list[str | re.Pattern] = []
         if isinstance(p, (tuple, list)):
             patterns.extend(p)
         elif isinstance(p, (re.Pattern, str)):
@@ -400,13 +405,13 @@ class Command:
 
         # compile all patterns into re objects, but keep the original pattern
         # object so we can return it to user when matched (friendy interface)
-        ret_patterns: list[tuple[str|re.Pattern, re.Pattern]] = []
+        ret_patterns: list[tuple[str | re.Pattern, re.Pattern]] = []
         for i in range(len(patterns)):
             pattern_orig = patterns[i]
             pattern_re = re.compile(patterns[i])
             ret_patterns.append((pattern_orig, pattern_re))
 
-        def check_match() -> Optional[tuple[re.Pattern|str, re.Match]]:
+        def check_match() -> Optional[tuple[re.Pattern | str, re.Match]]:
             if linemode:
                 while 1:
                     line = self._output.readline(True)
@@ -434,7 +439,7 @@ class Command:
         if m:
             return m
 
-        ref: list[tuple[re.Pattern|str, re.Match]] = []
+        ref: list[tuple[re.Pattern | str, re.Match]] = []
         started = time.time()
 
         def callback(self, buf: str) -> bool:
@@ -457,7 +462,9 @@ class Command:
         fh = self.read(callback)
         return ref[0]
 
-    def read(self, callback: Optional[Callable] = None, callback_interval: float = 0.1) -> str:
+    def read(self, callback: Optional[Callable] = None,
+             callback_interval: float = 0.1
+             ) -> str:
         """Read output from child.
 
         Args:

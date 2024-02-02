@@ -1,4 +1,3 @@
-#
 # Copyright (c) 2010-2012 Liraz Siri <liraz@turnkeylinux.org>
 # Copyright (c) 2023 TurnKey GNU/Linux <admin@turnkeylinux.org>
 #
@@ -8,7 +7,7 @@
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
-#
+
 import sys
 import re
 import subprocess
@@ -80,9 +79,8 @@ class AptCache(set):
         command = ["apt-cache", "show", *packages]
         p = subprocess.run(command, capture_output=True, text=True)
         if p.returncode not in (0, 100):
-            raise self.Error("execution failed (%d): %s\n%s" % (p.returncode,
-                                                                ''.join(command),
-                                                                p.stderr))
+            raise self.Error(f"execution failed ({p.returncode}):"
+                             f" {''.join(command)}\n{p.stderr}")
         cached = [line.split()[1]
                   for line in p.stdout.split("\n") if
                   line.startswith("Package: ")]
@@ -100,7 +98,9 @@ class Blacklist:
                     return True
         return False
 
-def installable(packages: list[str], blacklist: Optional[list[str]] = None) -> tuple[list[str], list[str]]:
+
+def installable(packages: list[str], blacklist: Optional[list[str]] = None
+                ) -> tuple[list[str], list[str]]:
     installed = Packages()
     aptcache = AptCache(packages)
     if blacklist is None:
@@ -126,15 +126,18 @@ def installable(packages: list[str], blacklist: Optional[list[str]] = None) -> t
 
     return installable, skipped
 
+
 class Installer:
     """
     Interface::
         installer.command       Command executed
         installer.installable   List of packages to be installed
         installer.skipping      List of packages we're skipping
-                                (e.g., because we couldn't find them in the apt-cache)
+                                (e.g., because we couldn't find them in the
+                                apt-cache)
 
-        installer()             Run installation command and return an error code
+        installer()             Run installation command and return an error
+                                code
                                 By default noninteractive...
     """
     Error = Error
@@ -142,7 +145,9 @@ class Installer:
     command: Optional[list[str]]
     installed: Optional[set[str]]
 
-    def __init__(self, packages: list[str], blacklist: Optional[list[str]] = None) -> None:
+    def __init__(self, packages: list[str],
+                 blacklist: Optional[list[str]] = None
+                 ) -> None:
         if blacklist is None:
             blacklist_ = []
         else:
@@ -154,12 +159,14 @@ class Installer:
         self.skipping.sort()
 
         if self.installable:
-            self.command = ["apt-get", "install", "--assume-yes", *self.installable]
+            self.command = ["apt-get", "install", "--assume-yes",
+                            *self.installable]
         else:
             self.command = None
 
     def __call__(self, interactive: bool = False) -> tuple[int, str]:
-        """Install packages. Return (exitcode, output) from execution of installation command
+        """Install packages. Return (exitcode, output) from execution of
+        installation command
         """
         if not self.installable:
             raise Error("no installable packages")
@@ -172,7 +179,8 @@ class Installer:
         if self.command is None:
             return 1, 'command not set'
         packages_before = Packages()
-        p = subprocess.run(self.command, env=env, capture_output=True, text=True)
+        p = subprocess.run(self.command, env=env,
+                           capture_output=True, text=True)
         packages_after = Packages()
 
         self.installed = packages_after - packages_before

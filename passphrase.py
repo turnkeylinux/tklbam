@@ -1,4 +1,3 @@
-#
 # Copyright (c) 2010-2012 Liraz Siri <liraz@turnkeylinux.org>
 # Copyright (c) 2023 TurnKey GNU/Linux <admin@turnkeylinux.org>
 #
@@ -14,6 +13,7 @@ import sys
 import base64
 import getpass
 
+
 def random_passphrase():
     random = base64.b32encode(os.urandom(10))
     parts = []
@@ -22,8 +22,10 @@ def random_passphrase():
 
     return "-".join(parts)
 
+
 class Error(Exception):
     pass
+
 
 def get_passphrase(confirm=True):
     if not os.isatty(sys.stdin.fileno()):
@@ -44,4 +46,3 @@ def get_passphrase(confirm=True):
         print("Sorry, passphrases do not match", file=sys.stderr)
 
     return passphrase
-

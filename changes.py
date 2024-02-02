@@ -12,32 +12,33 @@
 import sys
 import os
 from os.path import lexists, isdir, islink
+from typing import Optional, Generator, Self, Callable, Any
+
+import stat
+import errno
+import pwd
+import grp
 
 from dirindex import DirIndex
 from pathmap import PathMap
 
-import stat
-import errno
-
-import pwd
-import grp
-
-from typing import Optional, Generator, Self, Callable, Any
 
 class Error(Exception):
     pass
 
-def fmt_uid(uid: int|str) -> str:
+
+def fmt_uid(uid: int | str) -> str:
     try:
         return pwd.getpwuid(int(uid)).pw_name
-    except:
+    except:  # TODO don't use bare except
         return str(uid)
 
-def fmt_gid(gid: int|str) -> str:
+def fmt_gid(gid: int | str) -> str:
     try:
         return grp.getgrgid(int(gid)).gr_name
-    except:
+    except:  # TODO don't use bare except
         return str(gid)
+
 
 class Change:
     """
@@ -59,6 +60,7 @@ class Change:
     """
     class Base:
         OP: Optional[str] = None
+
         def __init__(self, path: str):
             self.path = path
             self._stat: Optional[os.stat_result] = None
@@ -74,7 +76,7 @@ class Change:
         def fmt(self, *args: str) -> str:
             items = []
             for item in [self.OP, self.path, *args]:
-                if item != None:
+                if item is not None:
                     items.append(str(item))
 
             return "\t".join(items)
@@ -92,7 +94,12 @@ class Change:
 
     class Overwrite(Base):
         OP = 'o'
-        def __init__(self, path: str, uid: Optional[str] = None, gid: Optional[str] = None):
+
+        def __init__(self,
+                     path: str,
+                     uid: Optional[str] = None,
+                     gid: Optional[str] = None
+                     ) -> None:
             Change.Base.__init__(self, path)
 
             if uid is None:
@@ -110,7 +117,13 @@ class Change:
 
     class Stat(Overwrite):
         OP = 's'
-        def __init__(self, path: str, uid: Optional[str] = None, gid: Optional[str] = None, mode: Optional[str] = None):
+
+        def __init__(self,
+                     path: str,
+                     uid: Optional[str] = None,
+                     gid: Optional[str] = None,
+                     mode: Optional[str] = None
+                     ) -> None:
             Change.Overwrite.__init__(self, path, uid, gid)
             if mode is None:
                 self.mode = self.stat.st_mode
@@ -130,7 +143,7 @@ class Change:
         op2class: dict[Optional[str], Self] = {}
         for val in list(cls.__dict__.values()):
             if isinstance(val, type):
-                op2class[val.OP] = val  # type: ignore[attr-defined,assignment]
+                op2class[val.OP] = val
                 # error: "type" has no attribute "OP"  [attr-defined]
                 # Incompatible types in assignment (expression has type "type", target has type "Self")  [assignment]
 
@@ -138,8 +151,8 @@ class Change:
         if op not in op2class:
             raise Error("illegal change line: " + line)
 
-        return op2class[op].fromline(line[2:])  # type: ignore[attr-defined]
-        # "Self" has no attribute "fromline"  [attr-defined]
+        return op2class[op].fromline(line[2:])
+
 
 def mkdir(path: str) -> None:
     try:
@@ -147,6 +160,7 @@ def mkdir(path: str) -> None:
     except OSError as e:
         if e.errno != errno.EEXIST:
             raise
+
 
 class Changes(list):
     """
@@ -174,10 +188,10 @@ class Changes(list):
 
             if func is os.lchown:
                 path, uid, gid = args
-                return "chown -h %s:%s %s" % (fmt_uid(uid), fmt_gid(gid), path)
+                return f"chown -h {fmt_uid(uid)}:{fmt_gid(gid)} {path}"
             elif func is os.chmod:
                 path, mode = args
-                return "chmod %s %s" % (oct(int(mode)), path)
+                return f"chmod {oct(int(mode))} {path}"
             elif func is os.remove:
                 path, = args
                 return "rm " + path
@@ -191,7 +205,8 @@ class Changes(list):
         return cls(list.__add__(self, other))
 
     @classmethod
-    def fromfile(cls, f: str, paths: Optional[list[str]] = None): # -> Changes:
+    def fromfile(cls, f: str, paths: Optional[list[str]] = None
+                 ):  # -> Changes:
         if f == '-':
             fh = sys.stdin
         else:
@@ -245,11 +260,17 @@ class Changes(list):
         for change in self:
 
             if not optimized or not lexists(change.path):
-                # backwards compat: old backups only stored IMODE in fsdelta, so we assume S_ISDIR
-                if change.OP == 's' and (stat.S_IMODE(change.mode) == change.mode or stat.S_ISDIR(change.mode)):
+                # backwards compat: old backups only stored IMODE in fsdelta,
+                #                   so we assume S_ISDIR
+                if change.OP == 's' and (
+                        stat.S_IMODE(change.mode) == change.mode
+                        or stat.S_ISDIR(change.mode)):
                     yield self.Action(mkdir, change.path)
-                    yield self.Action(os.lchown, change.path, str(uidmap[change.uid]), gidmap[change.gid])
-                    yield self.Action(os.chmod, change.path, str(stat.S_IMODE(change.mode)))
+                    yield self.Action(os.lchown, change.path,
+                                      str(uidmap[change.uid]),
+                                      gidmap[change.gid])
+                    yield self.Action(os.chmod, change.path,
+                                      str(stat.S_IMODE(change.mode)))
 
                 if optimized:
                     continue
@@ -264,18 +285,20 @@ class Changes(list):
 
             st = os.lstat(change.path)
             if change.OP in ('s', 'o'):
-                if not optimized or \
-                   (st.st_uid != uidmap[change.uid] or \
-                    st.st_gid != gidmap[change.gid]):
+                if not optimized or (
+                        st.st_uid != uidmap[change.uid]
+                        or st.st_gid != gidmap[change.gid]):
 
                     yield self.Action(os.lchown, change.path,
-                                        uidmap[change.uid], gidmap[change.gid])
+                                      uidmap[change.uid], gidmap[change.gid])
 
             if change.OP == 's':
                 if not optimized or \
-                    (not islink(change.path) and \
+                    (not islink(change.path) and
                      stat.S_IMODE(st.st_mode) != stat.S_IMODE(change.mode)):
-                    yield self.Action(os.chmod, change.path, str(stat.S_IMODE(change.mode)))
+                    yield self.Action(os.chmod, change.path,
+                                      str(stat.S_IMODE(change.mode)))
+
 
 def whatchanged(di_path: str, paths: list[str]) -> Changes:
     """Compared current filesystem with a saved dirindex from before.
@@ -288,11 +311,11 @@ def whatchanged(di_path: str, paths: list[str]) -> Changes:
     new, edited, statfix = di_saved.diff(di_fs)
     changes = Changes()
 
-    changes += [ Change.Overwrite(path) for path in new + edited ]
-    changes += [ Change.Stat(path) for path in statfix ]
+    changes += [Change.Overwrite(path) for path in new + edited]
+    changes += [Change.Stat(path) for path in statfix]
 
     di_saved.prune(*paths)
     deleted = set(di_saved) - set(di_fs)
-    changes += [ Change.Deleted(path) for path in deleted ]
+    changes += [Change.Deleted(path) for path in deleted]
 
     return changes

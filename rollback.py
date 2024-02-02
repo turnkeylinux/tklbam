@@ -1,4 +1,3 @@
-#
 # Copyright (c) 2010-2013 Liraz Siri <liraz@turnkeylinux.org>
 # Copyright (c) 2023 TurnKey GNU/Linux <admin@turnkeylinux.org>
 #
@@ -8,7 +7,7 @@
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
-#
+
 import os
 import sys
 from os.path import exists, lexists, dirname, join
@@ -35,14 +34,16 @@ from typing import Self
 class Error(Exception):
     pass
 
+
 class Rollback:
     Error = Error
 
     PATH = "/var/backups/tklbam3-rollback"
+
     class Paths(_Paths):
-        files = [ 'etc', 'etc/mysql',
-                  'fsdelta', 'dirindex', 'originals',
-                  'newpkgs', 'myfs', 'pgfs' ]
+        files = ['etc', 'etc/mysql',
+                 'fsdelta', 'dirindex', 'originals',
+                 'newpkgs', 'myfs', 'pgfs']
 
     @classmethod
     def create(cls, path: str = PATH) -> Self:
@@ -116,7 +117,7 @@ class Rollback:
                 if dirindex_rec.mod != local_rec.mod:
                     mod = stat.S_IMODE(dirindex_rec.mod)
                     os.chmod(change.path, mod)
-            except:
+            except:  # TODO don't use bare except
                 exceptions += 1
                 # fault-tolerance: warn and continue, don't die
                 traceback.print_exc(file=sys.stderr)
@@ -125,7 +126,8 @@ class Rollback:
             shutil.copy(join(self.paths.etc, fname), "/etc")
 
         if exceptions:
-            raise Error("caught %d exceptions during rollback_files" % exceptions)
+            raise Error(f"caught {exceptions} exceptions during"
+                        f" rollback_files")
 
     def rollback_new_packages(self) -> None:
         if not exists(self.paths.newpkgs):
@@ -136,12 +138,14 @@ class Rollback:
 
         purge_packages = current_packages & rollback_packages
         if purge_packages:
-            os.system("DEBIAN_FRONTEND=noninteractive dpkg --purge " + " ".join(purge_packages))
+            # TODO replace this with subprocess
+            os.system("DEBIAN_FRONTEND=noninteractive dpkg --purge "
+                      + " ".join(purge_packages))
 
     def rollback_database(self) -> None:
         if exists(self.paths.myfs):
-            mysql.restore(self.paths.myfs, self.paths.etc.mysql,  # type: ignore[attr-defined]
-            # error: "str" has no attribute "mysql"  [attr-defined]
+            mysql.restore(self.paths.myfs,
+                          self.paths.etc.mysql,
                           add_drop_database=True)
 
         if exists(self.paths.pgfs):
@@ -149,17 +153,19 @@ class Rollback:
 
     def rollback(self) -> None:
         exceptions = 0
-        for method in (self.rollback_database, self.rollback_files, self.rollback_new_packages):
+        for method in (self.rollback_database, self.rollback_files,
+                       self.rollback_new_packages):
             try:
                 method()
-            except:
+            except:  # TODO don't use bare except
                 exceptions += 1
-                print("error: %s raised an exception:" % method.__name__, file=sys.stderr)
+                print(f"error: {method.__name__} raised an exception:",
+                      file=sys.stderr)
                 traceback.print_exc(file=sys.stderr)
 
         shutil.rmtree(self.paths)
         if exceptions:
-            raise Error("caught %d exceptions during rollback" % exceptions)
+            raise Error(f"caught {exceptions} exceptions during rollback")
 
     def save_files(self, changes: Changes, overlay_path: str) -> None:
         for fname in ("passwd", "group"):
@@ -170,7 +176,8 @@ class Rollback:
             if lexists(change.path):
                 di.add_path(change.path)
                 if change.OP in ('o', 'd'):
-                    if change.OP == 'o' and not lexists(overlay_path + change.path):
+                    if change.OP == 'o' and not lexists(overlay_path
+                                                        + change.path):
                         continue
                     self._move_to_originals(change.path)
 
@@ -186,8 +193,7 @@ class Rollback:
 
     def save_database(self) -> None:
         try:
-            mysql.backup(self.paths.myfs, self.paths.etc.mysql)  # type: ignore[attr-defined]
-            # error: "str" has no attribute "mysql"  [attr-defined]
+            mysql.backup(self.paths.myfs, self.paths.etc.mysql)
         except mysql.Error:
             pass
 

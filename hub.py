@@ -1,4 +1,3 @@
-#
 # Copyright (c) 2010-2013 Liraz Siri <liraz@turnkeylinux.org>
 # Copyright (c) 2010 Alon Swartz <alon@turnkeylinux.org>
 # Copyright (c) 2023 TurnKey GNU/Linux <admin@turnkeylinux.org>
@@ -85,13 +84,15 @@ import base64
 import tempfile
 from datetime import datetime
 import subprocess
-from typing import Optional, Self
+from typing import Optional
 from dataclasses import dataclass
 
 from py3curl_wrapper import API as _API
 
 from utils import BaseAttrDict
 from registry import BaseRegisry
+from conf import Conf
+
 
 class Error(Exception):
     def __init__(self, description: str, *args: str):
@@ -101,9 +102,11 @@ class Error(Exception):
     def __str__(self) -> str:
         return self.description
 
+
 class APIError(Error, _API.Error):
     def __init__(self, code: int, name: str, description: str):
         _API.Error.__init__(self, code, name, description)
+
 
 class NotSubscribed(Error):
     DESC = """\
@@ -113,11 +116,15 @@ into the Hub and go to the "Backups" section for instructions."""
     def __init__(self, desc: str = DESC):
         Error.__init__(self, desc)
 
+
 class InvalidBackupError(Error):
     pass
 
+
 class API(_API):
-    def request(self, method: str, url: str, attrs: dict[str, str] = {}, headers: dict[str, str] = {}) -> dict[str, str]:
+    def request(self, method: str, url: str, attrs: dict[str, str] = {},
+                headers: dict[str, str] = {}
+                ) -> dict[str, str]:
         try:
             return _API.request(self, method, url, attrs, headers)
         except self.Error as e:
@@ -125,10 +132,11 @@ class API(_API):
                 raise InvalidBackupError(e.description)
 
             if e.name in ("BackupAccount.NotSubscribed",
-                         "BackupAccount.NotFound"):
+                          "BackupAccount.NotFound"):
                 raise NotSubscribed()
 
             raise APIError(e.code, e.name, e.description)
+
 
 @dataclass
 class BackupRecord:
@@ -153,17 +161,19 @@ class BackupRecord:
         self.created = self._parse_datetime(self.response['date_created'])
         self.updated = self._parse_datetime(self.response['date_updated'])
 
-        self.size = int(self.response['size']) # in MBs
+        self.size = int(self.response['size'])  # in MBs
         self.label = self.response['description']
 
         # no interface for this in tklbam, so not returned from hub
         self.sessions: list[str] = []
+
 
 @dataclass
 class CredsBase(BaseAttrDict):
 
     def __post_init__(self):
         self.kind = self.__class__.__name__.lower()
+
 
 class Credentials:
 
@@ -181,7 +191,8 @@ class Credentials:
         sessiontoken: str
 
     @classmethod
-    def from_dict(cls, d: dict[str, str] | BaseRegisry) -> Optional[IAMRole|IAMUser]:
+    def from_dict(cls, d: dict[str, str] | BaseRegisry
+                  ) -> Optional[IAMRole | IAMUser]:
 
         creds_types = dict((subcls.__name__.lower(), subcls)
                            for subcls in list(cls.__dict__.values())
@@ -202,7 +213,7 @@ class Credentials:
                         f' (known types: {", ".join(creds_types.keys())})')
 
         assert creds_type is not None
-        return(creds_types[creds_type](**kwargs))
+        return (creds_types[creds_type](**kwargs))
 
 
 class ProfileArchive:
@@ -220,32 +231,39 @@ class ProfileArchive:
 
 
 class Backups:
-    API_URL = os.getenv('TKLBAM_APIURL', 'https://hub.turnkeylinux.org/api/backup/')
+    API_URL = os.getenv('TKLBAM_APIURL',
+                        'https://hub.turnkeylinux.org/api/backup/')
     Error = Error
+
     class NotInitialized(Error):
         pass
 
     def __init__(self, subkey: Optional[str] = None):
         if subkey is None:
-            raise self.NotInitialized("no APIKEY - tklbam not linked to the Hub")
+            raise self.NotInitialized("no APIKEY - tklbam not linked to the"
+                                      " Hub")
 
         self.subkey = subkey
         self.api = API()
 
-    def _api(self, method: str, uri: str, attrs:dict[str, str] = {}) -> dict[str, str]:
-        headers = { 'subkey': str(self.subkey) }
+    def _api(self, method: str, uri: str, attrs: dict[str, str] = {}
+             ) -> dict[str, str]:
+        headers = {'subkey': str(self.subkey)}
         return self.api.request(method, self.API_URL + uri, attrs, headers)
 
     @classmethod
     def get_sub_apikey(cls, apikey: str) -> str:
-        response = API().request('GET', cls.API_URL + 'subkey/', {'apikey': apikey})
+        response = API().request('GET', cls.API_URL + 'subkey/',
+                                 {'apikey': apikey})
         return response['subkey']
 
-    def get_credentials(self) -> Optional[Credentials | Credentials.IAMRole | Credentials.IAMUser]:
+    def get_credentials(self) -> Optional[Credentials | Credentials.IAMRole
+                                          | Credentials.IAMUser]:
         response = self._api('GET', 'credentials/')
         return Credentials.from_dict(response)
 
-    def get_new_profile(self, profile_id: str, profile_timestamp: int) -> Optional[ProfileArchive]:
+    def get_new_profile(self, profile_id: str, profile_timestamp: int
+                        ) -> Optional[ProfileArchive]:
         """
         Gets a profile for <profile_id> that is newer than <profile_timestamp>.
 
@@ -254,8 +272,9 @@ class Backups:
 
         Raises an exception if no profile exists for profile_id.
         """
+        # quick hack until we fix the Hub API
+        attrs = {'turnkey_version': profile_id}
         #attrs = {'profile_id': profile_id}
-        attrs = {'turnkey_version': profile_id} # quick hack until we fix the Hub API
 
         response = self._api('GET', 'archive/timestamp/', attrs)
         archive_timestamp = int(response['archive_timestamp'])
@@ -273,7 +292,9 @@ class Backups:
 
         return ProfileArchive(profile_id, archive_path, archive_timestamp)
 
-    def new_backup_record(self, key: str, profile_id: str, server_id: Optional[str] = None) -> BackupRecord:
+    def new_backup_record(self, key: str, profile_id: str,
+                          server_id: Optional[str] = None
+                          ) -> BackupRecord:
         attrs = {'key': key, 'turnkey_version': profile_id}
         if server_id:
             attrs['server_id'] = server_id
@@ -284,7 +305,8 @@ class Backups:
         response = self._api('GET', f'record/{backup_id}/')
         return BackupRecord(response)
 
-    def set_backup_inprogress(self, backup_id: str, bool_: str) -> dict[str, str]:
+    def set_backup_inprogress(self, backup_id: str, bool_: str
+                              ) -> dict[str, str]:
         response = self._api('PUT', f'record/{backup_id}/inprogress/',
                              {'bool': bool_})
         return response
@@ -303,7 +325,6 @@ class Backups:
         return [BackupRecord({k: v}) for k, v in response.items()]
 
 
-from conf import Conf
-if os.environ.get("TKLBAM_DUMMYHUB") or os.path.exists(os.path.join(Conf.DEFAULT_PATH, "dummyhub")):
-    from dummyhub import Backups  # type: ignore[assignment]
-    # error: Incompatible import of "Backups" (imported name has type "Type[dummyhub.Backups]", local name has type "Type[hub.Backups]")  [assignment]
+if (os.environ.get("TKLBAM_DUMMYHUB")
+        or os.path.exists(os.path.join(Conf.DEFAULT_PATH, "dummyhub"))):
+    from dummyhub import Backups

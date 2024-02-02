@@ -1,5 +1,5 @@
 # Copyright (c) 2007-2011 Liraz Siri <liraz@turnkeylinux.org>
-#               2019, 2023 TurnKey GNU/Linux <admin@turnkeylinux.org>
+#               2019-2024 TurnKey GNU/Linux <admin@turnkeylinux.org>
 #
 # turnkey-popen4 is open source software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -86,7 +86,13 @@ class Popen4:
 
     sts = -1
 
-    def __init__(self, cmd: list[str], bufsize: int = 0, pty: bool = False, runas: Optional[str|int] = None, setpgrp: bool = False) -> None:
+    def __init__(self,
+                 cmd: list[str],
+                 bufsize: int = 0,
+                 pty: bool = False,
+                 runas: Optional[str | int] = None,
+                 setpgrp: bool = False
+                 ) -> None:
         """
         Argument notes:
 
@@ -113,7 +119,9 @@ class Popen4:
 
         self.pty = pty
 
-    def _init_pty(self, cmd: list[str], bufsize: int, runas: Optional[int|str]) -> None:
+    def _init_pty(self, cmd: list[str], bufsize: int,
+                  runas: Optional[int | str]
+                  ) -> None:
         def tty_echo_off(fd):
             new = termios.tcgetattr(fd)
             new[3] = new[3] & ~termios.ECHO          # lflags
@@ -133,7 +141,9 @@ class Popen4:
         self.fromchild = CatchIOErrorWrapper(os.fdopen(fd, "r+", bufsize))
         self.tochild = self.fromchild
 
-    def _init_pipe(self, cmd: list[str], bufsize: int, runas: int|str, setpgrp: bool = False) -> None:
+    def _init_pipe(self, cmd: list[str], bufsize: int, runas: int | str,
+                   setpgrp: bool = False
+                   ) -> None:
         p2cread, p2cwrite = os.pipe()
         c2pread, c2pwrite = os.pipe()
         self.pid = os.fork()
@@ -153,7 +163,7 @@ class Popen4:
         os.close(c2pwrite)
         self.fromchild = CatchIOErrorWrapper(os.fdopen(c2pread, 'r', bufsize))
 
-    def _run_child(self, cmd: str|list[str]) -> None:
+    def _run_child(self, cmd: str | list[str]) -> None:
         if isinstance(cmd, str):
             cmd = [SHELL, '-c', cmd]
         for i in range(3, MAXFD):

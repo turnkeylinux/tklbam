@@ -1,22 +1,25 @@
 from typing import Self
 from io import TextIOWrapper
 
+
 class Observer:
     def notify(self, subject: Self, event: str, value: str) -> None:
         pass
-    
+
+
 class FileEventAdaptor:
     """Example usage:
     class MyObserver(Observer):
        def notify(self, obj, event, value):
           print "event '%s': %s" % (event, value)
-      
+
     f = file("/dev/null", "r+")
     f = FileEventAdaptor(f)
     f.addObserver(Observer())
     """
     class Error(Exception):
         pass
+
     def __init__(self, fh: TextIOWrapper):
         self.fh = fh
         self.observers: list[Observer] = []
@@ -31,14 +34,13 @@ class FileEventAdaptor:
 
     def delObserversAll(self) -> None:
         self.observers = []
-        
+
     def __getattr__(self, attr: str) -> str:
         return getattr(self.fh, attr)
 
     def _notify(self, name: str, val: list[str]) -> None:
         for o in self.observers:
-            o.notify(self, name, val)  # type: ignore[arg-type]
-            # error: Argument 1 to "notify" of "Observer" has incompatible type "FileEventAdaptor"; expected "Observer"  [arg-type]
+            o.notify(self, name, val)
 
     def read(self, size: int = -1) -> str:
         s = self.fh.read(size)
@@ -56,7 +58,8 @@ class FileEventAdaptor:
         return s
 
     def xreadlines(self) -> list[str]:
-        # xreadlines is deprecated since Python 2.3 - File objects are iterators by default now.
+        # xreadlines is deprecated since Python 2.3 & removed in 3.0
+        # - File objects are iterators by default now.
         s = self.fh.readlines()
         self._notify('xreadlines', s)
         return s

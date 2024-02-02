@@ -1,4 +1,3 @@
-#
 # Copyright (c) 2010-2013 Liraz Siri <liraz@turnkeylinux.org>
 # Copyright (c) 2023 TurnKey GNU/Linux <admin@turnkeylinux.org>
 #
@@ -8,7 +7,7 @@
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
-#
+
 import os
 from os.path import lexists, islink, isdir, exists, realpath
 import subprocess
@@ -21,6 +20,7 @@ from typing import Any
 from dataclasses import dataclass
 
 from io import StringIO
+
 
 def remove_any(path: str) -> bool:
     """Remove a path whether it is a file or a directory.
@@ -35,6 +35,7 @@ def remove_any(path: str) -> bool:
         os.remove(path)
 
     return True
+
 
 @dataclass
 class BaseAttrDict:
@@ -72,6 +73,7 @@ def is_writeable(fpath: str) -> bool:
     except IOError:
         return False
 
+
 # workaround for shutil.move across-filesystem bugs
 def move(src: str, dst: str) -> None:
     st = os.lstat(src)
@@ -89,18 +91,24 @@ def move(src: str, dst: str) -> None:
         shutil.move(src, dst)
         os.lchown(dst, st.st_uid, st.st_gid)
 
+
 class OverlayError(Exception):
     pass
 
+
 def apply_overlay(src: str, dst: str, olist_path: str) -> None:
     # refactor to use subprocess
-    p1 = Popen(['tar', '--create', f'--files-from={olist_path}'], cwd=src, stdout=PIPE)
-    p2 = subprocess.run(['tar', '--extract', '--directory', dst], stdin=p1.stdout)
+    p1 = Popen(['tar', '--create', f'--files-from={olist_path}'],
+               cwd=src, stdout=PIPE)
+    p2 = subprocess.run(['tar', '--extract', '--directory', dst],
+                        stdin=p1.stdout)
     if p2.returncode != 0 or p1.wait() != 0:
         raise OverlayError(f"Applying overlay failed: {p2.stderr.decode()}")
 
+
 def fmt_title(title: str, c: str = '=') -> str:
     return title + "\n" + c * len(title) + "\n"
+
 
 def fmt_timestamp() -> str:
 
@@ -113,12 +121,14 @@ def fmt_timestamp() -> str:
 
     return fh.getvalue()
 
+
 def path_global_or_local(path_global: str, path_local: str) -> str:
     """Return global path if writeable, otherwise return local path"""
     if os.access(os.path.dirname(path_global), os.W_OK):
         return path_global
 
     return path_local
+
 
 def iamroot() -> bool:
     return os.getuid() == 0

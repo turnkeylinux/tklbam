@@ -1,4 +1,3 @@
-#
 # Copyright (c) 2010-2013 Liraz Siri <liraz@turnkeylinux.org>
 # Copyright (c) 2023 TurnKey GNU/Linux <admin@turnkeylinux.org>
 #
@@ -29,10 +28,12 @@ from paths import Paths as _Paths
 
 import stat
 
+PATH_DEBIAN_CNF = "/etc/mysql/debian.cnf"
+
+
 class Error(Exception):
     pass
 
-PATH_DEBIAN_CNF = "/etc/mysql/debian.cnf"
 
 def _mysql_opts(opts: Optional[list[str]] = None,
                 defaults_file: Optional[str] = None,
@@ -40,11 +41,12 @@ def _mysql_opts(opts: Optional[list[str]] = None,
                 ) -> list[str]:
     if not opts:
         opts = []
+
     def isreadable(path):
         try:
             with open(path):
                 return True
-        except:
+        except:  # TODO don't use bare except
             return False
 
     if not defaults_file:
@@ -57,11 +59,12 @@ def _mysql_opts(opts: Optional[list[str]] = None,
     for opt, val in list(conf.items()):
         opts.append(opt.replace("_", "-") + "=" + val)
 
-    return [ "--" + opt for opt in opts ]
+    return ["--" + opt for opt in opts]
+
 
 def mysqldump(**conf) -> Optional[IO[str]]:
-    opts = [ "all-databases", "skip-extended-insert", "single-transaction",
-             "compact", "quick" ]
+    opts = ["all-databases", "skip-extended-insert",
+            "single-transaction", "compact", "quick"]
 
     command = ["mysqldump"] + _mysql_opts(opts, **conf)
     popen = Popen(command, shell=True, stderr=PIPE, stdout=PIPE, text=True)
@@ -78,13 +81,15 @@ def mysqldump(**conf) -> Optional[IO[str]]:
 
     return popen.stdout
 
+
 def mysql(opts: Optional[list[str]] = None,
           defaults_file: Optional[str] = None,
           **conf: str
           ) -> Optional[IO[str]]:
     command = ["mysql"] + _mysql_opts(opts, defaults_file, **conf)
 
-    popen = Popen(command, shell=True, stdin=PIPE, stderr=PIPE, stdout=PIPE, text=True)
+    popen = Popen(command, shell=True, stdin=PIPE,
+                  stderr=PIPE, stdout=PIPE, text=True)
     if popen.stdin:
         popen.stdin.close()
     stderr = ''
@@ -98,12 +103,14 @@ def mysql(opts: Optional[list[str]] = None,
     #                        stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     return popen.stdout
 
+
 class MyFS:
     path: str
     limits: DBLimits  # reader
     add_drop_database: bool  # reader
     skip_extended_insert: bool  # reader
     max_extended_insert: int  # reader
+
     class Database:
         name: str
         path: str
@@ -113,19 +120,22 @@ class MyFS:
         paths: _Paths
         add_view_post: Callable  # writer
         add_view_pre: Callable  # writer
+
         class Paths(_Paths):
-            files = [ 'init', 'tables', 'views' ]
+            files = ['init', 'tables', 'views']
 
     class Table:
         name: str
         add_trigger: Callable  # writer
         add_row: Callable  # writer
+
         class Paths(_Paths):
-            files = [ 'init', 'triggers', 'rows' ]
+            files = ['init', 'triggers', 'rows']
 
     class View:
         class Paths(_Paths):
-            files = [ 'pre', 'post' ]
+            files = ['pre', 'post']
+
 
 def _match_name(sql: str) -> str:
     m = re.search(r'`(.*?)`', sql)
@@ -133,7 +143,9 @@ def _match_name(sql: str) -> str:
         return m.group(1)
     return ''
 
-def _parse_statements(fh: str | list[str] | IO[str] | TextIO | TextIOWrapper, delimiter: str = ';') -> Generator[str, None, None]:
+
+def _parse_statements(fh: str | list[str] | IO[str] | TextIO | TextIOWrapper,
+                      delimiter: str = ';') -> Generator[str, None, None]:
     statement = ""
     if isinstance(fh, str):
         fh = fh.split('\n')
@@ -150,6 +162,7 @@ def _parse_statements(fh: str | list[str] | IO[str] | TextIO | TextIOWrapper, de
             yield statement.strip()
             statement = ""
     return None
+
 
 class MyFS_Writer(MyFS):
     class Database(MyFS.Database):
@@ -196,7 +209,8 @@ class MyFS_Writer(MyFS):
             self.database = database
 
         def add_row(self, sql: str) -> None:
-            print(re.sub(r'.*?VALUES \((.*)\);', '\\1', sql), file=self.rows_fh)
+            print(re.sub(r'.*?VALUES \((.*)\);', '\\1', sql),
+                  file=self.rows_fh)
 
         def add_trigger(self, sql: str) -> None:
             print(sql + "\n", file=open(self.paths.triggers, "a"))
@@ -207,7 +221,8 @@ class MyFS_Writer(MyFS):
         self.limits = DBLimits(limits)
         self.outdir = outdir
 
-    def fromfile(self, fh: IO[str], callback: Optional[Callable] = None) -> None:
+    def fromfile(self, fh: IO[str], callback: Optional[Callable] = None
+                 ) -> None:
 
         databases: dict[str, MyFS.Database] = {}
         database: Optional[MyFS.Database] = None
@@ -220,7 +235,8 @@ class MyFS_Writer(MyFS):
 
                 if database_name in self.limits:
                     if database_name:
-                        database = self.Database(self.outdir, database_name, statement)
+                        database = self.Database(self.outdir, database_name,
+                                                 statement)
                     if callback:
                         callback(database)
                     if database:
@@ -240,7 +256,8 @@ class MyFS_Writer(MyFS):
             if not database:
                 continue
 
-            m = re.match(r'^/\*!50001 CREATE.* VIEW `(.*?)`', statement, re.DOTALL)
+            m = re.match(r'^/\*!50001 CREATE.* VIEW `(.*?)`',
+                         statement, re.DOTALL)
             if m:
                 view_name = m.group(1)
                 database.add_view_post(view_name, statement)
@@ -268,16 +285,22 @@ class MyFS_Writer(MyFS):
             if re.match(r'^/\*!50003 CREATE.* TRIGGER ', statement, re.DOTALL):
                 table.add_trigger(statement)
 
-            elif not table_ignore_inserts and statement.startswith("INSERT INTO"):
+            elif not table_ignore_inserts \
+                    and statement.startswith("INSERT INTO"):
                 assert _match_name(statement) == table.name
                 table.add_row(statement)
 
-def mysql2fs(fh: IO[str], outdir: str, limits: Optional[list[str]] = None, callback: Optional[Callable] = None) -> None:
+
+def mysql2fs(fh: IO[str], outdir: str, limits: Optional[list[str]] = None,
+             callback: Optional[Callable] = None
+             ) -> None:
     if not limits:
         limits = []
     MyFS_Writer(outdir, limits).fromfile(fh, callback)
 
-def chunkify(elements: Generator[str, None, None], delim: str, maxlen: int) -> Generator[str, None, None]:
+
+def chunkify(elements: Generator[str, None, None], delim: str, maxlen: int
+             ) -> Generator[str, None, None]:
     chunk = ""
     for element in elements:
         if len(chunk) + len(delim) + len(element) > maxlen:
@@ -285,10 +308,10 @@ def chunkify(elements: Generator[str, None, None], delim: str, maxlen: int) -> G
                 yield chunk
 
             if len(element) > maxlen:
-                ## locally correct logic:
-                #raise Error("element='%s' longer than maxlen=%d" % (element, maxlen))
+                # locally correct logic:
+                #raise Error(f"element='{element}' longer than maxlen={maxlen}")
 
-                ## globally correct logic (the lesser evil):
+                # globally correct logic (the lesser evil):
                 yield element
                 chunk = ""
                 continue
@@ -302,6 +325,7 @@ def chunkify(elements: Generator[str, None, None], delim: str, maxlen: int) -> G
 
     if chunk:
         yield chunk
+
 
 class MyFS_Reader(MyFS):
     MAX_EXTENDED_INSERT = 1000000 - 1024
@@ -330,6 +354,7 @@ $sql
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
 """
+
             class Error(Exception):
                 pass
 
@@ -345,7 +370,8 @@ $sql
                     return ''
                 with open(self.paths.pre) as fob:
                     sql = fob.read().strip()
-                return Template(self.TPL_PRE).substitute(name=self.name, sql=sql)
+                return Template(self.TPL_PRE
+                                ).substitute(name=self.name, sql=sql)
             pre = property(pre_)
 
             def post_(self) -> str:
@@ -353,7 +379,8 @@ $sql
                     return ''
                 with open(self.paths.post) as fob:
                     sql = fob.read().strip()
-                return Template(self.TPL_POST).substitute(name=self.name, sql=sql)
+                return Template(self.TPL_POST
+                                ).substitute(name=self.name, sql=sql)
             post = property(post_)
 
         def __init__(self, myfs: MyFS, fname: str):
@@ -371,8 +398,7 @@ $sql
                 return None
 
             for fname in os.listdir(self.paths.tables):
-                table = self.myfs.Table(self, fname)  # type: ignore[call-arg]
-                # error: Too many arguments for "Table"  [call-arg]
+                table = self.myfs.Table(self, fname)
                 if (self.name, table.name) in self.myfs.limits:
                     yield table
 
@@ -391,12 +417,14 @@ $sql
                 yield view
         views = property(views_)
 
-        def tofile(self, fh: IO[str], callback: Optional[Callable] = None) -> None:
+        def tofile(self, fh: IO[str], callback: Optional[Callable] = None
+                   ) -> None:
             if callback:
                 callback(self)
 
             if self.name != 'mysql':
-                print(f'/*!40000 DROP DATABASE IF EXISTS `{self.name}`*/;', file=fh)
+                print(f'/*!40000 DROP DATABASE IF EXISTS `{self.name}`*/;',
+                      file=fh)
             print(self.sql_init, end=' ', file=fh)
             print(f"USE `{self.name}`;", file=fh)
 
@@ -435,7 +463,9 @@ UNLOCK TABLES;
 /*!50003 SET character_set_results = utf8 */ ;
 /*!50003 SET collation_connection  = utf8_general_ci */ ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'STRICT_TRANS_TABLES,STRICT_ALL_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,TRADITIONAL,NO_AUTO_CREATE_USER' */ ;
+/*!50003 SET sql_mode              = \
+'STRICT_TRANS_TABLES,STRICT_ALL_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,\
+ERROR_FOR_DIVISION_BY_ZERO,TRADITIONAL,NO_AUTO_CREATE_USER' */ ;
 DELIMITER ;;
 """
         TPL_TRIGGERS_POST = """\
@@ -447,7 +477,8 @@ DELIMITER ;
 """
 
         def __init__(self, database: MyFS.Database, fname: str):
-            self.paths: _Paths = self.Paths(join(database.paths.tables, fname))
+            self.paths: _Paths = self.Paths(join(database.paths.tables,
+                                                 fname))
             with open(self.paths.init) as fob:
                 self.sql_init = fob.read()
             self.name = _match_name(self.sql_init)
@@ -462,7 +493,8 @@ DELIMITER ;
                     yield line.strip()
 
         def has_rows(self) -> bool:
-            if exists(self.paths.rows) and os.lstat(self.paths.rows).st_size != 0:
+            if exists(self.paths.rows) \
+                    and os.lstat(self.paths.rows).st_size != 0:
                 return True
             return False
 
@@ -481,25 +513,30 @@ DELIMITER ;
             skip_extended_insert = self.database.myfs.skip_extended_insert
             max_extended_insert = self.database.myfs.max_extended_insert
 
-            is_log_table = (self.database.name == "mysql" and self.name in ('general_log', 'slow_log'))
+            is_log_table = (self.database.name == "mysql"
+                            and self.name in ('general_log', 'slow_log'))
 
             if not is_log_table:
                 print("DROP TABLE IF EXISTS `%s`;" % self.name, file=fh)
 
-            print(Template(self.TPL_CREATE).substitute(init=self.sql_init), file=fh)
+            print(Template(self.TPL_CREATE).substitute(
+                                                init=self.sql_init), file=fh)
 
             if self.has_rows():
                 if not is_log_table:
-                    print(Template(self.TPL_INSERT_PRE).substitute(name=self.name).strip(), file=fh)
+                    print(Template(self.TPL_INSERT_PRE
+                                   ).substitute(name=self.name).strip(),
+                          file=fh)
 
                 insert_prefix = "INSERT INTO `%s` VALUES " % self.name
                 if skip_extended_insert:
-                    for  row in self.rows:
+                    for row in self.rows:
                         print(insert_prefix + "(%s);" % row, file=fh)
 
                 else:
-                    rows = ( "(%s)" % row for row in self.rows )
-                    row_chunks = chunkify(rows, ",\n", max_extended_insert - len(insert_prefix + ";"))
+                    rows = ("(%s)" % row for row in self.rows)
+                    row_chunks = chunkify(rows, ",\n", max_extended_insert
+                                          - len(insert_prefix + ";"))
 
                     index = None
                     for index, chunk in enumerate(row_chunks):
@@ -512,7 +549,8 @@ DELIMITER ;
                         print("\n-- CHUNKS: %d\n" % (index + 1), file=fh)
 
                 if not is_log_table:
-                    print(Template(self.TPL_INSERT_POST).substitute(name=self.name), file=fh)
+                    print(Template(self.TPL_INSERT_POST
+                                   ).substitute(name=self.name), file=fh)
 
             if self.triggers:
                 print(self.TPL_TRIGGERS_PRE.strip(), file=fh)
@@ -528,7 +566,8 @@ DELIMITER ;
 /*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
 /*!40103 SET TIME_ZONE='+00:00' */;
 /*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
-/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, \
+FOREIGN_KEY_CHECKS=0 */;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 """
@@ -544,7 +583,8 @@ DELIMITER ;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 """
 
-    def __init__(self, path: str, limits: Optional[list[str]|DBLimits] = None,
+    def __init__(self, path: str,
+                 limits: Optional[list[str] | DBLimits] = None,
                  skip_extended_insert: bool = False,
                  add_drop_database: bool = False,
                  max_extended_insert: Optional[int] = None):
@@ -585,6 +625,7 @@ DELIMITER ;
 
         print(self.POST, file=fh)
 
+
 def fs2mysql(fh: IO[str] | list[str] | str | TextIO | TextIOWrapper,
              myfs: str,
              limits: Optional[DBLimits] = None,
@@ -594,7 +635,9 @@ def fs2mysql(fh: IO[str] | list[str] | str | TextIO | TextIOWrapper,
              ) -> None:
     if isinstance(fh, str):
         fh = fh.split('\n')
-    MyFS_Reader(myfs, limits, skip_extended_insert, add_drop_database).tofile(fh, callback)
+    MyFS_Reader(myfs, limits, skip_extended_insert,
+                add_drop_database).tofile(fh, callback)
+
 
 def cb_print(fh: Optional[IO[str]] = None) -> Callable:
     if not fh:
@@ -610,12 +653,14 @@ def cb_print(fh: Optional[IO[str]] = None) -> Callable:
 
     return func
 
+
 def backup(myfs: str, etc: str, **kws) -> None:
     """High level mysql backup command.
     Arguments:
 
         <myfs>      Directory we create to save MySQL backup
-        <etc>       Directory where we save required MySQL etc configuration files (e.g., debian.cnf)
+        <etc>       Directory where we save required MySQL etc configuration
+                    files (e.g., debian.cnf)
         """
 
     if not MysqlService.is_running():
@@ -641,6 +686,7 @@ def backup(myfs: str, etc: str, **kws) -> None:
     finally:
         if mna:
             mna.stop()
+
 
 def restore(myfs: str, etc: str, **kws) -> None:
     if kws.pop('simulate', False):
@@ -671,6 +717,7 @@ def restore(myfs: str, etc: str, **kws) -> None:
         shutil.copy(join(etc, basename(PATH_DEBIAN_CNF)), PATH_DEBIAN_CNF)
         MysqlService.reload()
 
+
 class MysqlService:
     INIT_SCRIPT = "/etc/init.d/mysql"
     PID_FILE = '/var/run/mysqld/mysqld.pid'
@@ -683,12 +730,13 @@ class MysqlService:
         try:
             os.kill(pid, 0)
             return True
-        except:
+        except:  # TODO don't use bare except
             return False
 
     @classmethod
     def get_pid(cls) -> Optional[int]:
-        """Returns pid in pidfile if process is running. Otherwise returns None"""
+        """Returns pid in pidfile if process is running. Otherwise returns
+        None"""
         if not exists(cls.PID_FILE):
             return None
 
@@ -721,7 +769,7 @@ class MysqlService:
                                stdout=PIPE, stderr=STDOUT)
             if p.returncode == 0:
                 return None
-        if p == None:
+        if p is None:
             raise Error('process did not run')
         else:
             assert p
@@ -753,11 +801,13 @@ class MysqlService:
 
     @classmethod
     def is_accessible(cls) -> bool:
-        p = subprocess.run(["mysql", "--defaults-file=/etc/mysql/debian.cnf", "select 1"])
+        p = subprocess.run(["mysql", "--defaults-file=/etc/mysql/debian.cnf",
+                            "select 1"])
         if p.returncode == 0:
             return True
         else:
             return False
+
 
 class MysqlNoAuth:
     PATH_VARRUN = '/var/run/mysqld'
@@ -787,14 +837,14 @@ class MysqlNoAuth:
         #        continue_waiting = True
         #
         #    return continue_waiting
-        
         command.wait(timeout=10)
         if not command.running or not MysqlService.is_running():
             command.terminate()
             if was_running:
                 MysqlService.start()
 
-            raise Error(("%s failed to start\n" % self.COMMAND) + command.output)
+            raise Error(("%s failed to start\n" % self.COMMAND)
+                        + command.output)
 
         self.command = command
         self.was_running = was_running

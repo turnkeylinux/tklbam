@@ -31,12 +31,14 @@ from typing import Iterable
 import conf
 import registry
 
+
 class CliWrapper(CliWrapper_):
     assert __doc__ is not None
-    DESCRIPTION = Template(__doc__).substitute(TKLBAM_CONF=conf.Conf.DEFAULT_PATH,
-                                               TKLBAM_REGISTRY=registry._Registry.DEFAULT_PATH)
+    DESCRIPTION = Template(__doc__).substitute(
+            TKLBAM_CONF=conf.Conf.DEFAULT_PATH,
+            TKLBAM_REGISTRY=registry._Registry.DEFAULT_PATH)
 
-    PATH: Iterable[str]|list[str] = [ dirname(realpath(__file__)) ]
+    PATH: Iterable[str] | list[str] = [dirname(realpath(__file__))]
     COMMANDS_USAGE_ORDER = ['init',
                             '',
                             'passphrase', 'escrow',
@@ -44,6 +46,7 @@ class CliWrapper(CliWrapper_):
                             'backup', 'list', 'restore', 'restore-rollback',
                             '',
                             'status', 'internal']
+
 
 if __name__ == "__main__":
     CliWrapper.main()

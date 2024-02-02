@@ -17,6 +17,7 @@ import imp
 from typing import Optional
 from types import ModuleType
 
+
 class _Commands(dict):
     @staticmethod
     def _list_commands(paths: list[str]) -> set[str]:
@@ -35,14 +36,14 @@ class _Commands(dict):
     def _get_internals_module(name: str, path: list[str]) -> ModuleType:
         modname = "cmd_" + name.replace("-", "_")
         file, pathname, description = imp.find_module(modname, path)
-        return imp.load_module(modname, file, pathname, description)  # type: ignore[arg-type]
-        # error: Argument 2 to "load_module" has incompatible type "IO[Any]"; expected "Optional[_FileLike]"
+        return imp.load_module(modname, file, pathname, description)
 
-    def __init__(self, path: str|list[str]):
+    def __init__(self, path: str | list[str]):
         if isinstance(path, str):
             path = [path]
         for command in self._list_commands(path):
             self[command] = self._get_internals_module(command, path)
+
 
 class CliWrapper:
     DESCRIPTION = ""
@@ -62,7 +63,7 @@ class CliWrapper:
         command_names = list(commands.keys())
         command_names.sort()
 
-        maxlen = max([ len(name) for name in command_names ]) + 2
+        maxlen = max([len(name) for name in command_names]) + 2
         tpl = "    %%-%ds %%s" % (maxlen)
 
         def shortdesc(command: str) -> str:
@@ -79,7 +80,7 @@ class CliWrapper:
                 print(tpl % (command, shortdesc(command)), file=sys.stderr)
 
         for command in set(commands.keys()) - set(cls.COMMANDS_USAGE_ORDER):
-                print(tpl % (command, shortdesc(command)), file=sys.stderr)
+            print(tpl % (command, shortdesc(command)), file=sys.stderr)
 
         sys.exit(1)
 

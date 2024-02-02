@@ -1,5 +1,5 @@
-#
 # Copyright (c) 2010-2013 Liraz Siri <liraz@turnkeylinux.org>
+# Copyright (c) 2024 TurnKye GNU/Linux
 #
 # This file is part of TKLBAM (TurnKey GNU/Linux BAckup and Migration).
 #
@@ -13,8 +13,10 @@ from os.path import join, exists
 from typing import Optional, Self
 from dataclasses import dataclass
 
+
 class Error(Exception):
     pass
+
 
 @dataclass
 class TurnKeyVersion:
@@ -37,7 +39,7 @@ class TurnKeyVersion:
         try:
             with open("/etc/turnkey_version") as fob:
                 system_version = fob.readline().strip()
-        except:
+        except:  # TODO don't use bare except
             return None
 
         return cls.from_string(system_version)
@@ -48,7 +50,7 @@ class TurnKeyVersion:
             raise Error("not a turnkey version '%s'" % version)
 
         version = re.sub(r'^turnkey-', '', version)
-        
+
         m = re.match(r'(.*?)-((?:[\d\.]+|beta).*)-(amd64|i386|x86)$', version)
         if m:
             name, release, arch = m.groups()
@@ -65,6 +67,7 @@ class TurnKeyVersion:
             return cls(name)
         return None
 
+
 def _get_turnkey_version(root: str) -> Optional[str]:
     path = join(root, 'etc/turnkey_version')
     if not exists(path):
@@ -72,6 +75,7 @@ def _get_turnkey_version(root: str) -> Optional[str]:
 
     with open(path) as fob:
         return fob.read().strip()
+
 
 def _parse_keyvals(path: str) -> Optional[dict[str, str]]:
     if not exists(path):
@@ -89,14 +93,17 @@ def _parse_keyvals(path: str) -> Optional[dict[str, str]]:
                 d[key] = val
     return d
 
+
 def _get_os_release(root: str) -> Optional[dict[str, str]]:
     path = join(root, "etc/os-release")
     return _parse_keyvals(path)
-    
+
+
 def _get_lsb_release(root: str) -> Optional[dict[str, str]]:
     path = join(root, "etc/lsb-release")
     return _parse_keyvals(path)
-    
+
+
 def _get_debian_version(root) -> Optional[str]:
     path = join(root, "etc/debian_version")
     if not exists(path):
@@ -111,6 +118,7 @@ def _get_debian_version(root) -> Optional[str]:
     if '/' in s:
         return s.replace('/', '_')
     return None
+
 
 def detect_profile_id(root: str = '/') -> str:
     val = _get_turnkey_version(root)
@@ -127,8 +135,8 @@ def detect_profile_id(root: str = '/') -> str:
     lsb_release = _get_lsb_release(root)
     if lsb_release:
         try:
-            return "%s-%s" % (lsb_release['DISTRIB_ID'].lower(), 
-                              lsb_release['DISTRIB_RELEASE'])
+            return (f"{lsb_release['DISTRIB_ID'].lower()}-"
+                    f"{lsb_release['DISTRIB_RELEASE']}")
         except KeyError:
             pass
 

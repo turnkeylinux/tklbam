@@ -9,6 +9,7 @@ import command
 PATH_DEPS = os.environ.get('TKLBAM_DEPS', '/usr/lib/tklbam3/deps')
 SQUID_BIN = os.path.join(PATH_DEPS, "usr/sbin/tklbam3-squid")
 
+
 def _is_listening(localport: int) -> bool:
     sock = socket.socket()
     try:
@@ -19,6 +20,7 @@ def _is_listening(localport: int) -> bool:
             return False
     return False
 
+
 def _find_free_port(port_from: int) -> int:
     while True:
         if _is_listening(port_from) is False:
@@ -26,8 +28,10 @@ def _find_free_port(port_from: int) -> int:
 
         port_from += 1
 
+
 class Error(Exception):
     pass
+
 
 class Squid:
     def __init__(self, cache_size: str, cache_dir: str) -> None:
@@ -42,7 +46,8 @@ class Squid:
 
         localport = _find_free_port(33128)
         self.address = f"127.0.0.1:{localport}"
-        self.command = command.Command([SQUID_BIN, self.address, self.cache_size],
+        self.command = command.Command([SQUID_BIN, self.address,
+                                        self.cache_size],
                                        setpgrp=True, pty=True)
 
         def cb() -> bool:

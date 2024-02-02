@@ -2,22 +2,29 @@
 Usage examples:
 
     @retry(3)               # will retry 3 times (total 4 attempts), no backoff
-    @retry(3, backoff=1)    # will retry 3 times, increasing delay by 100% each attempt
-    @retry(3, backoff=2)    # will retry 3 times, increasing delay by 200% each attempt
+    @retry(3, backoff=1)    # will retry 3 times, increasing delay by 100%
+                            # each attempt
+    @retry(3, backoff=2)    # will retry 3 times, increasing delay by 200%
+                            # each attempt
 
 
 """
 from time import sleep
 from typing import Optional, Callable, Any
 
-def retry(retries: int, delay: int = 1, backoff: int = 0, fatal_exceptions: Optional[list[type]] = None) -> Callable:
+
+def retry(retries: int, delay: int = 1, backoff: int = 0,
+          fatal_exceptions: Optional[list[type]] = None
+          ) -> Callable:
     """
     Argument:
 
         retries             how many times to retry if exception is raised
         delay               how many seconds to delay in case of failure
-        backoff             linear backoff factor (e.g., 0 = no backoff, 1 = 100% step increase)
-        fatal_exc           fatal exceptions are unrecoverable, raised immediately
+        backoff             linear backoff factor (e.g., 0 = no backoff,
+                                                   1 = 100% step increase)
+        fatal_exc           fatal exceptions are unrecoverable, raised
+                            immediately
     """
     def decorator(func: Callable) -> Callable:
 

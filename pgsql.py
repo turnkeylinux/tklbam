@@ -1,4 +1,3 @@
-#
 # Copyright (c) 2013 Liraz Siri <liraz@turnkeylinux.org>
 # Copyright (c) 2023 TurnKey GNU/Linux <admin@turnkeylinux.org>
 #
@@ -8,7 +7,7 @@
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
-#
+
 import sys
 import os
 from os.path import join, isdir, exists
@@ -29,12 +28,15 @@ logging.basicConfig(level=logging.DEBUG)
 FNAME_GLOBALS = ".globals.sql"
 FNAME_MANIFEST = "manifest.txt"
 
+
 class Error(Exception):
     pass
+
 
 def su(command: list[str]) -> list[str]:
     logging.debug(f'["su", "postgres", "-c", *command]')
     return ["su", "postgres", "-c", *command]
+
 
 def check_user(user: str = 'postgres', check_group: bool = False) -> bool:
     try:
@@ -45,6 +47,7 @@ def check_user(user: str = 'postgres', check_group: bool = False) -> bool:
     except KeyError:
         return False
 
+
 def list_databases() -> Generator[str, None, None]:
     p = subprocess.run(su(['psql", "-l']), capture_output=True, text=True)
     for line in p.stdout.splitlines():
@@ -54,6 +57,7 @@ def list_databases() -> Generator[str, None, None]:
 
         name = m.group(1)
         yield name
+
 
 def dumpdb(outdir: str, name: str, tlimits: list[tuple[str, str|bool]] = []) -> None:
     path = join(outdir, name)
@@ -78,6 +82,7 @@ def dumpdb(outdir: str, name: str, tlimits: list[tuple[str, str|bool]] = []) -> 
     with open(join(path, FNAME_MANIFEST), "w") as fob:
         fob.write(f'{manifest.decode()}\n')
 
+
 def restoredb(dbdump: str, dbname: str, tlimits: list[tuple[str, str|bool]] = []) -> None:
     with open(join(dbdump, FNAME_MANIFEST)) as fob:
         manifest = fob.read().splitlines()
@@ -94,9 +99,12 @@ def restoredb(dbdump: str, dbname: str, tlimits: list[tuple[str, str|bool]] = []
             if sign:
                 assert isinstance(sign, bool)
                 pg_restore_com.append(f"--table={table}")
-        p1 = subprocess.Popen(["tar", "c", *manifest], stdout=PIPE, stderr=PIPE)
-        p2 = subprocess.Popen(pg_restore_com, stdin=p1.stdout, stdout=PIPE, stderr=PIPE)
-        p3 = subprocess.Popen(su(["psql"]), stdin=p2.stdout, stdout=PIPE, stderr=PIPE)
+        p1 = subprocess.Popen(["tar", "c", *manifest],
+                              stdout=PIPE, stderr=PIPE)
+        p2 = subprocess.Popen(pg_restore_com,
+                              stdin=p1.stdout, stdout=PIPE, stderr=PIPE)
+        p3 = subprocess.Popen(su(["psql"]),
+                              stdin=p2.stdout, stdout=PIPE, stderr=PIPE)
         p1.wait()
         p2.wait()
         out, err = p3.communicate()
@@ -108,16 +116,20 @@ def restoredb(dbdump: str, dbname: str, tlimits: list[tuple[str, str|bool]] = []
             raise Error(err.decode())
         logging.debug(f'pgsql.restordb: {out.decode()}')
 
-
     finally:
         os.chdir(orig_cwd)
 
-def pgsql2fs(outdir: str, limits: Optional[list[str]|DBLimits] = None, callback: Optional[Callable] = None) -> None:
+
+def pgsql2fs(outdir: str, limits: Optional[list[str] | DBLimits] = None,
+             callback: Optional[Callable] = None
+             ) -> None:
     if not isinstance(limits, DBLimits):
         limits = DBLimits(limits)
 
     for dbname in list_databases():
-        if dbname not in limits or dbname == 'postgres' or re.match(r'template\d', dbname):
+        if (dbname not in limits
+                or dbname == 'postgres'
+                or re.match(r'template\d', dbname)):
             continue
 
         if callback:
@@ -125,11 +137,16 @@ def pgsql2fs(outdir: str, limits: Optional[list[str]|DBLimits] = None, callback:
 
         dumpdb(outdir, dbname, limits[dbname])
 
-    globals = subprocess.run(["pg_dumpall", "--globals"], user='postgres', capture_output=True, text=True).stdout
+    globals = subprocess.run(["pg_dumpall", "--globals"],
+                             user='postgres',
+                             capture_output=True, text=True).stdout
     with open(join(outdir, FNAME_GLOBALS), "w") as fob:
         fob.write(globals)
 
-def fs2pgsql(outdir: str, limits: Optional[list[str]] = None, callback: Optional[Callable] = None) -> None:
+
+def fs2pgsql(outdir: str, limits: Optional[list[str]] = None,
+             callback: Optional[Callable] = None
+             ) -> None:
     if not limits:
         limits = []
     limits_ = DBLimits(limits)
@@ -139,7 +156,8 @@ def fs2pgsql(outdir: str, limits: Optional[list[str]] = None, callback: Optional
                 raise Error(f"can't exclude {database}/{table}: table"
                             " excludes not supported for postgres")
 
-    # load globals first, suppress noise (e.g., "ERROR: role "postgres" already exists)
+    # load globals first, suppress noise
+    # e.g., "ERROR: role "postgres" already exists)
     with open(join(outdir, FNAME_GLOBALS)) as fob:
         globals = fob.read()
     subprocess.check_output(["psql", "-q", "-o", "/dev/null", globals])
@@ -155,6 +173,7 @@ def fs2pgsql(outdir: str, limits: Optional[list[str]] = None, callback: Optional
 
         restoredb(fpath, dbname, limits_[dbname])
 
+
 def cb_print(fh: Optional[IO[str]] = None) -> Callable:
     if not fh:
         fh = sys.stdout
@@ -164,7 +183,9 @@ def cb_print(fh: Optional[IO[str]] = None) -> Callable:
 
     return func
 
-def backup(outdir: str, limits: Optional[list[str]] = [], callback: Optional[Callable] = None) -> None:
+
+def backup(outdir: str, limits: Optional[list[str]] = [],
+           callback: Optional[Callable] = None) -> None:
     if isdir(outdir):
         shutil.rmtree(outdir)
 
@@ -178,11 +199,15 @@ def backup(outdir: str, limits: Optional[list[str]] = [], callback: Optional[Cal
             shutil.rmtree(outdir)
         raise Error("pgsql backup failed: " + str(e))
 
-def restore(path: str, limits: list[str] = [], callback: Optional[Callable] = None) -> None:
+
+def restore(path: str, limits: list[str] = [],
+            callback: Optional[Callable] = None
+            ) -> None:
     try:
         fs2pgsql(path, limits, callback=callback)
     except Exception as e:
         raise Error("pgsql restore failed: " + str(e))
+
 
 class PgsqlService:
     INIT_SCRIPT = "/etc/init.d/postgresql"

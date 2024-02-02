@@ -27,7 +27,8 @@ from registry import registry, hub_backups
 from typing import Optional, NoReturn
 from passphrase import random_passphrase, get_passphrase
 
-def usage(e: Optional[str|getopt.GetoptError] = None) -> NoReturn:
+
+def usage(e: Optional[str | getopt.GetoptError] = None) -> NoReturn:
     if e:
         print("error: " + str(e), file=sys.stderr)
 
@@ -35,13 +36,14 @@ def usage(e: Optional[str|getopt.GetoptError] = None) -> NoReturn:
     print(__doc__.strip(), file=sys.stderr)
     sys.exit(1)
 
+
 def main():
     opts = None
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], "h", ["help", "random"])
     except getopt.GetoptError as e:
         usage(e)
-    assert opts != None
+    assert opts is not None
     opt_random = False
     for opt, val in opts:
         if opt in ('-h', '--help'):
@@ -69,13 +71,14 @@ def main():
             hb.update_key(hbr.backup_id, key)
             registry.key = key
 
-            print(("Updated" if passphrase else "Removed") + \
-                    " passphrase - uploaded key to Hub.")
+            print(("Updated" if passphrase else "Removed") +
+                  " passphrase - uploaded key to Hub.")
 
         except hub.Error:
             raise
     else:
         registry.key = key
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     main()

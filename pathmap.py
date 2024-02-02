@@ -1,4 +1,3 @@
-#
 # Copyright (c) 2010-2012 Liraz Siri <liraz@turnkeylinux.org>
 # Copyright (c) 2023 TurnKey GNU/Linux <admin@turnkeylinux.org>
 #
@@ -11,6 +10,7 @@
 #
 import glob
 from os.path import abspath, dirname
+
 
 class PathMap(dict):
     @staticmethod

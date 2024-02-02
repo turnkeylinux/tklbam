@@ -1,4 +1,3 @@
-#
 # Copyright (c) 2010-2013 Liraz Siri <liraz@turnkeylinux.org>
 # Copyright (c) 2023 TurnKey GNU/Linux <admin@turnkeylinux.org>
 #
@@ -8,9 +7,8 @@
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
-#
-import sys
 
+import sys
 import os
 from os.path import isdir, exists, join
 import logging
@@ -22,7 +20,7 @@ from changes import Changes
 from pathmap import PathMap
 from rollback import Rollback
 
-from utils import AttrDict, fmt_title, apply_overlay
+from utils import BaseAttrDict, fmt_title, apply_overlay
 
 import backup
 import conf
@@ -34,6 +32,7 @@ import json
 from temp import TempFile
 from userdb import Base
 
+
 class Error(Exception):
     pass
 
@@ -41,10 +40,12 @@ class Error(Exception):
 logging.basicConfig(level=logging.DEBUG)
 logging.debug(f'*** {__file__=}')
 
+
 def system(command: str) -> int:
     sys.stdout.flush()
     sys.stderr.flush()
     return os.system(command)
+
 
 class Restore:
     Error = Error
@@ -62,13 +63,14 @@ class Restore:
         logging.debug(')')
         self.extras = backup.ExtrasPaths(backup_extract_path)
         if not isdir(self.extras.path):
-            raise self.Error("illegal backup_extract_path: can't find '%s'" % self.extras.path)
+            raise self.Error("illegal backup_extract_path: can't find"
+                             f" '{self.extras.path}'")
 
         if simulate:
             rollback = False
 
         with open(self.extras.backup_conf) as fob:
-            self.conf = AttrDict(json.loads(fob.read())) \
+            self.conf = BaseAttrDict(json.loads(fob.read())) \
                     if exists(self.extras.backup_conf) else None
 
         self.simulate = simulate
@@ -76,7 +78,8 @@ class Restore:
         self.rollback = Rollback.create() if rollback else None
         self.limits = conf.Limits(limits)
         self.backup_extract_path = backup_extract_path
-        logging.debug('__init__ complete: {self.limits=}, {self.backup_extract_path=}')
+        logging.debug(f'__init__ complete: {self.limits=},'
+                      f' {self.backup_extract_path=}')
 
     def database(self) -> None:
         logging.debug(f'database()')
@@ -90,26 +93,32 @@ class Restore:
 
         if exists(self.extras.myfs):
             logging.debug('* self.extras.myfs exists')
-            print(fmt_title("DATABASE - unserializing MySQL databases from " + self.extras.myfs))
+            print(fmt_title("DATABASE - unserializing MySQL databases from "
+                            + self.extras.myfs))
 
             try:
-                mysql.restore(self.extras.myfs, self.extras.etc.mysql,  # type: ignore[attr-defined]
-                              limits=self.limits.mydb, callback=mysql.cb_print(), simulate=self.simulate)
+                mysql.restore(self.extras.myfs,
+                              self.extras.etc.mysql,
+                              limits=self.limits.mydb,
+                              callback=mysql.cb_print(),
+                              simulate=self.simulate)
                 # error: "str" has no attribute "mysql"
 
             except mysql.Error as e:
                 print("SKIPPING MYSQL DATABASE RESTORE: " + str(e))
 
         if exists(self.extras.pgfs):
-        
-            print("\n" + fmt_title("DATABASE - Unserializing PgSQL databases from " + self.extras.pgfs))
+
+            print("\n" + fmt_title("DATABASE - Unserializing PgSQL databases"
+                                   " from " + self.extras.pgfs))
 
             if self.simulate:
                 print("CAN'T SIMULATE PGSQL RESTORE, SKIPPING")
                 return
 
             try:
-                pgsql.restore(self.extras.pgfs, self.limits.pgdb, callback=pgsql.cb_print())
+                pgsql.restore(self.extras.pgfs, self.limits.pgdb,
+                              callback=pgsql.cb_print())
 
             except pgsql.Error as e:
                 print("SKIPPING PGSQL DATABASE RESTORE: " + str(e))
@@ -128,7 +137,8 @@ class Restore:
         if not packages:
             return
 
-        print(fmt_title("PACKAGES - %d new packages listed in %s" % (len(packages), newpkgs_file), '-'))
+        print(fmt_title(f"PACKAGES - {len(packages)} new packages listed in"
+                        f" {newpkgs_file}", '-'))
 
         already_installed = set(pkgman.installed()) & set(packages)
         if len(already_installed) == len(packages):
@@ -136,7 +146,8 @@ class Restore:
             return
 
         if already_installed:
-            print("// New packages not already installed: %d" % (len(packages) - len(already_installed)))
+            print("// New packages not already installed:"
+                  f" {len(packages) - len(already_installed)}")
 
         # apt-get update, otherwise installer may skip everything
         print("// Update list of available packages")
@@ -150,7 +161,8 @@ class Restore:
         print("// Installing new packages")
 
         if installer.skipping:
-            print("// Skipping uninstallable packages: " + " ".join(installer.skipping))
+            print("// Skipping uninstallable packages: "
+                  + " ".join(installer.skipping))
 
         print()
 
@@ -158,12 +170,12 @@ class Restore:
             print("NO NEW PACKAGES TO INSTALL\n")
             return
 
-        print("# " + installer.command)
+        print(f"# {installer.command}")
 
         if not self.simulate:
             exitcode = installer()
             if exitcode != 0:
-                print("# WARNING: non-zero exitcode (%d)" % exitcode)
+                print(f"# WARNING: non-zero exitcode ({exitcode})")
 
         if self.rollback:
             self.rollback.save_new_packages(installer.installed)
@@ -171,7 +183,8 @@ class Restore:
         print()
 
     @staticmethod
-    def _userdb_merge(old_etc: str, new_etc: str) -> tuple[Base, Base, dict[str, str], dict[str, str]]:
+    def _userdb_merge(old_etc: str, new_etc: str
+                      ) -> tuple[Base, Base, dict[str, str], dict[str, str]]:
         logging.debug(f' _userdb_merge( {old_etc=}, {new_etc=} )')
         old_passwd = join(old_etc, "passwd")
         new_passwd = join(new_etc, "passwd")
@@ -187,20 +200,22 @@ class Restore:
                             r(new_passwd), r(new_group))
 
     @staticmethod
-    def _get_fsdelta_olist(fsdelta_olist_path: str, limits: list[str] = []) -> list[str]:
+    def _get_fsdelta_olist(fsdelta_olist_path: str, limits: list[str] = []
+                           ) -> list[str]:
         logging.debug(f'_get_fsdelta_olist( {fsdelta_olist_path=}, {limits=}')
         pathmap = PathMap(limits)
         with open(fsdelta_olist_path) as fob:
-            return [ fpath
-                 for fpath in fob.read().splitlines()
-                 if fpath in pathmap ] 
+            return [fpath
+                    for fpath in fob.read().splitlines()
+                    if fpath in pathmap]
 
     @staticmethod
     def _apply_overlay(src: str, dst: str, olist: list[str]) -> None:
         logging.debug(f'_apply_overlay( {src=}, {dst=}, {olist=}')
         tmp = TempFile("fsdelta-olist-")
         for fpath in olist:
-            logging.debug(f'1 {fpath=} (type={type(fpath)}) {tmp=} (type={type(tmp)})')
+            logging.debug(f'1 {fpath=} (type={type(fpath)}) {tmp=}'
+                          f' (type={type(tmp)})')
             fpath = fpath.lstrip('/')
             tmp.write(f'{fpath}\n'.encode())
             logging.debug(f'2 {fpath=} ({type(fpath)=}) {tmp=} ({type(tmp)=})')
@@ -219,8 +234,9 @@ class Restore:
         rollback = self.rollback
         limits = self.limits.fs
 
-        print(fmt_title("FILES - restoring files, ownership and permissions", '-'))
-        logging.debug(f'about to merge {extras.etc=} & /etc' )
+        print(fmt_title("FILES - restoring files, ownership and permissions",
+                        '-'))
+        logging.debug(f'about to merge {extras.etc=} & /etc')
         passwd, group, uidmap, gidmap = self._userdb_merge(extras.etc, "/etc")
         if uidmap or gidmap:
             print("MERGING USERS AND GROUPS:\n")

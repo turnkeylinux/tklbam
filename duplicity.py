@@ -22,7 +22,8 @@ from squid import Squid
 from utils import iamroot
 
 import resource
-RLIMIT_NOFILE_MAX = 8192
+from cmd_internal import fmt_internal_command
+
 
 def _find_duplicity_pylib(path: str) -> Optional[str]:
     if not isdir(path):
@@ -34,14 +35,20 @@ def _find_duplicity_pylib(path: str) -> Optional[str]:
 
     return None
 
+
+RLIMIT_NOFILE_MAX = 8192
 PATH_DEPS = os.environ.get('TKLBAM_DEPS', '/usr/lib/tklbam3/deps')
 PATH_DEPS_BIN = join(PATH_DEPS, "bin")
 PATH_DEPS_PYLIB = _find_duplicity_pylib(PATH_DEPS)
 
-from cmd_internal import fmt_internal_command
 
 class Error(Exception):
     pass
+
+
+def _dummy_log(s: str) -> None:
+    pass
+
 
 @dataclass
 class Creds:
@@ -52,11 +59,13 @@ class Creds:
     usertoken: Optional[str] = None
     sessiontoken: Optional[str] = None
 
+
 class Duplicity:
     """low-level interface to Duplicity"""
 
-    def __init__(self, opts: list[tuple[str, str]]|str, *args: str):
-        """Duplicity command. The first member of args can be a an array of tuple arguments"""
+    def __init__(self, opts: list[tuple[str, str]] | str, *args: str):
+        """Duplicity command. The first member of args can be a an array of
+        tuple arguments"""
 
         command: list[str] = []
         if isinstance(opts, str):
@@ -76,20 +85,24 @@ class Duplicity:
 
         self.command: list[str] = ["duplicity"] + command + list(args)
 
-    def run(self, passphrase: str, creds: Optional[Creds] = None, debug: bool = False) -> None:
+    def run(self, passphrase: str, creds: Optional[Creds] = None,
+            debug: bool = False
+            ) -> None:
         sys.stdout.flush()
 
         if creds:
             if creds.c_type in ('devpay', 'iamuser'):
                 os.environ['AWS_ACCESS_KEY_ID'] = str(creds.accesskey)
                 os.environ['AWS_SECRET_ACCESS_KEY'] = str(creds.secretkey)
-                os.environ['X_AMZ_SECURITY_TOKEN'] = str(",".join([str(creds.producttoken),
-                                                                   str(creds.usertoken)])
-                                                         if creds.c_type == 'devpay'
-                                                         else str(creds.sessiontoken))
+                os.environ['X_AMZ_SECURITY_TOKEN'] = str(
+                                    ",".join([str(creds.producttoken),
+                                              str(creds.usertoken)])
+                                    if creds.c_type == 'devpay'
+                                    else str(creds.sessiontoken))
 
             elif creds.c_type == 'iamrole':
-                os.environ['AWS_STSAGENT'] = ' '.join(fmt_internal_command('stsagent'))
+                os.environ['AWS_STSAGENT'] = ' '.join(
+                                    fmt_internal_command('stsagent'))
 
         if PATH_DEPS_BIN not in os.environ['PATH'].split(':'):
             os.environ['PATH'] = PATH_DEPS_BIN + ':' + os.environ['PATH']
@@ -108,7 +121,8 @@ class Duplicity:
   explore the state of the system just before the above duplicity command is
   run, and/or execute it manually.
 
-  For Duplicity usage info, options and storage backends, run "duplicity --help".
+  For Duplicity usage info, options and storage backends, run "duplicity
+  --help".
   To exit from the shell and continue running duplicity "exit 0".
   To exit from the shell and abort this session "exit 1".
 """)
@@ -125,7 +139,8 @@ class Duplicity:
 
         exitcode = child.wait()
         if exitcode != 0:
-            raise Error("non-zero exitcode (%d) from backup command: %s" % (exitcode, str(self)))
+            raise Error(f"non-zero exitcode ({exitcode}) from backup command:"
+                        f" {str(self)}")
 
     def __str__(self) -> str:
         return " ".join(self.command)
@@ -146,6 +161,7 @@ def _raise_rlimit(type_: int, newlimit: int) -> None:
         pass
     return None
 
+
 @dataclass
 class Target:
     address: str
@@ -164,19 +180,22 @@ class Downloader:
     cache_size: str = CACHE_SIZE
     cache_dir: str = CACHE_DIR
 
-    def __call__(self, download_path: str, target: Target, debug: bool = False, log: Optional[Callable] = None, force: bool = False) -> None:
+    def __call__(self, download_path: str, target: Target,
+                 debug: bool = False, log: Optional[Callable] = None,
+                 force: bool = False
+                 ) -> None:
         orig_env = None
         squid = None
         if log is None:
-            log = lambda s: None
-            assert log is not None
+            log = _dummy_log
 
         if self.time:
             opts: list[tuple[str, str]] = [("restore-time", self.time)]
         else:
             opts = []
         if iamroot():
-            log(f"// started squid: caching downloaded backup archives to {self.cache_dir}\n")
+            log(f"// started squid: caching downloaded backup archives to"
+                f" {self.cache_dir}\n")
 
             squid = Squid(self.cache_size, self.cache_dir)
             squid.start()
@@ -203,10 +222,12 @@ class Downloader:
             else:
                 del os.environ['http_proxy']
 
-            log("\n// stopping squid: download complete so caching no longer required\n")
+            log("\n// stopping squid: download complete so caching no longer"
+                " required\n")
             squid.stop()
 
         sys.stdout.flush()
+
 
 class Uploader:
     """High-level interface to Duplicity uploads"""
@@ -229,18 +250,21 @@ class Uploader:
         if self.excludes is None:
             self.excludes = []
 
-    def __call__(self, source_dir: str, target: Target, force_cleanup: bool = True, dry_run: bool = False, debug: bool = False, log: Optional[Callable] = None):
+    def __call__(self, source_dir: str, target: Target,
+                 force_cleanup: bool = True, dry_run: bool = False,
+                 debug: bool = False, log: Optional[Callable] = None
+                 ) -> None:
         if log is None:
-            log = lambda s: None
-            assert log is not None
+            log = _dummy_log
 
         opts: list[tuple[str, str]] = []
         if self.verbose:
             opts.append(('verbosity', '5'))
 
         if force_cleanup:
-            cleanup_command = Duplicity(opts, "cleanup", "--force", target.address)
-            log(cleanup_command)
+            cleanup_command = Duplicity(opts, "cleanup",
+                                        "--force", target.address)
+            log(str(cleanup_command))
 
             if not dry_run:
                 cleanup_command.run(target.secret, target.credentials)
@@ -253,27 +277,28 @@ class Uploader:
 
         if self.includes:
             for include in self.includes:
-                opts += [ ('include', include) ]
+                opts += [('include', include)]
 
         if self.include_filelist:
-            opts += [ ('include-filelist', self.include_filelist) ]
+            opts += [('include-filelist', self.include_filelist)]
 
         if self.excludes:
             for exclude in self.excludes:
-                opts += [ ('exclude', exclude) ]
+                opts += [('exclude', exclude)]
 
-        args = [ '--s3-unencrypted-connection', '--allow-source-mismatch' ]
+        args = ['--s3-unencrypted-connection', '--allow-source-mismatch']
 
         if dry_run:
-            args += [ '--dry-run' ]
+            args += ['--dry-run']
 
         if self.s3_parallel_uploads > 1:
             s3_multipart_chunk_size = self.volsize / self.s3_parallel_uploads
             if s3_multipart_chunk_size < 5:
                 s3_multipart_chunk_size = 5
-            args += [ '--s3-use-multiprocessing', '--s3-multipart-chunk-size=%d' % s3_multipart_chunk_size ]
+            args += ['--s3-use-multiprocessing',
+                     f'--s3-multipart-chunk-size={s3_multipart_chunk_size}']
 
-        args += [ source_dir, target.address ]
+        args += [source_dir, target.address]
 
         backup_command = Duplicity(opts, *args)
 
