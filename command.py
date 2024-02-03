@@ -1,5 +1,5 @@
 # Copyright (c) 2007-2011 Liraz Siri <liraz@turnkeylinux.org>
-#               2019-2023 TurnKey GNU/Linux <admin@turnkeylinux.org>
+#               2019-2024 TurnKey GNU/Linux <admin@turnkeylinux.org>
 #
 # turnkey-command is open source software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as

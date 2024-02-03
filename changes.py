@@ -1,6 +1,6 @@
 #
 # Copyright (c) 2010-2013 Liraz Siri <liraz@turnkeylinux.org>
-# Copyright (c) 2023 TurnKey GNU/Linux <admin@turnkeylinux.org>
+# Copyright (c) 2023, 2024 TurnKey GNU/Linux <admin@turnkeylinux.org>
 #
 # This file is part of TKLBAM (TurnKey GNU/Linux BAckup and Migration).
 #
@@ -8,7 +8,7 @@
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
-#
+
 import sys
 import os
 from os.path import lexists, isdir, islink
@@ -32,6 +32,7 @@ def fmt_uid(uid: int | str) -> str:
         return pwd.getpwuid(int(uid)).pw_name
     except:  # TODO don't use bare except
         return str(uid)
+
 
 def fmt_gid(gid: int | str) -> str:
     try:
@@ -61,7 +62,7 @@ class Change:
     class Base:
         OP: Optional[str] = None
 
-        def __init__(self, path: str):
+        def __init__(self, path: str) -> None:
             self.path = path
             self._stat: Optional[os.stat_result] = None
 

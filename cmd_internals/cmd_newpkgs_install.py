@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 #
 # Copyright (c) 2010-2012 Liraz Siri <liraz@turnkeylinux.org>
-# Copyright (c) 2023 TurnKey GNU/Linux <admin@turnkeylinux.org>
+# Copyright (c) 2023, 2024 TurnKey GNU/Linux <admin@turnkeylinux.org>
 #
 # This file is part of TKLBAM (TurnKey GNU/Linux BAckup and Migration).
 #
@@ -9,7 +9,7 @@
 # modify it under the terms of the GNU General Public License as
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
-#
+
 """
 Install list of new packages that are available in apt-cache.
 
