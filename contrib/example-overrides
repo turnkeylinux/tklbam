@@ -47,10 +47,8 @@
 # 
 # Examples
 # 
-#   (exclude Drupal6 sessions table) 
-#   -mysql:drupal6/sessions
+#   (exclude Drupal10 sessions table)
+#   -mysql:drupal10/sessions
 # 
-#   (only include drupal6 database) 
-#   mysql:drupal6
-
-
+#   (only include drupal10 database)
+#   mysql:drupal10
