@@ -2,8 +2,8 @@
 # script adds the correct apt source and installs package
 # Author: Liraz Siri <liraz@turnkeylinux.org>
 
-fatal() { echo "FATAL: $@" >&2; exit 1; }
-info() { echo "INFO: $@"; }
+fatal() { echo "FATAL: $*" >&2; exit 1; }
+info() { echo "INFO: $*"; }
 
 [[ -z "$DEBUG" ]] || set -x
 
@@ -16,7 +16,7 @@ get_debian_dist() {
         10.*) echo buster ;;
         11.*) echo bullseye ;;
         12.*) echo bookworm ;;
-        */*)  echo $1 | sed 's|/.*||' ;;
+        */*)  echo "$1" | sed 's|/.*||' ;;
     esac
 }
 
@@ -55,29 +55,29 @@ if [[ "$APT_KEY_URL" == *.asc ]]; then
         apt-get update
         apt-get install -y --no-install-recommends gpg
     fi
-    tmp_file=/tmp/$(basename $APT_KEY_URL)
+    tmp_file=/tmp/$(basename "$APT_KEY_URL")
 elif [[ "$APT_KEY_URL" == *.gpg ]]; then
     tmp_file=''
 else
     error "APT_KEY_URL does not appear to be a GPG file (should end with .gpg or .asc)"
 fi
 
-if ! rgrep . /etc/apt/sources.list* | sed 's/#.*//' | grep -q $APT_URL; then
+if ! rgrep . /etc/apt/sources.list* | sed 's/#.*//' | grep -q "$APT_URL"; then
 
-    apt_name=$(echo $APT_URL | sed 's|.*//||; s|/.*||')
+    apt_name=$(echo "$APT_URL" | sed 's|.*//||; s|/.*||')
     apt_file="/etc/apt/sources.list.d/${apt_name}.list"
 
-    echo "deb [signed-by=/$KEY_FILE] $APT_URL $deb_dist main" > $apt_file
+    echo "deb [signed-by=/$KEY_FILE] $APT_URL $deb_dist main" > "$apt_file"
 
     info "downloading $APT_KEY_URL"
     local_file=/$KEY_FILE
     if [[ -n "$tmp_file" ]]; then
         local_file=$tmp_file
     fi
-    wget -O $local_file $APT_KEY_URL
+    wget -O "$local_file" "$APT_KEY_URL"
     if [[ -n "$tmp_file" ]]; then
-        gpg -o /$KEY_FILE --dearmor $tmp_file
-        rm -f $tmp_file
+        gpg -o "/$KEY_FILE" --dearmor "$tmp_file"
+        rm -f "$tmp_file"
     fi
     info "Added $APT_URL package source to $apt_file"
 fi
@@ -87,5 +87,5 @@ apt-get update \
     || fatal "Command fialed. Please report to TurnKey Linux."
 
 info "Installing $PACKAGE"
-apt-get install $PACKAGE \
+apt-get install "$PACKAGE" \
     || fatal "Package install failed, please report to TurnKe Linux."

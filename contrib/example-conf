@@ -48,4 +48,3 @@ backup-skip-database    False
 
 restore-cache-size 50%
 restore-cache-dir /var/cache/tklbam/restore
-
