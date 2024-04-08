@@ -67,7 +67,8 @@ Run "tklbam-init --help" for further details.
     class Paths(_Paths):
         files = ['restore.log', 'backup.log', 'backup.pid',
                  'backup-resume', 'sub_apikey', 'secret', 'key', 'credentials', 'hbr',
-                 'profile', 'profile/stamp', 'profile/profile_id']
+                 'profile', 'profile/stamp', 'profile/profile_id', 'fallback_access_key',
+                 'fallback_secret_key']
 
     def __init__(self, path=None):
         if path is None:
@@ -114,6 +115,14 @@ Run "tklbam-init --help" for further details.
         retval = cls._file_str(path, d)
         if retval:
             return AttrDict([ v.split("=", 1) for v in retval.split("\n") ])
+
+    def fallback_access_key(self, val=UNDEFINED):
+        return self._file_str(self.path.fallback_access_key, val)
+    fallback_access_key = property(fallback_access_key, fallback_access_key)
+
+    def fallback_secret_key(self, val=UNDEFINED):
+        return self._file_str(self.path.fallback_secret_key, val)
+    fallback_secret_key = property(fallback_secret_key, fallback_secret_key)
 
     def sub_apikey(self, val=UNDEFINED):
         return self._file_str(self.path.sub_apikey, val)
