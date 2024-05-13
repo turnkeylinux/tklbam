@@ -64,14 +64,34 @@ Database overrides
 
 ``<database-override>`` := -?pgsql:database[/table]
 
-By default ALL databases and database tables are backed up. 
+By default ALL MySQL/MariaDB databases and database tables are backed up.
 
-Adding a positive override (e.g., mysql:mydatabase) changes the default
-behavior so that only the database or table specified in the override is
-included in the backup.
+Similarly, ALL PostgreSQL are included - with the exception of the `postgres`
+database - an empty database included by default in all PostgreSQL installs.
 
-Negative overrides exclude a database (e.g., -mysql:mydatabase) or table (e.g.,
--mysql:mydatabase/mytable) from being included in the backup. 
+Exclusion of default `postgres` PostgreSQL database
+---------------------------------------------------
+
+The exclusion of the `postgres` database can NOT be overriden, even if
+explictly added as an override.
+
+Some documentation suggests that it is "best practice" to not use the default
+`postgres` database for user data. However, there is no documented strict
+reason why it shouldn't be used. So the inability to include this database is
+considered a bug and will be addressed in a future TKLBAM update. If you are
+already using the `postgres` database, the database can be renamed, or you can
+move your data to a new database.
+
+Database override details
+-------------------------
+
+Adding a positive override (e.g., mysql:mydatabase / pgsql:mydatabase )
+changes the default behavior so that only the database or table specified in
+the override is included in the backup. If you wish to use overrides to
+include multiple databases but not all, they must all be noted separately.
+
+Negative database/table overrides (with a dash prefix) exclude a database or
+table (e.g. -mysql:mydatabase / -pgsql:mydatabase).
 
 Excluding a table only excludes its data. The schema of an excluded table is
 still backed up, as it takes up a trivial amount of space and other tables or
@@ -81,11 +101,11 @@ You can mix positive overrides with negative overrides.
 
 Examples::
 
-    # exclude Drupal6 sessions table
-    -mysql:drupal6/sessions
+    # exclude Drupal10 sessions table
+    -mysql:drupal10/sessions
 
-    # only include drupal6 database
-    mysql:drupal6
+    # only include drupal10 database
+    mysql:drupal10
 
     # only include mahara postgres database
     pgsql:mahara
