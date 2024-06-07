@@ -55,7 +55,7 @@
 #
 # PosgreSQL Format
 #
-#   =?pgsql:database[/table]
+#   -?pgsql:database[/table]
 #
 # PosgreSQL Examples
 #
