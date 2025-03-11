@@ -41,14 +41,26 @@
 #   
 #   You can mix positive overrides with negative overrides.
 # 
-# Format
+# MySQL/MariaDB Format
 #
 #   -?mysql:database[/table]
 # 
-# Examples
+# MySQL/MariaDB Examples
 # 
 #   (exclude Drupal10 sessions table)
 #   -mysql:drupal10/sessions
 # 
 #   (only include drupal10 database)
 #   mysql:drupal10
+#
+# PosgreSQL Format
+#
+#   -?pgsql:database[/table]
+#
+# PosgreSQL Examples
+#
+#   (exclude my_db test table)
+#   -pgsql:my_db:test
+#
+#   (only include my_db database)
+#   pgsql:my_db
