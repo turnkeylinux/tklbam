@@ -1,0 +1,46 @@
+===================
+tklbam-set-fallback
+===================
+
+------------
+Set Fallback
+------------
+
+:Author: Stefan Davis <stefan@turnkeylinux.org>
+:Date:   2018-10-09
+:Manual section: 8
+:Manual group: backup
+
+SYNOPSIS
+========
+
+tklbam-set-fallback [ `FALLBACK-ACCESS-KEY` ] [ `FALLBACK-SECRET-KEY` ]
+
+This is used to setup fallback credentials used when access to the Hub is limited
+or not possible.
+
+ARGUMENTS
+=========
+
+`FALLBACK-ACCESS-KEY`   Your IAMUser access key
+`FALLBACK-SECRET-KEY`   Your IAMUser secret access key
+
+If you do not provide FALLBACK-ACCESS-KEY and/or FALLBACK-SECRET-KEY you will be
+prompted for it/them interactively.
+
+SECURITY WARNING
+================
+
+Providing your AWS IAMUser credentials as a commandline argument is potentially less secure
+than allowing tklbam-set-fallback to prompt you for it interactively.
+
+* The shell may save the credentials in its history file (e.g. ~/.bash_history)
+* The credentials may briefly show up in the process list.
+
+AWS IAMUser credentials exist on your system in plaintext. This is to allow backups to work
+seamlessly without interaction.
+
+SEE ALSO
+========
+
+``tklbam`` (8), ``tklbam-faq`` (7)

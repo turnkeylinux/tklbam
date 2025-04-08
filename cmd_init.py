@@ -166,6 +166,7 @@ Generated backup encryption key:
             registry.registry.sub_apikey = None
             registry.registry.credentials = None
     else:
+
         if force or not registry.registry.sub_apikey:
             if not apikey:
                 print "Copy paste the API-KEY from your Hub account's user profile"
