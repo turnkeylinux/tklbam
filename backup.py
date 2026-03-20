@@ -73,12 +73,12 @@ class BackupConf(AttrDict):
         if not exists(path):
             return None
 
-        d = simplejson.load(file(path))
+        d = simplejson.load(open(path))
         return cls(*(d[attr]
                      for attr in ('profile_id', 'overrides', 'skip_files', 'skip_packages', 'skip_database')))
 
     def tofile(self, path):
-        simplejson.dump(dict(self), file(path, "w"))
+        simplejson.dump(dict(self), open(path, "w"))
 
 class Backup:
     class Error(Exception):
@@ -97,30 +97,30 @@ class Backup:
             self._log("  " + " ".join(new_packages))
             self._log("  EOF\n")
 
-        fh = file(dest, "w")
+        fh = open(dest, "w")
         for package in new_packages:
-            print >> fh, package
+            print(package, file=fh)
 
         fh.close()
 
     def _write_whatchanged(self, dest, dest_olist, dirindex, dirindex_conf,
                            overrides=[]):
-        paths = read_paths(file(dirindex_conf))
+        paths = read_paths(open(dirindex_conf))
         paths += overrides
 
         changes = whatchanged(dirindex, paths)
-        changes.sort(lambda a,b: cmp(a.path, b.path))
+        changes.sort(key=lambda a: a.path)
 
         changes.tofile(dest)
         olist = [ change.path for change in changes if change.OP == 'o' ]
-        file(dest_olist, "w").writelines((path + "\n" for path in olist))
+        open(dest_olist, "w").writelines((path + "\n" for path in olist))
 
         if self.verbose:
             if changes:
                 self._log("Save list of filesystem changes to %s:\n" % dest)
 
             actions = list(changes.deleted(optimized=False)) + list(changes.statfixes(optimized=False))
-            actions.sort(lambda a,b: cmp(a.args[0], b.args[0]))
+            actions.sort(key=lambda a: a.args[0])
 
             umask = os.umask(0)
             os.umask(umask)
@@ -128,7 +128,7 @@ class Backup:
             for action in actions:
                 if action.func is os.chmod:
                     path, mode = action.args
-                    default_mode = (0777 if isdir(path) else 0666) ^ umask
+                    default_mode = (0o777 if isdir(path) else 0o666) ^ umask
                     if default_mode == stat.S_IMODE(mode):
                         continue
                 elif action.func is os.lchown:
@@ -145,7 +145,7 @@ class Backup:
 
     def _create_extras(self, extras, profile, conf):
         os.mkdir(extras.path)
-        os.chmod(extras.path, 0700)
+        os.chmod(extras.path, 0o700)
 
         etc = str(extras.etc)
         os.mkdir(etc)
@@ -180,7 +180,7 @@ class Backup:
                 if mysql.MysqlService.is_running():
                     self._log("\n" + fmt_title("Serializing MySQL database to " + extras.myfs, '-'))
                     mysql.backup(extras.myfs, extras.etc.mysql,
-                                 limits=conf.overrides.mydb, callback=mysql.cb_print()) if self.verbose else None
+                                 limits=conf.overrides.mydb, callback=mysql.cb_print() if self.verbose else None)
 
             except mysql.Error:
                 pass
@@ -194,7 +194,7 @@ class Backup:
 
     def _log(self, s=""):
         if self.verbose:
-            print s
+            print(s)
 
     def __init__(self, profile, overrides, 
                  skip_files=False, skip_packages=False, skip_database=False, resume=False, verbose=True, extras_root="/"):
@@ -248,7 +248,7 @@ class Backup:
             fpaths= _fpaths(extras_paths.path)
 
             if not skip_files:
-                fsdelta_olist = file(extras_paths.fsdelta_olist).read().splitlines()
+                fsdelta_olist = open(extras_paths.fsdelta_olist).read().splitlines()
                 fpaths += _filter_deleted(fsdelta_olist)
 
             size = sum([ os.lstat(fpath).st_size

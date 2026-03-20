@@ -9,6 +9,7 @@ from paths import Paths
 import pickle
 import glob
 from datetime import datetime
+from functools import cmp_to_key
 
 from utils import AttrDict
 
@@ -34,21 +35,21 @@ class APIKey:
         if secret is None:
             secret = os.urandom(8)
         else:
-            secret = sha(secret).digest()[:8]
+            secret = sha(secret.encode()).digest()[:8]
 
         packed = struct.pack("!L8s", uid, secret)
-        encoded = base64.b32encode(packed).lstrip("A").rstrip("=")
+        encoded = base64.b32encode(packed).decode('ascii').lstrip("A").rstrip("=")
 
         return cls(encoded)
 
     def subkey(self, namespace):
-        return self.generate(self.uid, namespace + self.secret)
+        return self.generate(self.uid, namespace.encode() + self.secret)
 
     def __str__(self):
         return self.encoded
 
     def __repr__(self):
-        return "APIKey(%s)" % `str(self)`
+        return "APIKey(%s)" % str(self)
 
     def __eq__(self, other):
         return self.encoded == other.encoded
@@ -65,13 +66,13 @@ class DummyUser(AttrDict):
         self.backups_max = 0
 
     def subscribe(self):
-        accesskey = base64.b64encode(sha("%d" % self.uid).digest())[:20]
+        accesskey = base64.b64encode(sha(("%d" % self.uid).encode()).digest())[:20]
         secretkey = base64.b64encode(os.urandom(30))[:40]
-        producttoken = "{ProductToken}" + base64.b64encode("\x00" + os.urandom(2) + "AppTkn" + os.urandom(224))
-        usertoken = "{UserToken}" + base64.b64encode("\x00" + os.urandom(2) + "UserTkn" + os.urandom(288))
+        producttoken = "{ProductToken}" + base64.b64encode(b"\x00" + os.urandom(2) + b"AppTkn" + os.urandom(224)).decode('ascii')
+        usertoken = "{UserToken}" + base64.b64encode(b"\x00" + os.urandom(2) + b"UserTkn" + os.urandom(288)).decode('ascii')
 
-        self.credentials = Credentials({'accesskey': accesskey,
-                                        'secretkey': secretkey,
+        self.credentials = Credentials({'accesskey': accesskey.decode('ascii'),
+                                        'secretkey': secretkey.decode('ascii'),
                                         'producttoken': producttoken,
                                         'usertoken': usertoken})
 
@@ -138,7 +139,7 @@ def _parse_duplicity_sessions(path):
         else:
             sessions[df.timestamp].size += fsize
 
-    return sessions.values()
+    return list(sessions.values())
 
 class DummyBackupRecord(AttrDict):
     # backup_id, address
@@ -173,7 +174,8 @@ class _DummyDB(AttrDict):
 
     @staticmethod
     def _save(path, obj):
-        pickle.dump(obj, file(path, "w"))
+        with open(path, "wb") as f:
+            pickle.dump(obj, f)
 
     @staticmethod
     def _load(path, default=None):
@@ -181,7 +183,8 @@ class _DummyDB(AttrDict):
             return default
 
         try:
-            return pickle.load(file(path))
+            with open(path, "rb") as f:
+                return pickle.load(f)
         except:
             return default
 
@@ -311,7 +314,7 @@ class Backups:
     def new_backup_record(self, key, profile_id, server_id=None):
         # in the real implementation the hub would create a bucket not a dir...
         # the real implementation would have to make sure this is unique
-        path = "/var/tmp/duplicity/" + base64.b32encode(os.urandom(10))
+        path = "/var/tmp/duplicity/" + base64.b32encode(os.urandom(10)).decode('ascii')
         os.makedirs(path)
         address = "file://" + path
 
@@ -329,9 +332,9 @@ class Backups:
         return self.user.backups[backup_id]
 
     def list_backups(self):
-        backups = self.user.backups.values()
-        return sorted(self.user.backups.values(),
-                      lambda a,b: cmp(int(a.backup_id), int(b.backup_id)))
+        backups = list(self.user.backups.values())
+        return sorted(backups,
+                      key=cmp_to_key(lambda a,b: (int(a.backup_id) > int(b.backup_id)) - (int(a.backup_id) < int(b.backup_id))))
 
     def updated_backup(self, address):
         # In the real implementation this should add a task which queries S3
@@ -346,5 +349,3 @@ class Backups:
 
     def set_backup_inprogress(self, backup_id, bool):
         pass
-
-

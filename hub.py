@@ -115,7 +115,7 @@ class API(_API):
     def request(self, method, url, attrs={}, headers={}):
         try:
             return _API.request(self, method, url, attrs, headers)
-        except self.Error, e:
+        except self.Error as e:
             if e.name == "BackupRecord.NotFound":
                 raise InvalidBackupError(e.description)
 
@@ -253,11 +253,11 @@ class Backups:
             return None
 
         response = self._api('GET', 'archive/', attrs)
-        content = base64.urlsafe_b64decode(str(response['archive_content']))
+        content = base64.urlsafe_b64decode(str(response['archive_content']).encode()).decode('latin-1')
 
         fd, archive_path = tempfile.mkstemp(prefix="archive.")
-        fh = os.fdopen(fd, "w")
-        fh.write(content)
+        fh = os.fdopen(fd, "wb")
+        fh.write(content.encode('latin-1'))
         fh.close()
 
         return ProfileArchive(profile_id, archive_path, archive_timestamp)
@@ -290,7 +290,7 @@ class Backups:
 
     def list_backups(self):
         response = self._api('GET', 'records/')
-        return map(lambda r: BackupRecord(r), response)
+        return list(map(lambda r: BackupRecord(r), response))
 
 class ProfileArchive:
     def __init__(self, profile_id, archive, timestamp):
@@ -308,5 +308,3 @@ class ProfileArchive:
 from conf import Conf
 if os.environ.get("TKLBAM_DUMMYHUB") or os.path.exists(os.path.join(Conf.DEFAULT_PATH, "dummyhub")):
     from dummyhub import Backups
-
-

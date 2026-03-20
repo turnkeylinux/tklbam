@@ -88,7 +88,7 @@ class Duplicity:
         os.environ['PASSPHRASE'] = passphrase
 
         if debug:
-            print """
+            print("""
   The --debug option has dropped you into an interactive shell in which you can
   explore the state of the system just before the above duplicity command is
   run, and/or execute it manually.
@@ -96,7 +96,7 @@ class Duplicity:
   For Duplicity usage info, options and storage backends, run "duplicity --help".
   To exit from the shell and continue running duplicity "exit 0".
   To exit from the shell and abort this session "exit 1".
-"""
+""")
 
             import executil
             shell = os.environ.get("SHELL", "/bin/bash")

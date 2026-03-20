@@ -22,14 +22,14 @@ def get_credentials(hb):
 
 def usage(e=None):
     if e:
-        print >> sys.stderr, "error: " + str(e)
+        print("error: " + str(e), file=sys.stderr)
 
-    print >> sys.stderr, "Syntax: %s" % sys.argv[0]
-    print >> sys.stderr, __doc__.strip()
+    print("Syntax: %s" % sys.argv[0], file=sys.stderr)
+    print(__doc__.strip(), file=sys.stderr)
     sys.exit(1)
 
 def fatal(e):
-    print >> sys.stderr, "error: " + str(e)
+    print("error: " + str(e), file=sys.stderr)
     sys.exit(1)
 
 def format(creds):
@@ -44,14 +44,14 @@ def main():
 
     try:
         hb = hub_backups()
-    except hub.Backups.NotInitialized, e:
-        print >> sys.stderr, "error: " + str(e)
+    except hub.Backups.NotInitialized as e:
+        print("error: " + str(e), file=sys.stderr)
 
     creds = get_credentials(hb)
     if creds.type != 'iamrole':
         fatal("STS agent incompatible with '%s' type credentials" % creds.type)
 
-    print format(creds)
+    print(format(creds))
 
 if __name__ == "__main__":
     main()

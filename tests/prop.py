@@ -5,7 +5,7 @@ class CantSetNone(object):
         self._test = None
 
     def test(self, val=None):
-        print "test(%s)" % `val`
+        print("test(%s)" % repr(val))
         if val is None:
             return self._test
         else:
@@ -17,11 +17,11 @@ class CanSetNone(object):
         self._test = None
 
     def read_test(self):
-        print "read_test()"
+        print("read_test()")
         return self._test
 
     def write_test(self, val):
-        print "write_test(%s)" % val
+        print("write_test(%s)" % val)
         self._test = val
 
     test = property(read_test, write_test)
@@ -34,7 +34,7 @@ class ShortCanSetNone(object):
         self._test = None
 
     def test(self, val=UNDEFINED):
-        print "test(%s)" % `val`
+        print("test(%s)" % repr(val))
         if val is UNDEFINED:
             return self._test
         else:

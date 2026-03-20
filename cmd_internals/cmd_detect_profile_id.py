@@ -19,14 +19,14 @@ from version import detect_profile_id
 
 def usage(e=None):
     if e:
-        print >> sys.stderr, "error: " + str(e)
-    print >> sys.stderr, "Syntax: %s [ path/to/root ]" % sys.argv[0]
+        print("error: " + str(e), file=sys.stderr)
+    print("Syntax: %s [ path/to/root ]" % sys.argv[0], file=sys.stderr)
     sys.exit(1)
 
 def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'h', ['help'])
-    except getopt.GetoptError, e:
+    except getopt.GetoptError as e:
         usage(e)
 
     for opt, val in opts:
@@ -35,7 +35,7 @@ def main():
 
     root = args[0] if args else '/'
 
-    print detect_profile_id(root)
+    print(detect_profile_id(root))
 
 if __name__ == "__main__":
     main()

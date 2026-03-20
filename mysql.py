@@ -37,7 +37,7 @@ PATH_DEBIAN_CNF = "/etc/mysql/debian.cnf"
 def _mysql_opts(opts=[], defaults_file=None, **conf):
     def isreadable(path):
         try:
-            file(path)
+            open(path)
             return True
         except:
             return False
@@ -99,7 +99,7 @@ def _match_name(sql):
     
 def _parse_statements(fh, delimiter=';'):
     statement = ""
-    for line in fh.xreadlines():
+    for line in fh:
         if line.startswith("--"):
             continue
         if not line.strip():
@@ -126,16 +126,16 @@ class MyFS_Writer(MyFS):
             if not exists(self.paths):
                 os.mkdir(self.paths)
 
-            print >> file(self.paths.init, "w"), sql
+            print(sql, file=open(self.paths.init, "w"))
             self.name = name
 
         def add_view_pre(self, name, sql):
             view = self.View(self.paths.views, name)
-            print >> file(view.paths.pre, "w"), sql
+            print(sql, file=open(view.paths.pre, "w"))
 
         def add_view_post(self, name, sql):
             view = self.View(self.paths.views, name)
-            print >> file(view.paths.post, "w"), sql
+            print(sql, file=open(view.paths.post, "w"))
 
     class Table(MyFS.Table):
         def __init__(self, database, name, sql):
@@ -143,19 +143,19 @@ class MyFS_Writer(MyFS):
             if not exists(self.paths):
                 os.makedirs(self.paths)
 
-            print >> file(self.paths.init, "w"), sql
+            print(sql, file=open(self.paths.init, "w"))
             if exists(self.paths.triggers):
                 os.remove(self.paths.triggers)
 
-            self.rows_fh = file(self.paths.rows, "w")
+            self.rows_fh = open(self.paths.rows, "w")
             self.name = name
             self.database = database
 
         def add_row(self, sql):
-            print >> self.rows_fh, re.sub(r'.*?VALUES \((.*)\);', '\\1', sql)
+            print(re.sub(r'.*?VALUES \((.*)\);', '\\1', sql), file=self.rows_fh)
 
         def add_trigger(self, sql):
-            print >> file(self.paths.triggers, "a"), sql + "\n"
+            print(sql + "\n", file=open(self.paths.triggers, "a"))
 
     def __init__(self, outdir, limits=[]):
         self.limits = DBLimits(limits)
@@ -291,25 +291,25 @@ $sql
             def pre(self):
                 if not exists(self.paths.pre):
                     return
-                sql = file(self.paths.pre).read().strip()
+                sql = open(self.paths.pre).read().strip()
                 return Template(self.TPL_PRE).substitute(name=self.name, sql=sql)
             pre = property(pre)
 
             def post(self):
                 if not exists(self.paths.post):
                     return
-                sql = file(self.paths.post).read().strip()
+                sql = open(self.paths.post).read().strip()
                 return Template(self.TPL_POST).substitute(name=self.name, sql=sql)
             post = property(post)
             
         def __init__(self, myfs, fname):
             self.paths = self.Paths(join(myfs.path, fname))
-            self.sql_init = file(self.paths.init).read()
+            self.sql_init = open(self.paths.init).read()
             self.name = _match_name(self.sql_init)
             self.myfs = myfs
 
         def __repr__(self):
-            return "Database(%s)" % `self.paths.path`
+            return "Database(%s)" % repr(self.paths.path)
 
         def tables(self):
             if not exists(self.paths.tables):
@@ -339,9 +339,9 @@ $sql
                 callback(self)
 
             if self.myfs.add_drop_database and self.name != 'mysql':
-                print >> fh, "/*!40000 DROP DATABASE IF EXISTS `%s`*/;" % self.name
-            print >> fh, self.sql_init,
-            print >> fh, "USE `%s`;" % self.name
+                print("/*!40000 DROP DATABASE IF EXISTS `%s`*/;" % self.name, file=fh)
+            print(self.sql_init, file=fh, end='')
+            print("USE `%s`;" % self.name, file=fh)
 
             for table in self.tables:
                 if callback:
@@ -350,7 +350,7 @@ $sql
 
             for view in self.views:
                 if view.pre:
-                    print >> fh, "\n" + view.pre
+                    print("\n" + view.pre, file=fh)
 
     class Table(MyFS.Table):
         TPL_CREATE = """\
@@ -391,15 +391,15 @@ DELIMITER ;
 
         def __init__(self, database, fname):
             self.paths = self.Paths(join(database.paths.tables, fname))
-            self.sql_init = file(self.paths.init).read()
+            self.sql_init = open(self.paths.init).read()
             self.name = _match_name(self.sql_init)
             self.database = database
 
         def __repr__(self):
-            return "Table(%s)" % `self.paths.path`
+            return "Table(%s)" % repr(self.paths.path)
 
         def rows(self):
-            for line in file(self.paths.rows).xreadlines():
+            for line in open(self.paths.rows):
                 yield line.strip()
 
         def has_rows(self):
@@ -413,7 +413,7 @@ DELIMITER ;
             if not exists(self.paths.triggers):
                 return []
 
-            return list(_parse_statements(file(self.paths.triggers), ';;'))
+            return list(_parse_statements(open(self.paths.triggers), ';;'))
         triggers = property(triggers)
 
         def tofile(self, fh):
@@ -423,18 +423,18 @@ DELIMITER ;
             is_log_table = (self.database.name == "mysql" and self.name in ('general_log', 'slow_log'))
 
             if not is_log_table:
-                print >> fh, "DROP TABLE IF EXISTS `%s`;" % self.name
+                print("DROP TABLE IF EXISTS `%s`;" % self.name, file=fh)
 
-            print >> fh, Template(self.TPL_CREATE).substitute(init=self.sql_init)
+            print(Template(self.TPL_CREATE).substitute(init=self.sql_init), file=fh)
 
             if self.has_rows():
                 if not is_log_table:
-                    print >> fh, Template(self.TPL_INSERT_PRE).substitute(name=self.name).strip()
+                    print(Template(self.TPL_INSERT_PRE).substitute(name=self.name).strip(), file=fh)
 
                 insert_prefix = "INSERT INTO `%s` VALUES " % self.name
                 if skip_extended_insert:
                     for  row in self.rows:
-                        print >> fh, insert_prefix + "(%s);" % row
+                        print(insert_prefix + "(%s);" % row, file=fh)
                         
                 else:
                     rows = ( "(%s)" % row for row in self.rows )
@@ -448,16 +448,16 @@ DELIMITER ;
                         fh.write("\n")
 
                     if index is not None:
-                        print >> fh, "\n-- CHUNKS: %d\n" % (index + 1)
+                        print("\n-- CHUNKS: %d\n" % (index + 1), file=fh)
 
                 if not is_log_table:
-                    print >> fh, Template(self.TPL_INSERT_POST).substitute(name=self.name)
+                    print(Template(self.TPL_INSERT_POST).substitute(name=self.name), file=fh)
 
             if self.triggers:
-                print >> fh, self.TPL_TRIGGERS_PRE.strip()
+                print(self.TPL_TRIGGERS_PRE.strip(), file=fh)
                 for trigger in self.triggers:
-                    print >> fh, trigger
-                print >> fh, self.TPL_TRIGGERS_POST
+                    print(trigger, file=fh)
+                print(self.TPL_TRIGGERS_POST, file=fh)
 
     PRE = """\
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
@@ -503,7 +503,7 @@ DELIMITER ;
                 yield database
 
     def tofile(self, fh, callback=None):
-        print >> fh, self.PRE
+        print(self.PRE, file=fh)
 
         for database in self:
             database.tofile(fh, callback)
@@ -513,11 +513,11 @@ DELIMITER ;
             if not views:
                 continue
 
-            print >> fh, "USE `%s`;" % database.name
+            print("USE `%s`;" % database.name, file=fh)
             for view in views:
-                print >> fh, "\n" + view.post
+                print("\n" + view.post, file=fh)
 
-        print >> fh, self.POST
+        print(self.POST, file=fh)
 
 def fs2mysql(fh, myfs, limits=[], callback=None, skip_extended_insert=False, add_drop_database=False):
 
@@ -530,10 +530,10 @@ def cb_print(fh=None):
     def func(val):
         if isinstance(val, MyFS.Database):
             database = val
-            print >> fh, "database: " + database.name
+            print("database: " + database.name, file=fh)
         elif isinstance(val, MyFS.Table):
             table = val
-            print >> fh, "table: " + join(table.database.name, table.name)
+            print("table: " + join(table.database.name, table.name), file=fh)
 
     return func
 
@@ -577,7 +577,7 @@ def restore(myfs, etc, **kws):
 
     mna = None
     if simulate:
-        mysql_fh = file("/dev/null", "w")
+        mysql_fh = open("/dev/null", "w")
     else:
         if not MysqlService.is_running():
             raise Error("MySQL service not running")
@@ -619,7 +619,7 @@ class MysqlService:
         if not exists(cls.PID_FILE):
             return
 
-        pid = int(file(cls.PID_FILE).read().strip())
+        pid = int(open(cls.PID_FILE).read().strip())
         if cls._pid_exists(pid):
             return pid
 
@@ -641,7 +641,7 @@ class MysqlService:
             try:
                 executil.getoutput(cls.INIT_SCRIPT, "start")
                 return
-            except executil.ExecError, e:
+            except executil.ExecError as e:
                 pass
 
         raise e
@@ -696,7 +696,7 @@ class MysqlNoAuth:
             was_running = False
 
         self.orig_varrun_mode = stat.S_IMODE(os.stat(self.PATH_VARRUN).st_mode)
-        os.chmod(self.PATH_VARRUN, 0750)
+        os.chmod(self.PATH_VARRUN, 0o750)
 
         command = Command(self.COMMAND)
 

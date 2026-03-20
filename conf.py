@@ -20,7 +20,7 @@ class Limits(list):
     @classmethod
     def fromfile(cls, inputfile):
         try:
-            fh = file(inputfile)
+            fh = open(inputfile)
         except:
             return cls()
 
@@ -43,7 +43,7 @@ class Limits(list):
 
         for limit in limits:
             if not is_legal(limit):
-                raise Error(`limit` + " is not a legal limit")
+                raise Error(repr(limit) + " is not a legal limit")
 
         return cls(limits)
 
@@ -166,7 +166,7 @@ class Conf(AttrDict):
         if not exists(self.paths.conf):
             return
 
-        for line in file(self.paths.conf).read().split("\n"):
+        for line in open(self.paths.conf).read().split("\n"):
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
@@ -187,6 +187,5 @@ class Conf(AttrDict):
                 else:
                     raise self.Error("unknown conf option '%s'" % opt)
 
-            except self.Error, e:
+            except self.Error as e:
                 raise self._error(e)
-

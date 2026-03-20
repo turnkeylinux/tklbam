@@ -25,7 +25,7 @@ Exitcode:
 """
 import sys
 import getopt
-from StringIO import StringIO
+from io import StringIO
 
 from registry import registry
 
@@ -48,10 +48,10 @@ class Status:
 
 def usage(e=None):
     if e:
-        print >> sys.stderr, "error: " + str(e)
+        print("error: " + str(e), file=sys.stderr)
 
-    print >> sys.stderr, "Usage: %s [ -options ]" % (sys.argv[0])
-    print >> sys.stderr, __doc__.strip()
+    print("Usage: %s [ -options ]" % (sys.argv[0]), file=sys.stderr)
+    print(__doc__.strip(), file=sys.stderr)
 
     sys.exit(1)
 
@@ -59,7 +59,7 @@ def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], "h",
                                        [ "short", "help" ])
-    except getopt.GetoptError, e:
+    except getopt.GetoptError as e:
         usage(e)
 
     opt_short = False
@@ -73,23 +73,23 @@ def main():
     status = Status.get()
 
     if status == Status.NO_APIKEY:
-        print "TKLBAM (Backup and Migration):  NOT INITIALIZED"
+        print("TKLBAM (Backup and Migration):  NOT INITIALIZED")
         if not opt_short:
-            print
-            print '  To initialize TKLBAM, run the "tklbam-init" command to link this'
-            print '  system to your TurnKey Hub account. For details see the man page or'
-            print '  go to:'
-            print
-            print '      https://www.turnkeylinux.org/tklbam'
+            print()
+            print('  To initialize TKLBAM, run the "tklbam-init" command to link this')
+            print('  system to your TurnKey Hub account. For details see the man page or')
+            print('  go to:')
+            print()
+            print('      https://www.turnkeylinux.org/tklbam')
 
     elif status == Status.NO_BACKUP:
-        print "TKLBAM (Backup and Migration):  NO BACKUPS"
+        print("TKLBAM (Backup and Migration):  NO BACKUPS")
         if not opt_short:
-            print
-            print '  To backup for the first time run the "tklbam-backup" command. For'
-            print '  details see the man page or go to:'
-            print
-            print '      https://www.turnkeylinux.org/tklbam'
+            print()
+            print('  To backup for the first time run the "tklbam-backup" command. For')
+            print('  details see the man page or go to:')
+            print()
+            print('      https://www.turnkeylinux.org/tklbam')
 
     elif status == Status.OK:
         hbr = registry.hbr
@@ -97,7 +97,7 @@ def main():
         if registry.hbr.updated:
             s += ", Updated %s" % hbr.updated.strftime("%a %Y-%m-%d %H:%M")
 
-        print s
+        print(s)
 
     sys.exit(status)
 

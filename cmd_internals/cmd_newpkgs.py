@@ -12,16 +12,16 @@
 """Print list of new packages"""
 import os
 import sys
-import commands
+import subprocess
 
 from pkgman import Packages
 
 def usage(e=None):
     if e:
-        print >> sys.stderr, "error: " + str(e)
+        print("error: " + str(e), file=sys.stderr)
 
-    print >> sys.stderr, "Syntax: %s base-packages-list [ packages-list ]" % sys.argv[0]
-    print >> sys.stderr, __doc__.strip()
+    print("Syntax: %s base-packages-list [ packages-list ]" % sys.argv[0], file=sys.stderr)
+    print(__doc__.strip(), file=sys.stderr)
     sys.exit(1)
 
 def main():
@@ -36,7 +36,7 @@ def main():
         packages = Packages()
 
     for package in (packages - base_packages):
-        print package
+        print(package)
         
 if __name__=="__main__":
     main()

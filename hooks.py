@@ -37,7 +37,7 @@ def _run_hooks(path, args, keyring=None):
 
         try:
             executil.system(fpath, *args)
-        except executil.ExecError, e:
+        except executil.ExecError as e:
             raise HookError("`%s %s` non-zero exitcode (%d)" % \
                             (fpath, " ".join(args), e.exitcode))
 

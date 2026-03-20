@@ -13,8 +13,9 @@ import os
 from os.path import *
 
 import re
-import commands
+import shlex
 import shutil
+import subprocess
 
 from executil import system, getoutput, getoutput_popen
 
@@ -27,7 +28,7 @@ class Error(Exception):
     pass
 
 def su(command):
-    return "su postgres -c" + commands.mkarg(command)
+    return "su postgres -c" + shlex.quote(command)
 
 def list_databases():
     for line in getoutput(su('psql -l')).splitlines():
@@ -54,10 +55,10 @@ def dumpdb(outdir, name, tlimits=[]):
     pg_dump += " " + name
 
     manifest = getoutput(su(pg_dump) + " | tar xvC %s" % path)
-    file(join(path, FNAME_MANIFEST), "w").write(manifest + "\n")
+    open(join(path, FNAME_MANIFEST), "w").write(manifest + "\n")
 
 def restoredb(dbdump, dbname, tlimits=[]):
-    manifest = file(join(dbdump, FNAME_MANIFEST)).read().splitlines()
+    manifest = open(join(dbdump, FNAME_MANIFEST)).read().splitlines()
     # remove any malformed entries
     manifest = [i for i in manifest if not i.endswith('Permission denied')]
     try:
@@ -93,7 +94,7 @@ def pgsql2fs(outdir, limits=[], callback=None):
         dumpdb(outdir, dbname, limits[dbname])
 
     globals = getoutput(su("pg_dumpall --globals"))
-    file(join(outdir, FNAME_GLOBALS), "w").write(globals)
+    open(join(outdir, FNAME_GLOBALS), "w").write(globals)
 
 def fs2pgsql(outdir, limits=[], callback=None):
     limits = DBLimits(limits)
@@ -101,8 +102,8 @@ def fs2pgsql(outdir, limits=[], callback=None):
         if (database, table) not in limits:
             raise Error("can't exclude %s/%s: table excludes not supported for postgres" % (database, table))
 
-    # load globals first, suppress noise (e.g., "ERROR: role "postgres" already exists)
-    globals = file(join(outdir, FNAME_GLOBALS)).read()
+    # load globals first, suppress noise (e.g., "ERROR: role "postgres" already exists")
+    globals = open(join(outdir, FNAME_GLOBALS)).read()
     getoutput_popen(su("psql -q -o /dev/null"), globals)
 
     for dbname in os.listdir(outdir):
@@ -121,7 +122,7 @@ def cb_print(fh=None):
         fh = sys.stdout
 
     def func(val):
-        print >> fh, "database: " + val
+        print("database: " + val, file=fh)
 
     return func
 
@@ -134,7 +135,7 @@ def backup(outdir, limits=[], callback=None):
 
     try:
         pgsql2fs(outdir, limits, callback)
-    except Exception, e:
+    except Exception as e:
         if isdir(outdir):
             shutil.rmtree(outdir)
         raise Error("pgsql backup failed: " + str(e))
@@ -142,7 +143,7 @@ def backup(outdir, limits=[], callback=None):
 def restore(path, limits=[], callback=None):
     try:
         fs2pgsql(path, limits, callback=callback)
-    except Exception, e:
+    except Exception as e:
         raise Error("pgsql restore failed: " + str(e))
 
 class PgsqlService:
@@ -155,4 +156,3 @@ class PgsqlService:
             return True
         except:
             return False
-

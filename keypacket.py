@@ -32,11 +32,11 @@ def _pad(s):
     return os.urandom(padding_len) + s + struct.pack("!H", len(s))
 
 def _unpad(padded):
-    len, = struct.unpack("!H", padded[-2:])
-    return padded[-(2 + len) :-2]
+    length, = struct.unpack("!H", padded[-2:])
+    return padded[-(2 + length) :-2]
 
 def _repeat(f, input, count):
-    for x in xrange(count):
+    for x in range(count):
         input = f(input)
     return input
 
@@ -46,7 +46,7 @@ def _cipher_key(passphrase, repeats):
     return cipher_key
 
 def _cipher(cipher_key):
-    return AES.new(cipher_key, mode=AES.MODE_CBC, IV='\0' * 16)
+    return AES.new(cipher_key, mode=AES.MODE_CBC, IV=b'\0' * 16)
 
 def fmt(secret, passphrase):
     salt = os.urandom(SALT_LEN)
@@ -65,8 +65,8 @@ def fmt(secret, passphrase):
 
     fingerprint = hashlib.sha1(secret).digest()[:FINGERPRINT_LEN]
     packet = struct.pack("!BHH", KEY_VERSION,
-                         hash_repeats / 1000,
-                         cipher_repeats / 1000) + fingerprint + ciphertext
+                         hash_repeats // 1000,
+                         cipher_repeats // 1000) + fingerprint + ciphertext
 
     return base64.b64encode(packet)
 
@@ -74,7 +74,7 @@ def _parse(packet):
     try:
         packet = base64.b64decode(packet)
         version, khr, kcr = struct.unpack("!BHH", packet[:5])
-    except (TypeError, struct.error), e:
+    except (TypeError, struct.error) as e:
         raise Error("can't parse key packet: " + str(e))
 
     minimum_len = (5 + FINGERPRINT_LEN + 16)
