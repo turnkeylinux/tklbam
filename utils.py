@@ -18,6 +18,7 @@ import datetime
 
 from StringIO import StringIO
 
+
 def remove_any(path):
     """Remove a path whether it is a file or a directory.
        Return: True if removed, False if nothing to remove"""
@@ -32,6 +33,7 @@ def remove_any(path):
 
     return True
 
+
 class AttrDict(dict):
     def __getattr__(self, name):
         if name in self:
@@ -41,14 +43,17 @@ class AttrDict(dict):
     def __setattr__(self, name, val):
         self[name] = val
 
+
 def is_writeable(fpath):
     try:
         file(fpath, "w+")
         return True
-    except IOError:
+    except OSError:
         return False
 
 # workaround for shutil.move across-filesystem bugs
+
+
 def move(src, dst):
     st = os.lstat(src)
 
@@ -65,16 +70,20 @@ def move(src, dst):
         shutil.move(src, dst)
         os.lchown(dst, st.st_uid, st.st_gid)
 
+
 def apply_overlay(src, dst, olist_path):
     orig_cwd = os.getcwd()
     os.chdir(src)
-    executil.getoutput("tar --create --files-from=%s | tar --extract --directory %s" %
-                       (olist_path, executil.mkarg(dst)))
+    executil.getoutput(
+        "tar --create --files-from=%s | tar --extract --directory %s" %
+        (olist_path, executil.mkarg(dst)))
 
     os.chdir(orig_cwd)
 
+
 def fmt_title(title, c='='):
     return title + "\n" + c * len(title) + "\n"
+
 
 def fmt_timestamp():
 
@@ -87,12 +96,14 @@ def fmt_timestamp():
 
     return fh.getvalue()
 
+
 def path_global_or_local(path_global, path_local):
     """Return global path if writeable, otherwise return local path"""
     if os.access(os.path.dirname(path_global), os.W_OK):
         return path_global
 
     return path_local
+
 
 def iamroot():
     return os.getuid() == 0

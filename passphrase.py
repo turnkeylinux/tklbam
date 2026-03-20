@@ -13,16 +13,19 @@ import sys
 import base64
 import getpass
 
+
 def random_passphrase():
     random = base64.b32encode(os.urandom(10))
     parts = []
     for i in range(4):
-        parts.append(random[i * 4:(i+1) * 4])
+        parts.append(random[i * 4:(i + 1) * 4])
 
     return "-".join(parts)
 
+
 class Error(Exception):
     pass
+
 
 def get_passphrase(confirm=True):
     if not os.isatty(sys.stdin.fileno()):
@@ -43,4 +46,3 @@ def get_passphrase(confirm=True):
         print >> sys.stderr, "Sorry, passphrases do not match"
 
     return passphrase
-

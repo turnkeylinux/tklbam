@@ -15,8 +15,10 @@ import commands
 
 from fnmatch import fnmatch
 
+
 class Error(Exception):
     pass
+
 
 def installed():
     """Return list of installed packages"""
@@ -35,14 +37,15 @@ def installed():
 
     packages = []
     for control in parse_status("/var/lib/dpkg/status"):
-        d = dict([ re.split(':\s*', line, 1)
-                   for line in control.split('\n')
-                   if line and (':' in line) and (line[0] != ' ') ])
+        d = dict([re.split(r':\s*', line, 1)
+                  for line in control.split('\n')
+                  if line and (':' in line) and (line[0] != ' ')])
 
         if "ok installed" in d['Status']:
             packages.append(d['Package'])
 
     return packages
+
 
 class Packages(set):
     @classmethod
@@ -68,6 +71,7 @@ class Packages(set):
 
         set.__init__(self, packages)
 
+
 class AptCache(set):
     Error = Error
 
@@ -76,13 +80,16 @@ class AptCache(set):
         status, output = commands.getstatusoutput(command)
         status = os.WEXITSTATUS(status)
         if status not in (0, 100):
-            raise self.Error("execution failed (%d): %s\n%s" % (status, command, output))
+            raise self.Error(
+                "execution failed (%d): %s\n%s" %
+                (status, command, output))
 
-        cached = [ line.split()[1]
-                   for line in output.split("\n") if
-                   line.startswith("Package: ") ]
+        cached = [line.split()[1]
+                  for line in output.split("\n") if
+                  line.startswith("Package: ")]
 
         set.__init__(self, cached)
+
 
 class Blacklist:
     def __init__(self, patterns):
@@ -94,6 +101,7 @@ class Blacklist:
                 if fnmatch(val, pattern):
                     return True
         return False
+
 
 def installable(packages, blacklist=[]):
     installed = Packages()
@@ -118,6 +126,7 @@ def installable(packages, blacklist=[]):
 
     return installable, skipped
 
+
 class Installer:
     """
     Interface::
@@ -139,7 +148,8 @@ class Installer:
         self.skipping.sort()
 
         if self.installable:
-            self.command = "apt-get install --assume-yes " + " ".join(self.installable)
+            self.command = "apt-get install --assume-yes " + \
+                " ".join(self.installable)
         else:
             self.command = None
 

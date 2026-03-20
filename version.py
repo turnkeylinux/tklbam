@@ -14,11 +14,14 @@ from os.path import *
 
 from utils import AttrDict
 
+
 class Error(Exception):
     pass
 
+
 class TurnKeyVersion(AttrDict):
     Error = Error
+
     def __init__(self, codename, release=None, arch=None):
         AttrDict.__init__(self)
         self.codename = codename
@@ -26,7 +29,8 @@ class TurnKeyVersion(AttrDict):
         self.arch = arch
 
     def __str__(self):
-        return "turnkey-%s-%s-%s" % (self.codename, self.release, self.arch)
+        return "turnkey-{}-{}-{}".format(self.codename,
+                                         self.release, self.arch)
 
     def is_complete(self):
         if self.codename and self.release and self.arch:
@@ -38,7 +42,7 @@ class TurnKeyVersion(AttrDict):
     def from_system(cls):
         try:
             system_version = file("/etc/turnkey_version").readline().strip()
-        except:
+        except BaseException:
             return
 
         return cls.from_string(system_version)
@@ -49,7 +53,7 @@ class TurnKeyVersion(AttrDict):
             raise Error("not a turnkey version '%s'" % version)
 
         version = re.sub(r'^turnkey-', '', version)
-        
+
         m = re.match(r'(.*?)-((?:[\d\.]+|beta).*)-(amd64|i386|x86)$', version)
         if m:
             name, release, arch = m.groups()
@@ -65,12 +69,14 @@ class TurnKeyVersion(AttrDict):
             name = m.group(1)
             return cls(name)
 
+
 def _get_turnkey_version(root):
     path = join(root, 'etc/turnkey_version')
     if not exists(path):
         return
 
     return file(path).read().strip()
+
 
 def _parse_keyvals(path):
     if not exists(path):
@@ -86,14 +92,17 @@ def _parse_keyvals(path):
         d[key] = val
     return d
 
+
 def _get_os_release(root):
     path = join(root, "etc/os-release")
     return _parse_keyvals(path)
-    
+
+
 def _get_lsb_release(root):
     path = join(root, "etc/lsb-release")
     return _parse_keyvals(path)
-    
+
+
 def _get_debian_version(root):
     path = join(root, "etc/debian_version")
     if not exists(path):
@@ -107,6 +116,7 @@ def _get_debian_version(root):
     if '/' in s:
         return s.replace('/', '_')
 
+
 def detect_profile_id(root='/'):
     val = _get_turnkey_version(root)
     if val:
@@ -115,15 +125,15 @@ def detect_profile_id(root='/'):
     os_release = _get_os_release(root)
     if os_release:
         try:
-            return "%s-%s" % (os_release['ID'], os_release['VERSION_ID'])
+            return "{}-{}".format(os_release['ID'], os_release['VERSION_ID'])
         except KeyError:
             pass
 
     lsb_release = _get_lsb_release(root)
     if lsb_release:
         try:
-            return "%s-%s" % (lsb_release['DISTRIB_ID'].lower(), 
-                              lsb_release['DISTRIB_RELEASE'])
+            return "{}-{}".format(lsb_release['DISTRIB_ID'].lower(),
+                                  lsb_release['DISTRIB_RELEASE'])
         except KeyError:
             pass
 

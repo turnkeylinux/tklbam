@@ -13,6 +13,7 @@ import re
 import sys
 import imp
 
+
 class _Commands(dict):
     @staticmethod
     def _list_commands(paths):
@@ -37,6 +38,7 @@ class _Commands(dict):
         for command in self._list_commands(path):
             self[command] = self._get_internals_module(command, path)
 
+
 class CliWrapper:
     DESCRIPTION = ""
     PATH = None
@@ -55,7 +57,7 @@ class CliWrapper:
         command_names = commands.keys()
         command_names.sort()
 
-        maxlen = max([ len(name) for name in command_names ]) + 2
+        maxlen = max([len(name) for name in command_names]) + 2
         tpl = "    %%-%ds %%s" % (maxlen)
 
         def shortdesc(command):
@@ -68,7 +70,7 @@ class CliWrapper:
                 print >> sys.stderr, tpl % (command, shortdesc(command))
 
         for command in set(commands.keys()) - set(cls.COMMANDS_USAGE_ORDER):
-                print >> sys.stderr, tpl % (command, shortdesc(command))
+            print >> sys.stderr, tpl % (command, shortdesc(command))
 
         sys.exit(1)
 

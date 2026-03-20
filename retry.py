@@ -9,6 +9,7 @@ Usage examples:
 """
 from time import sleep
 
+
 def retry(retries, delay=1, backoff=0, fatal_exceptions=None):
     """
     Argument:
@@ -34,7 +35,7 @@ def retry(retries, delay=1, backoff=0, fatal_exceptions=None):
                     return func(*args, **kwargs)
                 except _fatal_exceptions:
                     raise
-                except:
+                except BaseException:
                     if attempt < retries and delay:
                         sleep(delay + delay * attempt * backoff)
             else:

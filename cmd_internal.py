@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 #
 # Copyright (c) 2010-2012 Liraz Siri <liraz@turnkeylinux.org>
 #
@@ -19,17 +19,19 @@ from cliwrapper import CliWrapper
 import cmd_internals
 from executil import fmt_command
 
+
 class CliWrapper(CliWrapper):
     DESCRIPTION = __doc__
     PATH = cmd_internals.__path__
 
+
 main = CliWrapper.main
 
+
 def fmt_internal_command(command, *args):
-    internal_command = [ realpath(__file__), command ] + list(args)
+    internal_command = [realpath(__file__), command] + list(args)
     return fmt_command("python2", *internal_command)
+
 
 if __name__ == "__main__":
     CliWrapper.main()
-
-
