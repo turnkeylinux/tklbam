@@ -16,10 +16,10 @@ class _Registry(object):
             if not exists(path):
                 return None
 
-            return file(path).read().rstrip()
+            return open(path).read().rstrip()
 
         else:
-            file(path, "w").write("%s\n" % val)
+            open(path, "w").write("%s\n" % val)
     foo = property(foo, foo)
 
 registry = _Registry()
@@ -27,7 +27,7 @@ registry = _Registry()
 def main():
     args = sys.argv[1:]
 
-    print `registry.foo`
+    print(repr(registry.foo))
     if args:
         registry.foo = args[0]
 

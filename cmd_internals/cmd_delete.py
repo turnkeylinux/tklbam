@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 # 
 # Copyright (c) 2010-2012 Liraz Siri <liraz@turnkeylinux.org>
 # 
@@ -26,17 +26,17 @@ from changes import Changes
 
 def usage(e=None):
     if e:
-        print >> sys.stderr, "error: " + str(e)
+        print("error: " + str(e), file=sys.stderr)
 
-    print >> sys.stderr, "Syntax: %s [-options] delta|- [path ...]" % sys.argv[0]
-    print >> sys.stderr, __doc__.strip()
+    print("Syntax: %s [-options] delta|- [path ...]" % sys.argv[0], file=sys.stderr)
+    print(__doc__.strip(), file=sys.stderr)
     sys.exit(1)
 
 def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'svh', 
                                        ['simulate', 'verbose'])
-    except getopt.GetoptError, e:
+    except getopt.GetoptError as e:
         usage(e)
 
     simulate = False
@@ -61,11 +61,10 @@ def main():
 
     for action in changes.deleted():
         if verbose:
-            print action
+            print(action)
 
         if not simulate:
             action()
 
 if __name__=="__main__":
     main()
-

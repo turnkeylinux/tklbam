@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 # 
 # Copyright (c) 2010-2012 Liraz Siri <liraz@turnkeylinux.org>
 # 
@@ -39,15 +39,15 @@ import shutil
 import mysql
 
 def fatal(e):
-    print >> sys.stderr, "fatal: " + str(e)
+    print("fatal: " + str(e), file=sys.stderr)
     sys.exit(1)
 
 def usage(e=None):
     if e:
-        print >> sys.stderr, "error: " + str(e)
+        print("error: " + str(e), file=sys.stderr)
 
-    print >> sys.stderr, "Syntax: %s [-options] path/to/output [ -?database/table ... ] " % sys.argv[0]
-    print >> sys.stderr, __doc__.strip()
+    print("Syntax: %s [-options] path/to/output [ -?database/table ... ] " % sys.argv[0], file=sys.stderr)
+    print(__doc__.strip(), file=sys.stderr)
     sys.exit(1)
 
 def main():
@@ -55,7 +55,7 @@ def main():
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'Du:p:v', 
                                        ['verbose', 'delete', 'fromfile=',
                                         'user=', 'password=', 'defaults-file=', 'host='])
-    except getopt.GetoptError, e:
+    except getopt.GetoptError as e:
         usage(e)
 
     opt_verbose = False
@@ -99,17 +99,16 @@ def main():
         if opt_fromfile == '-':
             mysqldump_fh = sys.stdin
         else:
-            mysqldump_fh = file(opt_fromfile)
+            mysqldump_fh = open(opt_fromfile)
     else:
         mysqldump_fh = mysql.mysqldump(**myconf)
 
     callback = None
     if opt_verbose:
-        print "source: " + mysqldump_fh.name
+        print("source: " + mysqldump_fh.name)
         callback = mysql.cb_print()
 
     mysql.mysql2fs(mysqldump_fh, outdir, limits, callback)
 
 if __name__ == "__main__":
     main()
-

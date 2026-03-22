@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 # 
 # Copyright (c) 2010-2012 Liraz Siri <liraz@turnkeylinux.org>
 # 
@@ -15,10 +15,10 @@ import userdb
 
 def usage(e=None):
     if e:
-        print >> sys.stderr, "error: " + str(e)
+        print("error: " + str(e), file=sys.stderr)
 
-    print >> sys.stderr, "Syntax: %s old-passwd old-group new-passwd new-group merged-passwd merged-group" % sys.argv[0]
-    print >> sys.stderr, __doc__.strip()
+    print("Syntax: %s old-passwd old-group new-passwd new-group merged-passwd merged-group" % sys.argv[0], file=sys.stderr)
+    print(__doc__.strip(), file=sys.stderr)
     sys.exit(1)
 
 def main():
@@ -31,19 +31,21 @@ def main():
     merged_passwd, merged_group = args[4:6]
 
     def r(path):
-        return file(path).read()
+        return open(path).read()
 
     passwd, group, uidmap, gidmap = userdb.merge(r(old_passwd), r(old_group),
                                                  r(new_passwd), r(new_group))
 
-    print >> file(merged_passwd, "w"), passwd
-    print >> file(merged_group, "w"), group
+    with open(merged_passwd, "w") as f:
+        print(passwd, file=f)
+    with open(merged_group, "w") as f:
+        print(group, file=f)
 
     def fmt_map(m):
          return ":".join([ "%d,%d" % (key, val) for key,val in m.items() ])
 
-    print fmt_map(uidmap)
-    print fmt_map(gidmap)
+    print(fmt_map(uidmap))
+    print(fmt_map(gidmap))
 
 if __name__=="__main__":
     main()

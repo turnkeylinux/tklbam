@@ -5,10 +5,10 @@ Maintainer: Liraz Siri <liraz@turnkeylinux.org>
 Build-Depends:
  debhelper (>= 10),
  dh-exec,
- dh-python2 (>= 4.20201102+turnkey0),
- python-all (>= 2.6.6-3~),
+ dh-python,
+ python3-all (>= 3.11~),
 Standards-Version: 4.0.0
-X-Python-Version: >= 2.6
+X-Python3-Version: >= 3.11
 
 Package: tklbam
 Architecture: all
@@ -16,15 +16,13 @@ Depends:
  ca-certificates,
  ${misc:Depends},
  gnupg,
- ntpdate,
- pycurl-wrapper (>= 1.2),
- pycurl-wrapper (<< 2.0),
+ ntpsec-ntpdate | systemd-timesyncd,
+ py3curl-wrapper (>= 2.0),
  gpg (>= 2.2.12),
- ${python:Depends},
- python-crypto,
- python-simplejson,
- tklbam-duplicity (>=  0.6.18),
- tklbam-python-boto (>= 2.3.0-2turnkey),
- tklbam-squid (>= 2.7.STABLE9-2.1turnkey+25),
- turnkey-pylib (>= 0.5),
+ python3 (>= 3.11~),
+ python3-pycryptodome,
+ python3-simplejson,
+ duplicity (>= 3.0),
+ tklbam-squid (>= 2.7.STABLE9-2.1turnkey),
+ turnkey-pylib (>= 0.7),
 Description: TurnKey GNU/Linux Backup and Migration agent

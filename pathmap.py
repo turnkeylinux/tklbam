@@ -11,6 +11,7 @@
 import glob
 from os.path import *
 
+
 class PathMap(dict):
     @staticmethod
     def _expand(path):
@@ -24,7 +25,7 @@ class PathMap(dict):
         if needsglob(path):
             return glob.glob(path)
         else:
-            return [ path ]
+            return [path]
 
     def __init__(self, paths):
         self.default = True
@@ -40,11 +41,11 @@ class PathMap(dict):
                 self[expanded] = sign
 
     def includes(self):
-        return [ path for path in self if self[path] ]
+        return [path for path in self if self[path]]
     includes = property(includes)
 
     def excludes(self):
-        return [ path for path in self if not self[path] ]
+        return [path for path in self if not self[path]]
     excludes = property(excludes)
 
     def __contains__(self, path):

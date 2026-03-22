@@ -8,10 +8,12 @@
 # published by the Free Software Foundation; either version 3 of
 # the License, or (at your option) any later version.
 #
+from collections import OrderedDict
+
+
 class Error(Exception):
     pass
 
-from collections import OrderedDict
 
 class Base(OrderedDict):
     class Ent(list):
@@ -50,7 +52,7 @@ class Base(OrderedDict):
             else:
                 names = db.keys()
                 if not names:
-                    return # empty db, nothing we can do.
+                    return  # empty db, nothing we can do.
 
                 altroot = db[names.pop()].copy()
                 altroot.id = 0
@@ -71,7 +73,9 @@ class Base(OrderedDict):
                 vals = line.split(':')
                 if self.Ent.LEN:
                     if len(vals) != self.Ent.LEN:
-                        raise Error("line with incorrect field count (%d != %d) '%s'" % (len(vals), self.Ent.LEN, line))
+                        raise Error(
+                            "line with incorrect field count (%d != %d) '%s'" %
+                            (len(vals), self.Ent.LEN, line))
 
                 name = vals[0]
                 self[name] = self.Ent(vals)
@@ -83,12 +87,12 @@ class Base(OrderedDict):
 
     def __str__(self):
         ents = self.values()
-        ents.sort(lambda a,b: cmp(a.id, b.id))
+        ents.sort(lambda a, b: cmp(a.id, b.id))
 
-        return "\n".join([ ':'.join(ent) for ent in ents ]) + "\n"
+        return "\n".join([':'.join(ent) for ent in ents]) + "\n"
 
     def ids(self):
-        return [ self[name].id for name in self ]
+        return [self[name].id for name in self]
     ids = property(ids)
 
     def new_id(self, extra_ids=[], old_id=1000):
@@ -234,7 +238,8 @@ class Base(OrderedDict):
 
                 if name in db_new and db_new[name].id != ent.id:
 
-                    # we can't remap ids in new, so merge new entry as *_copy of itself
+                    # we can't remap ids in new, so merge new entry as *_copy
+                    # of itself
                     new_ent = cls.Ent(db_new[name])
                     new_ent.name = new_ent.name + '_orig'
 
@@ -242,15 +247,18 @@ class Base(OrderedDict):
 
         return db_merged, old2newids
 
+
 class EtcGroup(Base):
     class Ent(Base.Ent):
         LEN = 4
         gid = Base.Ent.id
 
+
 class EtcPasswd(Base):
     class Ent(Base.Ent):
         LEN = 7
         uid = Base.Ent.id
+
         def gid(self, val=None):
             if val:
                 self[3] = str(val)
@@ -263,6 +271,7 @@ class EtcPasswd(Base):
             oldgid = self[name].gid
             if oldgid in gidmap:
                 self[name].gid = gidmap[oldgid]
+
 
 def merge(old_passwd, old_group, new_passwd, new_group):
     g1 = EtcGroup(old_group)
