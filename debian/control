@@ -19,7 +19,7 @@ Depends:
  ntpsec-ntpdate | systemd-timesyncd,
  py3curl-wrapper (>= 2.0),
  gpg (>= 2.2.12),
- ${python3:Depends},
+ python3 (>= 3.11~),
  python3-pycryptodome,
  python3-simplejson,
  duplicity (>= 3.0),
