@@ -3,7 +3,7 @@
 include /usr/share/dpkg/pkg-info.mk
 
 %:
-	dh $@ --with python2 --buildsystem=makefile
+	dh $@ --with python3 --buildsystem=makefile
 
 override_dh_auto_install:
 	dh_auto_install -- prefix=debian/$(DEB_SOURCE)/usr
