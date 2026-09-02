@@ -227,10 +227,16 @@ class Target(AttrDict):
 
         endpoint = None
         if is_s3 and len(addr_split) > 2:
-            endpoint = S3_ENDPOINT_RE.match(addr_split[2])
+            endpoint_host = addr_split[2]
+            if endpoint_host == "s3.amazonaws.com":
+                region = "us-east-1"
+            else:
+                endpoint = S3_ENDPOINT_RE.match(endpoint_host)
 
         if endpoint:
             region = endpoint.group(1)
+
+        if region:
             del addr_split[2]
             address = "/".join(addr_split)
         elif is_s3:
