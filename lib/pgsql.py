@@ -53,7 +53,10 @@ def dumpdb(outdir, name, tlimits=[]):
             pg_dump += " --exclude-table=" + table
     pg_dump += " " + name
 
-    manifest = getoutput(su(pg_dump) + " | tar xvC %s" % path)
+    # A complete tar stream does not prove pg_dump exited successfully.
+    # pipefail propagates failures from either stage without buffering the dump.
+    pipeline = su(pg_dump) + " | tar xvC" + commands.mkarg(path)
+    manifest = getoutput("bash", "-o", "pipefail", "-c", pipeline)
     with open(join(path, FNAME_MANIFEST), "w") as fob:
         fob.write(manifest + "\n")
 

@@ -176,22 +176,14 @@ class Backup:
                                     conf.overrides.fs)
 
         if not conf.skip_database:
+            if mysql.MysqlService.is_running():
+                self._log("\n" + fmt_title("Serializing MySQL database to " + extras.myfs, '-'))
+                mysql.backup(extras.myfs, extras.etc.mysql,
+                             limits=conf.overrides.mydb, callback=mysql.cb_print() if self.verbose else None)
 
-            try:
-                if mysql.MysqlService.is_running():
-                    self._log("\n" + fmt_title("Serializing MySQL database to " + extras.myfs, '-'))
-                    mysql.backup(extras.myfs, extras.etc.mysql,
-                                 limits=conf.overrides.mydb, callback=mysql.cb_print() if self.verbose else None)
-
-            except mysql.Error:
-                pass
-
-            try:
-                if pgsql.PgsqlService.is_running():
-                    self._log("\n" + fmt_title("Serializing PgSQL databases to " + extras.pgfs, '-'))
-                    pgsql.backup(extras.pgfs, conf.overrides.pgdb, callback=pgsql.cb_print() if self.verbose else None)
-            except pgsql.Error:
-                pass
+            if pgsql.PgsqlService.is_running():
+                self._log("\n" + fmt_title("Serializing PgSQL databases to " + extras.pgfs, '-'))
+                pgsql.backup(extras.pgfs, conf.overrides.pgdb, callback=pgsql.cb_print() if self.verbose else None)
 
     def _log(self, s=""):
         if self.verbose:
