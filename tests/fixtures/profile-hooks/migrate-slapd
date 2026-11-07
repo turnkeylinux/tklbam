@@ -1,0 +1,32 @@
+#!/bin/bash
+
+tklbam_operation=$1
+tklbam_state=$2
+
+ldap_backup_dir=/root/ldap_backup
+
+if [ "$tklbam_operation" == "backup" ] && [ "$tklbam_state" == "pre" ]; then
+    service slapd stop
+
+    mkdir -p $ldap_backup_dir
+    slapcat -n0 -l $ldap_backup_dir/config.ldif
+    slapcat -l $ldap_backup_dir/data.ldif
+
+    service slapd start
+fi
+
+if [ "$tklbam_operation" == "restore" ] && [ "$tklbam_state" == "post" ]; then
+    service slapd stop
+
+    # restore config
+    rm -rf /etc/ldap/slapd.d/*
+    slapadd -n0 -F /etc/ldap/slapd.d/ -l $ldap_backup_dir/config.ldif
+    chown -R openldap:openldap /etc/ldap/slapd.d/*
+
+    # restore data
+    rm -rf /var/lib/ldap/*
+    slapadd -F /etc/ldap/slapd.d/ -l $ldap_backup_dir/data.ldif
+    chown -R openldap:openldap /var/lib/ldap/*
+
+    service slapd start
+fi

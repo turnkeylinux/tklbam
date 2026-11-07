@@ -1,0 +1,22 @@
+Profile-hook verification keyring
+=================================
+
+profile-keyring.gpg contains the historical TurnKey release public certificate:
+694CFF26795A29BAE07B4EB585C25E95A16EB94D
+Turnkey Linux Release Key <release@turnkeylinux.com>
+
+Provenance: turnkeylinux/common commit 4e6036c4f8b0ea630658e88afb77231fbf7184bd
+parent, overlays/turnkey.d/apt/etc/apt/trusted.gpg.d/turnkey.gpg,
+Git blob adf0eab081b2f9c8557ca1694637c6d6bd5ce06e.
+SHA256: d7f0b51c3a1fb13ea4e3553b2e09b5b5defa0770466516a68047ab337b4df59c
+
+This certificate authenticates existing signed profile hooks. The certificate
+expired on 2023-08-12. Historical signatures remain verifiable using gpgv,
+preserving TKLBAM's established signature-verification behavior. This package
+does not renew the certificate or re-sign profiles.
+
+The keyring is scoped to profile hooks. APT repository trust and administrator
+GPG configuration are managed separately. Missing or invalid profile-hook
+signatures stop the operation so required application data cannot be silently
+omitted. Reinstall the packaged keyring or restore the authentic profile before
+retrying such a failure.

@@ -1,0 +1,14 @@
+migrate-slapd and migrate-slapd.sig are unmodified official TurnKey profile
+fixtures from turnkeylinux/tklbam-profiles hooks/openldap, also delivered by
+https://hub.turnkeylinux.org/api/backup/archive/?profile_id=turnkey-openldap-19.0-trixie-amd64
+
+Hook SHA256: 04517792d8d3286fcdcb3f12e185aa7ac7303393e3aa5bd2aa64e441d87dd072
+Signature SHA256: 7ec7883a80d7b6b82bb6e29af3bd3139f3a5886fc734e319076011945dab55fd
+
+The test verifies the real detached signature but stubs hook execution. It
+never runs LDAP commands. The historical certificate and its provenance are
+in share/README.profile-keyring.
+
+unrelated-keyring.gpg is the public TurnKey Trixie main APT certificate,
+dearmored from turnkeylinux/common overlays/bootstrap_apt/usr/share/keyrings/
+tkl-trixie-main.asc. It is a negative-test fixture, not profile trust material.

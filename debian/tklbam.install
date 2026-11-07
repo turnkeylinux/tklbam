@@ -15,3 +15,6 @@ contrib/ez-apt-install.sh           => /usr/share/tklbam/contrib/ez-apt-install.
 # move files/dirs
 lib/*                               /usr/lib/tklbam/
 deps                                /usr/lib/tklbam/
+
+# Profile-hook trust is independent of APT repository trust.
+share/profile-keyring.gpg           /usr/share/tklbam/
