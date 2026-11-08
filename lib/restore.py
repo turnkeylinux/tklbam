@@ -28,6 +28,7 @@ import mysql
 import pgsql
 
 import json
+import re
 
 from pylib.temp import TempFile
 
@@ -43,6 +44,23 @@ class Restore:
     Error = Error
 
     PACKAGES_BLACKLIST = ['linux-*', 'vmware-tools*']
+
+    # Hub links belong to the destination installation, including when the
+    # archive predates these protections. Backup encryption keys and profiles
+    # retain their normal restore behavior.
+    INSTANCE_PATHS = (
+        '/var/lib/turnkey-mail',
+        '/var/lib/turnkey-onboarding',
+        '/var/lib/inithooks/cache/HUB_ACCOUNT_EMAIL',
+        '/var/lib/tklbam/sub_apikey',
+        '/var/lib/tklbam/credentials',
+        '/var/lib/hubdns',
+        '/etc/turnkey-runtime',
+        '/etc/turnkey-build.json',
+        '/var/lib/turnkey-docker',
+    )
+    INSTANCE_FILE_DIRECTORY = '/etc/postfix'
+    INSTANCE_FILE_PATTERN = r'^/etc/postfix/turnkey-mail-[0-9a-f]{16}\.(sasl(\.db)?|sender|headers)($|/)'
 
     def __init__(self, backup_extract_path, limits=[], rollback=True, simulate=False):
         self.extras = backup.ExtrasPaths(backup_extract_path)
@@ -212,13 +230,31 @@ class Restore:
 
             print
 
-        changes = Changes.fromfile(extras.fsdelta, limits)
+        instance_paths = PathMap(['-' + path for path in self.INSTANCE_PATHS])
+        instance_file = re.compile(self.INSTANCE_FILE_PATTERN)
+        # An ancestor move, replacement, chmod or recursive overlay can affect
+        # identity even when the identity file itself is absent from fsdelta.
+        instance_ancestors = set([self.INSTANCE_FILE_DIRECTORY])
+        for protected in self.INSTANCE_PATHS + (self.INSTANCE_FILE_DIRECTORY,):
+            ancestor = dirname(protected)
+            while ancestor not in instance_ancestors:
+                instance_ancestors.add(ancestor)
+                ancestor = dirname(ancestor)
+
+        def can_restore(path):
+            path = normpath('/' + path.lstrip('/'))
+            return (path not in instance_ancestors and path in instance_paths
+                    and not instance_file.match(path))
+
+        changes = Changes(change for change in Changes.fromfile(extras.fsdelta, limits)
+                          if can_restore(change.path))
         deleted = list(changes.deleted())
 
         if rollback:
             rollback.save_files(changes, overlay)
 
-        fsdelta_olist = self._get_fsdelta_olist(extras.fsdelta_olist, limits)
+        fsdelta_olist = [path for path in self._get_fsdelta_olist(extras.fsdelta_olist, limits)
+                         if can_restore(path)]
         if fsdelta_olist:
             print "OVERLAY:\n"
             for fpath in fsdelta_olist:

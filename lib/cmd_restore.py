@@ -389,6 +389,8 @@ def main():
         elif opt == '--debug':
             opt_debug = True
 
+    os.environ['TKLBAM_RESTORE_SIMULATE'] = 'yes' if opt_simulate else 'no'
+
     for opt, val in opts:
         for skip_opt in ('files', 'packages', 'database'):
             if opt != '--skip-' + skip_opt:
