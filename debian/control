@@ -33,6 +33,7 @@ Replaces:
  pycurl-wrapper,
  tklbam (<= 1.4.7),
 Depends:
+ turnkey-hub (>= 2.3.7),
  ca-certificates,
  gpgv,
  ${misc:Depends},

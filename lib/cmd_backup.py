@@ -327,6 +327,17 @@ def main():
     if conf.s3_parallel_uploads > 1 and conf.s3_parallel_uploads > (conf.volsize / 5):
         warn("s3-parallel-uploads > volsize / 5 (minimum upload chunk is 5MB)")
 
+    if not conf.address and not dump_path and (not registry.sub_apikey or not registry.secret):
+        import cmd_init
+        arguments = sys.argv
+        try:
+            sys.argv = ["tklbam-init"]
+            if conf.force_profile:
+                sys.argv.append("--force-profile=" + conf.force_profile)
+            cmd_init.main()
+        finally:
+            sys.argv = arguments
+
     if not raw_upload_path:
         try:
             update_profile(conf.force_profile)

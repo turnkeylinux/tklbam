@@ -12,7 +12,7 @@
 """
 Initialization (start here)
 
-By default, this links TKLBAM to your Hub account and downloads an appropriate
+By default, this uses turnkey-hub to connect this server and downloads an appropriate
 backup profile, which is used to calculate the list of system changes we need
 to backup. On a TurnKey system the profile describes the installation state of
 the appliance and contains a list of packages, filesystem paths to scan for
@@ -22,11 +22,12 @@ will not describe installation state, only a list of directories to backup.
 
 Arguments:
 
-    API-KEY                        Cut and paste this from your Hub account's user profile.
+    API-KEY                        Optional legacy account API key.
 
 Options:
 
-    --force                        Force re-initialization with new API-KEY.
+    --force                        Replace authorization using the Hub connection
+                                   or an explicitly supplied legacy API key.
 
     --force-profile=PROFILE_ID     Force a specific backup profile. E.g.:
                                    "core-18.1-bookworm"; or "turnkey-lamp-18.1-bookworm-amd64"
@@ -49,15 +50,6 @@ Options:
 
                                    tklbam-backup will only work with --address or --dump options
                                    tklbam-restore will only work with --address or a backup extract
-
-Security warning:
-
-    Providing your Hub account's APIKEY as a command line argument is
-    potentially less secure than allowing tklbam-init to prompt you for it
-    interactively:
-
-    * The shell may save the APIKEY to its history file (e.g., ~/.bash_history)
-    * The APIKEY may briefly show up in the process list
 
 Examples:
 
@@ -172,37 +164,18 @@ Generated backup encryption key:
             registry.registry.credentials = None
     else:
         if force or not registry.registry.sub_apikey:
-            if not apikey:
-                print "Copy paste the API-KEY from your Hub account's user profile"
-                print
-
-                while True:
-                    apikey = raw_input("API-KEY: ").strip()
-                    if apikey:
-                        break
-
-            if not is_valid_apikey(apikey):
-                fatal("'%s' is an invalid API-KEY" % apikey)
-
+            if apikey and not is_valid_apikey(apikey):
+                fatal("Invalid legacy API key.")
+            import connection
             try:
-                sub_apikey = hub.Backups.get_sub_apikey(apikey)
+                connection.initialize(apikey, conf.force_profile)
             except Exception, e:
                 fatal(e)
-
-            registry.registry.sub_apikey = sub_apikey
-
-            hb = hub.Backups(sub_apikey)
-            try:
-                credentials = hb.get_credentials()
-                registry.registry.credentials = credentials
-                print "Linked TKLBAM to your Hub account."
-
-            except hub.NotSubscribed, e:
-                print "Linked TKLBAM to your Hub account but there's a problem:"
-                print
-
+            print "Linked TKLBAM to your Hub account."
+            return
         elif not force_profile and registry.registry.profile:
-            fatal("already initialized")
+            print "TKLBAM is already initialized. Use --force to replace its connection."
+            return
 
     if force_profile or not registry.registry.profile:
         try:

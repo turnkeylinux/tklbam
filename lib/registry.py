@@ -440,9 +440,7 @@ Creating an empty profile, which means:
 def hub_backups():
     import sys
 
-    try:
-        hb = hub.Backups(registry.sub_apikey)
-    except hub.Backups.NotInitialized:
-        raise NotInitialized()
-
-    return hb
+    if not registry.sub_apikey:
+        import connection
+        connection.initialize(fetch_profile=False)
+    return hub.Backups(registry.sub_apikey)

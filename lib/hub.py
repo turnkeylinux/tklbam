@@ -216,7 +216,7 @@ class Backups:
 
     def __init__(self, subkey=None):
         if subkey is None:
-            raise self.NotInitialized("no APIKEY - tklbam not linked to the Hub")
+            raise self.NotInitialized("Connect this server with turnkey-hub, then retry the backup operation")
 
         self.subkey = subkey
         self.api = API()

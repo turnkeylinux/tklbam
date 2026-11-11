@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Installation alone does not enable backups or contact the Hub.
+[ -s "${TKLBAM_REGISTRY:-/var/lib/tklbam}/sub_apikey" ] || exit 0
+[ -s "${TKLBAM_REGISTRY:-/var/lib/tklbam}/profile/profile_id" ] || exit 0
+
 set "${JITTER:=3600}"
 
 randomsleep() {
