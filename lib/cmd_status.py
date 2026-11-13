@@ -78,9 +78,9 @@ def main():
         print "TKLBAM (Backup and Migration):  NOT INITIALIZED"
         if not opt_short:
             print
-            print '  To initialize TKLBAM, run the "tklbam-init" command to link this'
-            print '  system to your TurnKey Hub account. For details see the man page or'
-            print '  go to:'
+            print '  To set up backups, run tklbam-init and follow the instructions.'
+            print '  Backup setup may require connecting an AWS account in the Hub.'
+            print '  For details see the man page or go to:'
             print
             print '      https://www.turnkeylinux.org/tklbam'
 

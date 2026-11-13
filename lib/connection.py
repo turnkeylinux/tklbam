@@ -22,7 +22,7 @@ def initialize(apikey=None, profile=None, fetch_profile=True):
         child = subprocess.Popen(command, stdout=subprocess.PIPE)
         output = child.communicate()[0]
         if child.returncode:
-            raise hub.Error("Backup connection is incomplete. Follow the instructions above, then try again.")
+            raise hub.Error("Backup setup is incomplete.")
         try:
             token = json.loads(output)["credential"]
             if not re.match(r"^tklbam2\.[0-9a-f]{32}\.[A-Za-z0-9_-]{43}\Z", token):
