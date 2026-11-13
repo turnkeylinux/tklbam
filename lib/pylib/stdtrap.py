@@ -74,6 +74,7 @@ UnitedStdTrap examples with tee to logfile:
 """
 
 import os
+import errno
 import sys
 import pty
 import select
@@ -104,6 +105,8 @@ class Splicer:
 
     3) If `tee` is provided then data from the local pipe is tee'ed into those file handles
     """
+    DISPLAY_CLOSED = 2
+
     @staticmethod
     def _splice(spliced_fd, usepty, transparent, tee=[]):
         """splice into spliced_fd -> (splicer_pid, splicer_reader, orig_fd_dup)"""
@@ -167,7 +170,7 @@ class Splicer:
         if tee:
             sinks += [ Sink(f) for f in tee ]
         if transparent:
-            sinks.append(Sink(orig_fd_dup))
+            sinks.append(Sink(orig_fd_dup, optional=True))
 
         while True:
             has_unwritten_data = True in [ sink.data != '' for sink in sinks ]
@@ -190,9 +193,8 @@ class Splicer:
                         data = r_fh.read()
                         for sink in sinks:
                             sink.buffer(data)
-                            poll.register(sink.fd)
-
-                        poll.register(outpipe.fileno(), select.POLLOUT)
+                            if not sink.failed:
+                                poll.register(sink.fd, select.POLLOUT)
 
                     if mask & select.POLLHUP:
                         closed = True
@@ -203,12 +205,12 @@ class Splicer:
                         if sink.fd != fd:
                             continue
 
-                        if mask & select.POLLOUT:
+                        if mask & (select.POLLOUT | select.POLLHUP | select.POLLERR | select.POLLNVAL):
                             wrote_all = sink.write()
                             if wrote_all:
                                 poll.unregister(sink.fd)
 
-        os._exit(0)
+        os._exit(Splicer.DISPLAY_CLOSED if any(sink.failed for sink in sinks) else 0)
 
     def __init__(self, spliced_fd, usepty=False, transparent=False, tee=[]):
         if tee is None:
@@ -221,6 +223,7 @@ class Splicer:
         self.splicer_pid, self.splicer_reader, self.orig_fd_dup = vals
 
         self.spliced_fd = spliced_fd
+        self.display_closed = False
 
     def close(self):
         """closes the splice -> captured output"""
@@ -233,7 +236,14 @@ class Splicer:
         os.close(self.orig_fd_dup)
 
         captured = self.splicer_reader.read()
-        os.waitpid(self.splicer_pid, 0)
+        unused, status = os.waitpid(self.splicer_pid, 0)
+        self.display_closed = os.WIFEXITED(status) and os.WEXITSTATUS(status) == self.DISPLAY_CLOSED
+        if self.display_closed:
+            null_fd = os.open(os.devnull, os.O_WRONLY)
+            os.dup2(null_fd, self.spliced_fd)
+            os.close(null_fd)
+        elif status:
+            raise Error("output capture failed (wait status %s)" % status)
 
         return captured
 
@@ -272,21 +282,30 @@ def set_blocking(fd, block):
     fcntl.fcntl(fd, fcntl.F_SETFL, arg)
 
 class Sink:
-    def __init__(self, fd):
+    def __init__(self, fd, optional=False):
         if hasattr(fd, 'fileno'):
             fd = fd.fileno()
 
         self.fd = fd
+        self.optional = optional
+        self.failed = False
         self.data = ''
 
     def buffer(self, data):
-        self.data += data
+        if not self.failed:
+            self.data += data
 
     def write(self):
         try:
             written = os.write(self.fd, self.data)
-        except:
-            return False
+        except OSError, e:
+            if e.errno in (errno.EAGAIN, errno.EINTR):
+                return False
+            if not self.optional or e.errno not in (errno.EIO, errno.EPIPE, errno.EBADF):
+                raise
+            self.failed = True
+            self.data = ''
+            return True
 
         self.data = self.data[written:]
         if not self.data:
@@ -341,7 +360,10 @@ class UnitedStdTrap:
         self.std = self.stderr = self.stdout = StringIO(self.stdout_splice.close())
 
         sys.stderr.flush()
-        os.dup2(self.stderr_dupfd, sys.stderr.fileno())
+        if self.stdout_splice.display_closed:
+            os.dup2(sys.stdout.fileno(), sys.stderr.fileno())
+        else:
+            os.dup2(self.stderr_dupfd, sys.stderr.fileno())
         os.close(self.stderr_dupfd)
 
 def silence(callback, args=()):

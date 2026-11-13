@@ -132,6 +132,7 @@ import getopt
 import re
 import time
 import shutil
+import tempfile
 
 from string import Template
 
@@ -327,7 +328,7 @@ def main():
     if conf.s3_parallel_uploads > 1 and conf.s3_parallel_uploads > (conf.volsize / 5):
         warn("s3-parallel-uploads > volsize / 5 (minimum upload chunk is 5MB)")
 
-    if not conf.address and not dump_path and (not registry.sub_apikey or not registry.secret):
+    if not opt_simulate and not conf.address and not dump_path and (not registry.sub_apikey or not registry.secret):
         import cmd_init
         arguments = sys.argv
         try:
@@ -345,7 +346,7 @@ def main():
             fatal("you need a profile to backup, run tklbam-init first")
 
     credentials = None
-    if not conf.address and not dump_path:
+    if not opt_simulate and not conf.address and not dump_path:
         try:
             hb = hub_backups()
         except hub.Backups.NotInitialized, e:
@@ -402,12 +403,16 @@ def main():
 
             opt_resume = True
 
-    registry.backup_resume_conf = None
     if not opt_simulate:
         registry.backup_resume_conf = conf
 
     target = None
-    if not dump_path:
+    simulate_path = None
+    if opt_simulate and not conf.address:
+        simulate_path = tempfile.mkdtemp(prefix='tklbam-simulate-')
+        target = duplicity.Target('file://' + simulate_path, None, '')
+        print "Simulating a full backup with temporary local storage."
+    elif not dump_path:
         with open(conf.secretfile) as fob:
             secret = fob.readline().strip()
         target = duplicity.Target(conf.address, credentials, secret)
@@ -455,10 +460,13 @@ def main():
 
             else:
                 hooks.backup.pre()
+                extras_root = dump_path if dump_path else "/"
+                if opt_simulate and registry.backup_resume_conf:
+                    extras_root = tempfile.mkdtemp(prefix='tklbam-simulate-extract-')
                 b = backup.Backup(registry.profile,
                                   conf.overrides,
                                   conf.backup_skip_files, conf.backup_skip_packages, conf.backup_skip_database,
-                                  opt_resume, True, dump_path if dump_path else "/")
+                                  opt_resume, True, extras_root)
 
                 hooks.backup.inspect(b.extras_paths.path)
 
@@ -497,6 +505,8 @@ def main():
             raise
 
         finally:
+            if simulate_path:
+                shutil.rmtree(simulate_path)
             backup_inprogress(False)
             if trap:
                 sys.stdout.flush()
@@ -512,7 +522,8 @@ def main():
             stats = m.group(1)
             print stats.strip()
 
-    registry.backup_resume_conf = None
+    if not opt_simulate:
+        registry.backup_resume_conf = None
 
     if not (opt_simulate or dump_path):
         try:
