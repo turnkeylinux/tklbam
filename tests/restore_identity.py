@@ -41,6 +41,10 @@ class RestoreIdentityTest(unittest.TestCase):
         restore.Restore.INSTANCE_FILE_PATTERN = '^' + re.escape(self.target) + self.original_pattern[1:]
         self.original_file_directory = getattr(restore.Restore, 'INSTANCE_FILE_DIRECTORY', None)
         restore.Restore.INSTANCE_FILE_DIRECTORY = self.path('/etc/postfix')
+        self.original_docker_runtime = restore.Restore.DOCKER_RUNTIME_PATH
+        self.original_docker_hosts = restore.Restore.DOCKER_HOSTS_PATH
+        restore.Restore.DOCKER_RUNTIME_PATH = self.path('/etc/turnkey-runtime')
+        restore.Restore.DOCKER_HOSTS_PATH = self.path('/etc/hosts')
         self.original_open = getattr(restore, 'open', None)
         def target_open(path, *args):
             if path in ('/etc/passwd', '/etc/group'):
@@ -62,6 +66,8 @@ class RestoreIdentityTest(unittest.TestCase):
             del restore.Restore.INSTANCE_FILE_DIRECTORY
         else:
             restore.Restore.INSTANCE_FILE_DIRECTORY = self.original_file_directory
+        restore.Restore.DOCKER_RUNTIME_PATH = self.original_docker_runtime
+        restore.Restore.DOCKER_HOSTS_PATH = self.original_docker_hosts
         if self.original_open is None:
             del restore.open
         else:
@@ -120,6 +126,41 @@ class RestoreIdentityTest(unittest.TestCase):
 
     def test_builtin_paths_cover_hub_identity(self):
         self.assertEqual(self.original_paths, INSTANCE_PATHS)
+
+    def test_docker_preserves_hosts_from_old_archive_and_restores_sibling(self):
+        self.write(self.path('/etc/turnkey-runtime'), 'docker\n')
+        hosts = self.archived('/etc/hosts')
+        ordinary = self.archived('/etc/application-setting')
+        operation = self.run_restore(limits=[self.target, hosts], rollback=True)
+        with open(hosts) as stream:
+            self.assertEqual(stream.read(), 'destination:/etc/hosts')
+        with open(ordinary) as stream:
+            self.assertEqual(stream.read(), 'source:/etc/application-setting')
+        self.assertFalse(os.path.exists(str(operation.rollback.paths.originals) + hosts))
+
+    def test_docker_preserves_hosts_deletion_and_permission_changes(self):
+        for operation in ('d', 's'):
+            self.write(self.path('/etc/turnkey-runtime'), 'docker\n')
+            hosts = self.archived('/etc/hosts', operation)
+            self.run_restore()
+            with open(hosts) as stream:
+                self.assertEqual(stream.read(), 'destination:/etc/hosts')
+            self.assertEqual(stat.S_IMODE(os.stat(hosts).st_mode), 0600)
+            self.changes = []
+            self.olist = []
+
+    def test_non_docker_restores_hosts_normally(self):
+        self.write(self.path('/etc/turnkey-runtime'), 'proxmox\n')
+        hosts = self.archived('/etc/hosts')
+        self.run_restore()
+        with open(hosts) as stream:
+            self.assertEqual(stream.read(), 'source:/etc/hosts')
+
+    def test_missing_runtime_marker_restores_hosts_normally(self):
+        hosts = self.archived('/etc/hosts')
+        self.run_restore()
+        with open(hosts) as stream:
+            self.assertEqual(stream.read(), 'source:/etc/hosts')
 
     def test_generated_smtp_files_are_protected_but_user_mail_config_restores(self):
         protected = []

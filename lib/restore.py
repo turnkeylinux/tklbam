@@ -9,6 +9,7 @@
 # the License, or (at your option) any later version.
 #
 import sys
+import errno
 
 import os
 from os.path import *
@@ -61,6 +62,17 @@ class Restore:
     )
     INSTANCE_FILE_DIRECTORY = '/etc/postfix'
     INSTANCE_FILE_PATTERN = r'^/etc/postfix/turnkey-mail-[0-9a-f]{16}\.(sasl(\.db)?|sender|headers)($|/)'
+    DOCKER_RUNTIME_PATH = '/etc/turnkey-runtime'
+    DOCKER_HOSTS_PATH = '/etc/hosts'
+
+    def _docker_runtime(self):
+        try:
+            with open(self.DOCKER_RUNTIME_PATH) as stream:
+                return stream.read().strip() == 'docker'
+        except IOError, e:
+            if e.errno == errno.ENOENT:
+                return False
+            raise
 
     def __init__(self, backup_extract_path, limits=[], rollback=True, simulate=False):
         self.extras = backup.ExtrasPaths(backup_extract_path)
@@ -230,12 +242,16 @@ class Restore:
 
             print
 
-        instance_paths = PathMap(['-' + path for path in self.INSTANCE_PATHS])
+        protected_paths = self.INSTANCE_PATHS
+        if self._docker_runtime():
+            # Docker owns this mount; it cannot be replaced by an old archive.
+            protected_paths += (self.DOCKER_HOSTS_PATH,)
+        instance_paths = PathMap(['-' + path for path in protected_paths])
         instance_file = re.compile(self.INSTANCE_FILE_PATTERN)
         # An ancestor move, replacement, chmod or recursive overlay can affect
         # identity even when the identity file itself is absent from fsdelta.
         instance_ancestors = set([self.INSTANCE_FILE_DIRECTORY])
-        for protected in self.INSTANCE_PATHS + (self.INSTANCE_FILE_DIRECTORY,):
+        for protected in protected_paths + (self.INSTANCE_FILE_DIRECTORY,):
             ancestor = dirname(protected)
             while ancestor not in instance_ancestors:
                 instance_ancestors.add(ancestor)
