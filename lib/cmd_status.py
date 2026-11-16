@@ -78,8 +78,8 @@ def main():
         print "TKLBAM (Backup and Migration):  NOT INITIALIZED"
         if not opt_short:
             print
-            print '  To set up backups, run tklbam-init and follow the instructions.'
-            print '  Backup setup may require connecting an AWS account in the Hub.'
+            print '  To set up backups, run sudo tklbam-init and follow the instructions.'
+            print '  Connect an AWS account in the Hub to store your backups.'
             print '  For details see the man page or go to:'
             print
             print '      https://www.turnkeylinux.org/tklbam'

@@ -24,6 +24,7 @@ class ConnectionTest(unittest.TestCase):
         import cmd_init
         original_init = connection.initialize
         original_update = registry.update_profile
+        original_geteuid = cmd_init.os.geteuid
         arguments = sys.argv
         calls = []
         def initialize(apikey, profile):
@@ -34,14 +35,34 @@ class ConnectionTest(unittest.TestCase):
         try:
             connection.initialize = initialize
             registry.update_profile = duplicate
+            cmd_init.os.geteuid = lambda: 0
             sys.argv = ['tklbam-init', '--force', '--force-profile=generic', 'A' * 20]
             cmd_init.main()
         finally:
             connection.initialize = original_init
             registry.update_profile = original_update
+            cmd_init.os.geteuid = original_geteuid
             sys.argv = arguments
         self.assertEqual([('A' * 20, 'generic')], calls)
         self.assertEqual('validated-new-credential', registry.registry.sub_apikey)
+
+    def test_unprivileged_init_explains_sudo_without_changing_registry(self):
+        import cmd_init
+        from StringIO import StringIO
+        original_geteuid = cmd_init.os.geteuid
+        arguments, stderr = sys.argv, sys.stderr
+        try:
+            cmd_init.os.geteuid = lambda: 1000
+            for name, command in [('init', 'tklbam init'), ('tklbam-init', 'tklbam-init')]:
+                sys.argv = [name, '--force']
+                sys.stderr = StringIO()
+                self.assertRaises(SystemExit, cmd_init.main)
+                self.assertIn('sudo ' + command, sys.stderr.getvalue())
+                self.assertEqual(self.before, {n: open(os.path.join(self.path, n)).read()
+                                               for n in os.listdir(self.path)})
+        finally:
+            cmd_init.os.geteuid = original_geteuid
+            sys.argv, sys.stderr = arguments, stderr
 
     def test_failed_authorization_preserves_existing_connection(self):
         class Reject:

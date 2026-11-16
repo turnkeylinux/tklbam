@@ -144,6 +144,10 @@ def main():
 
         apikey = args[0]
 
+    if os.geteuid() != 0:
+        command = "tklbam init" if sys.argv[0] == "init" else "tklbam-init"
+        fatal("Initialization requires root. Run sudo %s with the same options." % command)
+
     if not registry.registry.secret:
         registry.registry.secret = generate_secret()
         registry.registry.key = keypacket.fmt(registry.registry.secret, "")
