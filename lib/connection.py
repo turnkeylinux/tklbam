@@ -119,9 +119,9 @@ def complete_daily_initialization(current, validated_token=None):
     # A retry may already have a profile and token but lack a completed init
     # marker. Validate the current grant before activating its job.
     if validated_token != token:
-        credentials = hub.Backups(token).get_credentials()
-        if credentials.type != "iamrole":
-            raise hub.Error("The Hub returned invalid credentials for the daily backup schedule.")
+        _, daily_ready = hub.Backups(token).get_credentials(initialize=True, existing_record=current.hbr)
+        if not daily_ready:
+            return
         # Package upgrades or local edits could replace the job while the request runs.
         mode = stock_cron_mode()
         if mode is None:
@@ -147,10 +147,19 @@ def deactivate_daily(current):
 
 
 def initialize(apikey=None, profile=None, fetch_profile=True):
+    import registry
+    current = registry.registry
     token = hub.Backups.get_sub_apikey(apikey) if apikey else hub_token()
-    credentials = hub.Backups(token).get_credentials()
+    pending = pending_daily(current) if not apikey else None
+    backups = hub.Backups(token)
+    daily_ready = False
+    if (pending and token.startswith("tklbam2." + pending.group(1) + ".")
+            and initialized_daily(current) != token):
+        credentials, daily_ready = backups.get_credentials(initialize=True, existing_record=current.hbr)
+    else:
+        credentials = backups.get_credentials()
     install_connection(token, credentials, profile, fetch_profile)
-    return token if not apikey and credentials.get("type") == "iamrole" else None
+    return token if daily_ready else None
 
 
 def install_connection(token, credentials, profile=None, fetch_profile=True):

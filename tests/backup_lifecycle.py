@@ -237,6 +237,63 @@ class ScheduledBackupTests(unittest.TestCase):
                           'inprogress/True', 'upload', 'upload', 'inprogress/False',
                           'updated'], events)
 
+    def test_record_id_collision_uses_a_new_destination_and_discards_old_resume(self):
+        events = self.run_child('record-collision', 0)
+        self.assertEqual(['scheduled credentials', 'profile', 'record/read', 'record/create',
+                          'inprogress/True', 'upload', 'upload', 'inprogress/False', 'updated'], events)
+
+    def test_same_stable_record_id_reuses_a_relocated_scoped_record(self):
+        events = self.run_child('scoped-record-relocated', 0)
+        self.assertEqual(['scheduled credentials', 'profile', 'record/read',
+                          'inprogress/True', 'upload', 'upload', 'inprogress/False', 'updated'], events)
+        hbr = open(os.path.join(self.path, 'registry', 'hbr')).read().splitlines()
+        self.assertIn('record_id=101', hbr)
+        self.assertIn('address=file://' + os.path.join(self.path, 'target'), hbr)
+
+    def test_different_stable_record_id_requires_new_record_at_the_same_address(self):
+        events = self.run_child('stable-record-collision', 0)
+        self.assertEqual(['scheduled credentials', 'profile', 'record/read', 'record/create',
+                          'inprogress/True', 'upload', 'upload', 'inprogress/False', 'updated'], events)
+        hbr = open(os.path.join(self.path, 'registry', 'hbr')).read().splitlines()
+        self.assertIn('record_id=303', hbr)
+
+    def test_legacy_relocation_reuses_the_record_without_a_stable_id(self):
+        events = self.run_child('legacy-record-relocated', 0)
+        self.assertEqual(['profile', 'manual credentials', 'record/read',
+                          'inprogress/True', 'upload', 'upload', 'inprogress/False', 'updated'], events)
+
+    def test_manual_resume_stops_when_the_same_record_has_moved(self):
+        events = self.run_child('manual-resume-relocated', 1)
+        self.assertEqual(['profile', 'manual credentials', 'record/read'], events)
+        self.assertFalse(os.path.exists(os.path.join(self.path, 'registry', 'backup-resume')))
+
+    def test_deleted_record_uses_a_new_destination_and_discards_old_resume(self):
+        events = self.run_child('record-missing', 0)
+        self.assertEqual(['scheduled credentials', 'profile', 'record/read', 'record/create',
+                          'inprogress/True', 'upload', 'upload', 'inprogress/False', 'updated'], events)
+
+    def test_failed_record_lookup_does_not_upload_to_a_cached_destination(self):
+        events = self.run_child('record-unavailable', 1)
+        self.assertEqual(['scheduled credentials', 'profile', 'record/read'], events)
+
+    def test_scoped_manual_backup_stops_when_the_old_destination_cannot_be_verified(self):
+        events = self.run_child('manual-record-unavailable', 1)
+        self.assertEqual(['profile', 'manual credentials', 'record/read'], events)
+
+    def test_legacy_manual_backup_can_retry_its_cached_destination(self):
+        events = self.run_child('legacy-record-unavailable', 0)
+        self.assertEqual(['profile', 'manual credentials', 'record/read',
+                          'inprogress/True', 'upload', 'upload', 'inprogress/False', 'updated'], events)
+
+    def test_scheduled_explicit_resume_stops_before_contacting_hub(self):
+        self.assertEqual([], self.run_child('scheduled-explicit-resume', 1))
+        self.assertTrue(os.path.exists(os.path.join(self.path, 'registry', 'backup-resume')))
+
+    def test_manual_explicit_resume_rejects_a_conflicting_record(self):
+        events = self.run_child('manual-explicit-resume', 1)
+        self.assertEqual(['profile', 'manual credentials', 'record/read'], events)
+        self.assertTrue(os.path.exists(os.path.join(self.path, 'registry', 'backup-resume')))
+
     def test_dormant_link_makes_no_request_and_leaves_state_uninitialized(self):
         self.assertEqual([], self.run_child('dormant', 0))
         self.assertEqual(['hub-managed-daily'], os.listdir(os.path.join(self.path, 'registry')))
@@ -286,8 +343,15 @@ def scheduled_child(mode, path):
     command.PATH_LOGFILE = os.path.join(path, 'backup.log')
     command.PATH_PIDLOCK = os.path.join(path, 'backup.pid')
     target = 'file://' + os.path.join(path, 'target')
+    old_target = 'file://' + os.path.join(path, 'old-target')
+    conflicting_target = 'file://' + os.path.join(path, 'conflicting-target')
     device = 'a' * 32
     token = 'tklbam2.%s.%s' % (device, 'c' * 43)
+    if mode.startswith('legacy-'):
+        token = 'account-wide-legacy-key'
+    manual = mode.startswith(('manual-', 'legacy-'))
+    relocated = mode in ('scoped-record-relocated', 'legacy-record-relocated', 'manual-resume-relocated')
+    replace_record = mode in ('record-collision', 'record-missing', 'stable-record-collision')
     pending = os.path.join(current.path, 'hub-managed-daily')
 
     def set_pending(id):
@@ -309,8 +373,20 @@ def scheduled_child(mode, path):
         current.key = 'previous keypacket'
         current.profile = 'empty'
         current._file_str(os.path.join(current.path, 'hub-daily-initialized'), device)
-        if mode == 'repeat':
+        if mode in ('repeat', 'legacy-record-unavailable'):
             current.hbr = AttrDict(backup_id=17, address=target)
+        if relocated or mode in ('record-collision', 'record-missing', 'record-unavailable',
+                                 'manual-record-unavailable', 'scheduled-explicit-resume',
+                                 'manual-explicit-resume', 'stable-record-collision'):
+            address = target if mode == 'stable-record-collision' else old_target
+            saved = AttrDict(backup_id=17, address=address)
+            if mode in ('scoped-record-relocated', 'manual-resume-relocated', 'stable-record-collision'):
+                saved.record_id = 101
+            current.hbr = saved
+            previous = command.Conf()
+            previous.address = address
+            previous.secretfile = current.path.secret
+            current.backup_resume_conf = previous
         current.credentials = {'type': 'iamuser', 'accesskey': 'legacy-cache',
                                'secretkey': 'legacy-cache', 'sessiontoken': ''}
 
@@ -319,8 +395,13 @@ def scheduled_child(mode, path):
 
     class Hub(hub.Backups):
         def _api(self, method, uri, attrs=None):
-            assert (self.subkey, method, uri, attrs) == (token, 'GET', 'credentials/', {'scheduled': '1'})
-            event('scheduled credentials')
+            assert (self.subkey, method, uri) == (token, 'GET', 'credentials/')
+            if manual:
+                assert not attrs
+                event('manual credentials')
+            else:
+                assert attrs == {'scheduled': '1'}
+                event('scheduled credentials')
             if mode == 'disabled':
                 return {'scheduled': 'disabled'}
             if mode == 'unavailable':
@@ -329,7 +410,7 @@ def scheduled_child(mode, path):
                 set_pending('b' * 32)
             response = dict(type='iamrole', accesskey='fixture', secretkey='fixture',
                             sessiontoken='fixture', expiration='2030-01-01T00:00:00Z')
-            if mode != 'old-hub':
+            if not manual and mode != 'old-hub':
                 response['scheduled'] = 'allowed'
             return response
         def new_backup_record(self, key, *args):
@@ -337,13 +418,31 @@ def scheduled_child(mode, path):
             event('record/create')
             if mode == 'relink-record':
                 set_pending('b' * 32)
+            if replace_record:
+                assert current.backup_resume_conf is None
+                return AttrDict(backup_id=18, address=target, record_id=303)
             return AttrDict(backup_id=17, address=target)
-        def get_backup_record(self, *args):
+        def get_backup_record(self, backup_id):
             event('record/read')
+            if mode == 'record-missing':
+                raise hub.InvalidBackupError('record deleted')
+            if mode in ('record-unavailable', 'manual-record-unavailable', 'legacy-record-unavailable'):
+                raise hub.APIError(503, 'Unavailable', 'Hub unavailable')
+            if mode in ('record-collision', 'manual-explicit-resume'):
+                return AttrDict(backup_id=backup_id, address=conflicting_target)
+            if mode == 'stable-record-collision':
+                return AttrDict(backup_id=backup_id, address=target, record_id=202)
+            if relocated:
+                moved = AttrDict(backup_id=backup_id, address=target)
+                if not mode.startswith('legacy-'):
+                    moved.record_id = 101
+                return moved
             return current.hbr
         def set_backup_inprogress(self, backup_id, value):
+            assert str(backup_id) == ('18' if replace_record else '17')
             event('inprogress/' + str(value))
         def updated_backup(self, address):
+            assert address == target
             event('updated')
 
     connection.hub_token = helper
@@ -363,8 +462,16 @@ def scheduled_child(mode, path):
     command.hooks.backup.pre = lambda: None
     command.hooks.backup.inspect = inspect
     command.hooks.backup.post = lambda: None
-    command.duplicity.Duplicity.run = lambda *a, **kw: event('upload')
-    sys.argv = ['tklbam-backup', '--scheduled', '--skip-files', '--skip-database', '--skip-packages']
+    def upload(duplicity, *args, **kwargs):
+        assert duplicity.command[-1] == target, duplicity.command
+        event('upload')
+
+    command.duplicity.Duplicity.run = upload
+    sys.argv = ['tklbam-backup', '--skip-files', '--skip-database', '--skip-packages']
+    if not manual:
+        sys.argv.append('--scheduled')
+    if mode in ('scheduled-explicit-resume', 'manual-explicit-resume', 'manual-resume-relocated'):
+        sys.argv.append('--resume')
     command.main()
 
 

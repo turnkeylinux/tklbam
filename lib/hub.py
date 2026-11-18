@@ -24,7 +24,7 @@ subkey/
 
 credentials/
     method: GET
-    fields: [scheduled=1]
+    fields: [scheduled=1 | initialize=1]
     return: accesskey, secretkey, usertoken, producttoken
 
 record/create/
@@ -81,6 +81,7 @@ Exceptions::
 import os
 
 import base64
+from hashlib import sha256
 import tempfile
 from datetime import datetime
 
@@ -141,6 +142,7 @@ class BackupRecord(AttrDict):
         self.key = response['key']
         self.address = response['address']
         self.backup_id = response['backup_id']
+        self.record_id = response.get('record_id')
         self.server_id = response['server_id']
         self.profile_id = response['turnkey_version']
 
@@ -233,7 +235,17 @@ class Backups:
         response = API().request('GET', cls.API_URL + 'subkey/', {'apikey': apikey})
         return response['subkey']
 
-    def get_credentials(self, scheduled=False):
+    def get_credentials(self, scheduled=False, initialize=False, existing_record=None):
+        if initialize:
+            attrs = {'initialize': '1'}
+            if existing_record and existing_record.address:
+                attrs['backup_id'] = existing_record.backup_id
+                attrs['address_digest'] = sha256(existing_record.address.encode('utf-8')).hexdigest()
+            response = self._api('GET', 'credentials/', attrs)
+            ready = response.pop('daily_ready', False) is True
+            credentials = Credentials.from_dict(response)
+            return credentials, ready and credentials.type == 'iamrole'
+
         if not scheduled:
             return Credentials.from_dict(self._api('GET', 'credentials/'))
 

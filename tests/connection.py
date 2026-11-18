@@ -121,6 +121,30 @@ class ScheduledCredentialsTest(unittest.TestCase):
         self.assertEqual(self.credentials, self.backups.get_credentials(scheduled=True))
         self.assertEqual([('GET', 'credentials/', {'scheduled': '1'})], self.calls)
 
+    def test_init_uses_the_same_credential_request_and_keeps_readiness_out_of_cache(self):
+        self.response['daily_ready'] = True
+        credentials, ready = self.backups.get_credentials(initialize=True)
+        self.assertTrue(ready)
+        self.assertEqual(self.credentials, credentials)
+        self.assertEqual([('GET', 'credentials/', {'initialize': '1'})], self.calls)
+
+    def test_old_hub_credentials_allow_manual_init_without_enabling_daily(self):
+        credentials, ready = self.backups.get_credentials(initialize=True)
+        self.assertFalse(ready)
+        self.assertEqual(self.credentials, credentials)
+
+    def test_init_proves_the_cached_destination_without_sending_its_address(self):
+        self.response['daily_ready'] = True
+        record = hub.AttrDict(backup_id=12, address='s3://fixture/backup-prefix')
+        self.backups.get_credentials(initialize=True, existing_record=record)
+        proof = dict(initialize='1', backup_id=12, address_digest=hashlib.sha256(record.address).hexdigest())
+        self.assertEqual([('GET', 'credentials/', proof)], self.calls)
+
+    def test_only_boolean_true_confirms_readiness(self):
+        self.response['daily_ready'] = 'true'
+        _, ready = self.backups.get_credentials(initialize=True)
+        self.assertFalse(ready)
+
     def test_disabled_schedule_skips_without_parsing_credentials(self):
         self.response = {'scheduled': 'disabled'}
         self.assertRaises(hub.ScheduleDisabled, self.backups.get_credentials, scheduled=True)
@@ -137,12 +161,26 @@ class ScheduledCredentialsTest(unittest.TestCase):
         self.assertRaises(hub.Error, self.backups.get_credentials, scheduled=True)
 
 
+class BackupRecordResponseTest(unittest.TestCase):
+    def test_record_id_is_optional_and_distinct_from_account_local_backup_id(self):
+        response = dict(key='fixture', address='file:///fixture', backup_id=17, server_id=None,
+                        turnkey_version=None, date_created=None, date_updated=None, size=0,
+                        description='')
+        self.assertIsNone(hub.BackupRecord(response).record_id)
+        response['record_id'] = 101
+        record = hub.BackupRecord(response)
+        self.assertEqual(17, record.backup_id)
+        self.assertEqual(101, record.record_id)
+
+
 class DailyInitializationTest(unittest.TestCase):
     def setUp(self):
         import cmd_init
         path = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, path)
         self.calls = []
+        self.requests = []
+        self.daily_ready = True
         self.device = 'a' * 32
         self.token = 'tklbam2.' + self.device + '.' + 'b' * 43
         self.current = registry._Registry(os.path.join(path, 'registry'))
@@ -174,9 +212,15 @@ class DailyInitializationTest(unittest.TestCase):
                 fixture.calls.append('legacy helper')
                 return 'legacy'
 
-            def get_credentials(self):
+            def _api(self, method, uri, attrs=None):
                 fixture.calls.append(self.subkey)
-                return hub.Credentials.IAMRole('key', 'secret', 'token', '2030-01-01T00:00:00Z')
+                fixture.requests.append(attrs)
+                assert (method, uri) == ('GET', 'credentials/')
+                credentials = dict(type='iamrole', accesskey='key', secretkey='secret',
+                                   sessiontoken='token', expiration='2030-01-01T00:00:00Z')
+                if attrs == {'initialize': '1'} and fixture.daily_ready is not None:
+                    credentials['daily_ready'] = fixture.daily_ready
+                return credentials
         self.replace(hub, 'Backups', Backups)
         self.main = cmd_init.main
 
@@ -195,6 +239,7 @@ class DailyInitializationTest(unittest.TestCase):
     def test_successful_init_activates_and_retry_makes_no_request(self):
         self.initialize('--force-profile=empty')
         self.assertEqual(['helper', self.token], self.calls)
+        self.assertEqual([{'initialize': '1'}], self.requests)
         self.assertEqual(self.token, connection.initialized_daily(self.current))
         self.assertEqual(0744, stat.S_IMODE(os.stat(self.cron).st_mode))
         self.assertTrue(self.current.secret and self.current.profile)
@@ -202,20 +247,42 @@ class DailyInitializationTest(unittest.TestCase):
         self.initialize()
         self.assertEqual(['helper', self.token], self.calls)
 
+    def test_quota_hold_keeps_manual_credentials_and_daily_dormant_until_retry(self):
+        self.daily_ready = False
+        self.initialize('--force-profile=empty')
+        self.assertEqual(['helper', self.token], self.calls)
+        self.assertEqual(self.token, self.current.sub_apikey)
+        self.assertEqual('iamrole', self.current.credentials.type)
+        self.assertFalse(os.path.exists(self.ready))
+        self.assertEqual(0644, stat.S_IMODE(os.stat(self.cron).st_mode))
+
+        self.daily_ready = True
+        self.initialize()
+        self.assertEqual(['helper', self.token, self.token], self.calls)
+        self.assertEqual([{'initialize': '1'}, {'initialize': '1'}], self.requests)
+        self.assertEqual(self.token, connection.initialized_daily(self.current))
+
+    def test_old_hub_init_leaves_daily_dormant(self):
+        self.daily_ready = None
+        self.initialize('--force-profile=empty')
+        self.assertEqual(self.token, self.current.sub_apikey)
+        self.assertFalse(os.path.exists(self.ready))
+        self.assertEqual(0644, stat.S_IMODE(os.stat(self.cron).st_mode))
+
     def test_failed_credentials_leave_a_dormant_job(self):
-        def reject(backups):
+        def reject(backups, *args):
             raise hub.Error('AWS account needs setup')
-        self.replace(hub.Backups, 'get_credentials', reject)
+        self.replace(hub.Backups, '_api', reject)
         self.assertRaises(SystemExit, self.initialize, '--force-profile=empty')
         self.assertFalse(os.path.exists(self.ready))
         self.assertEqual(0644, stat.S_IMODE(os.stat(self.cron).st_mode))
 
     def test_relink_during_init_credentials_leaves_a_dormant_job(self):
-        original = hub.Backups.get_credentials
-        def relink(backups):
+        original = hub.Backups._api
+        def relink(backups, *args):
             self.current._file_str(self.marker, 'c' * 32 + ' managed')
-            return original(backups)
-        self.replace(hub.Backups, 'get_credentials', relink)
+            return original(backups, *args)
+        self.replace(hub.Backups, '_api', relink)
         self.initialize('--force-profile=empty')
         self.assertIsNone(connection.initialized_daily(self.current))
         self.assertEqual(0644, stat.S_IMODE(os.stat(self.cron).st_mode))

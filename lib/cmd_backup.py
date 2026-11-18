@@ -395,27 +395,53 @@ def main():
                       "tip: you can still use tklbam-backup with --dump or --address")
             credentials = manual_credentials(hb)
 
-        record = registry.hbr
-        if record:
+        device_scoped = getattr(hb, "subkey", "").startswith("tklbam2.")
+        saved_record = registry.hbr
+        record = saved_record
+        if saved_record:
             try:
-                record = hb.get_backup_record(record.backup_id)
-            except hb.Error, e:
-                # The existing address may still be usable during Hub outages.
-                # An invalid record needs a new address from the Hub.
-                if isinstance(e, hub.InvalidBackupError):
-                    warn("old backup record deleted, creating new ... ")
-                    record = None
-                    check_schedule()
-                    registry.hbr = None
-                else:
-                    warn("using cached backup record: " + str(e))
+                record = hb.get_backup_record(saved_record.backup_id)
+            except hub.InvalidBackupError:
+                record = None
+            except hub.Error, e:
+                # Device-scoped grants must confirm that the saved destination
+                # belongs to the current account.
+                if device_scoped:
+                    fatal(e)
+                warn("using cached backup record: " + str(e))
             else:
                 check_schedule()
-                registry.hbr = record
+                old_id = getattr(saved_record, 'record_id', None)
+                new_id = getattr(record, 'record_id', None)
+                address_changed = record.address != saved_record.address
+                # Older scoped records have only an account-local backup ID and
+                # the saved storage address to establish their identity.
+                if old_id is not None and new_id is not None:
+                    same_record = str(old_id) == str(new_id)
+                else:
+                    same_record = not (device_scoped and address_changed)
+
+                if not same_record:
+                    record = None
+                else:
+                    registry.hbr = record
+                    if address_changed:
+                        resume = registry.backup_resume_conf
+                        if resume and resume.address != record.address:
+                            registry.backup_resume_conf = None
+
+        if opt_resume:
+            resume = registry.backup_resume_conf
+            if not record or not resume or resume.address != record.address:
+                fatal("The interrupted backup belongs to a different storage destination. Start a new backup.")
 
         if not record:
             record_args = (registry.key, detect_profile_id(), get_server_id())
             check_schedule()
+            if saved_record:
+                warn("The saved backup record is unavailable for this destination. Creating a new backup record.")
+                registry.hbr = None
+                registry.backup_resume_conf = None
             record = hb.new_backup_record(*record_args)
             check_schedule()
             registry.hbr = record

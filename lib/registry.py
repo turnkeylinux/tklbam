@@ -144,9 +144,12 @@ Run "tklbam-init --help" for further details.
     def hbr(self, val=UNDEFINED):
         format = "%Y-%m-%d %H:%M:%S"
         if val and val is not UNDEFINED:
+            record_id = getattr(val, 'record_id', None)
             val = AttrDict({'address': val.address,
                             'backup_id': val.backup_id,
                             'updated': datetime.now().strftime(format)})
+            if record_id is not None:
+                val.record_id = record_id
 
         retval = self._file_dict(self.path.hbr, val)
         if retval:
