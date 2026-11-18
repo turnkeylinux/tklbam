@@ -65,6 +65,8 @@ class Restore:
     INSTANCE_FILE_PATTERN = r'^/etc/postfix/turnkey-mail-[0-9a-f]{16}\.(sasl(\.db)?|sender|headers)($|/)'
     DOCKER_RUNTIME_PATH = '/etc/turnkey-runtime'
     DOCKER_HOSTS_PATH = '/etc/hosts'
+    MOUNTINFO_PATH = '/proc/self/mountinfo'
+    NETWORK_PATHS = ('/etc/hosts', '/etc/hostname', '/etc/resolv.conf')
 
     def _docker_runtime(self):
         try:
@@ -74,6 +76,38 @@ class Restore:
             if e.errno == errno.ENOENT:
                 return False
             raise
+
+    def _runtime_network_paths(self):
+        # A bind mount may have the same device number as its parent, so
+        # os.path.ismount cannot identify all of these files.
+        try:
+            with open(self.MOUNTINFO_PATH) as stream:
+                mounted = set(re.sub(r'\\([0-7]{3})',
+                                     lambda m: chr(int(m.group(1), 8)),
+                                     line.split()[4]) for line in stream)
+        except IOError, e:
+            if e.errno != errno.ENOENT:
+                raise
+            mounted = set()
+
+        protected = set()
+        for path in self.NETWORK_PATHS:
+            target = realpath(path)
+            if path in mounted or target in mounted:
+                protected.update((path, target))
+        if self._docker_runtime():
+            protected.add(self.DOCKER_HOSTS_PATH)
+        return tuple(protected)
+
+    @staticmethod
+    def _ancestor_paths(paths):
+        ancestors = set()
+        for path in paths:
+            ancestor = dirname(path)
+            while ancestor not in ancestors:
+                ancestors.add(ancestor)
+                ancestor = dirname(ancestor)
+        return ancestors
 
     def __init__(self, backup_extract_path, limits=[], rollback=True, simulate=False):
         self.extras = backup.ExtrasPaths(backup_extract_path)
@@ -243,25 +277,44 @@ class Restore:
 
             print
 
-        protected_paths = self.INSTANCE_PATHS
-        if self._docker_runtime():
-            # Docker owns this mount; it cannot be replaced by an old archive.
-            protected_paths += (self.DOCKER_HOSTS_PATH,)
-        instance_paths = PathMap(['-' + path for path in protected_paths])
+        instance_paths = PathMap(['-' + path for path in self.INSTANCE_PATHS])
         instance_file = re.compile(self.INSTANCE_FILE_PATTERN)
         # An ancestor move, replacement, chmod or recursive overlay can affect
         # identity even when the identity file itself is absent from fsdelta.
-        instance_ancestors = set([self.INSTANCE_FILE_DIRECTORY])
-        for protected in protected_paths + (self.INSTANCE_FILE_DIRECTORY,):
-            ancestor = dirname(protected)
-            while ancestor not in instance_ancestors:
-                instance_ancestors.add(ancestor)
-                ancestor = dirname(ancestor)
+        instance_ancestors = self._ancestor_paths(self.INSTANCE_PATHS +
+                                                  (self.INSTANCE_FILE_DIRECTORY,))
+        instance_ancestors.add(self.INSTANCE_FILE_DIRECTORY)
+
+        runtime_paths = set(self._runtime_network_paths())
+        runtime_protected = runtime_paths | self._ancestor_paths(runtime_paths)
+        runtime_prefixes = tuple(path + '/' for path in runtime_paths)
+        runtime_basenames = set(basename(path) for path in runtime_protected)
+        resolved_parents = {}
+
+        def is_runtime_path(path):
+            return path in runtime_protected or path.startswith(runtime_prefixes)
+
+        def reaches_runtime_path(path, lexical):
+            if is_runtime_path(lexical):
+                return True
+            # For example, /var/run points to /run on Debian. Resolve the
+            # parent of candidate paths to protect files below that symlink.
+            # Unrelated names do not require a filesystem lookup.
+            parent, name = split(path.rstrip('/'))
+            if name not in runtime_basenames and name not in ('.', '..'):
+                return False
+            if parent not in resolved_parents:
+                resolved_parents[parent] = realpath(parent)
+            resolved = normpath(join(resolved_parents[parent], name))
+            return (is_runtime_path(resolved) or
+                    (islink(resolved) and is_runtime_path(realpath(resolved))))
 
         def can_restore(path):
-            path = normpath('/' + path.lstrip('/'))
-            return (path not in instance_ancestors and path in instance_paths
-                    and not instance_file.match(path))
+            path = '/' + path.lstrip('/')
+            lexical = normpath(path)
+            return (lexical not in instance_ancestors and lexical in instance_paths
+                    and not instance_file.match(lexical)
+                    and not (runtime_paths and reaches_runtime_path(path, lexical)))
 
         changes = Changes(change for change in Changes.fromfile(extras.fsdelta, limits)
                           if can_restore(change.path))
