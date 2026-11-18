@@ -1,5 +1,6 @@
 #!/usr/lib/tklbam-pypy2/bin/pypy
 """Exercise filesystem restore with an old archive containing Hub identity."""
+import errno
 import os
 import re
 import pipes
@@ -405,6 +406,7 @@ class RestoreRollbackTest(unittest.TestCase):
         second = os.path.join(self.target, 'second')
         created = os.path.join(self.target, 'created')
         self.write(first, 'original first')
+        os.chmod(first, 04755)
         self.write(second, 'original second')
         changes = Changes([Change.Deleted(first), Change.Deleted(second),
                            Change.Deleted(created)])
@@ -427,7 +429,29 @@ class RestoreRollbackTest(unittest.TestCase):
                                (created, 'created after interruption')):
             with open(path) as stream:
                 self.assertEqual(stream.read(), expected)
+        self.assertEqual(stat.S_IMODE(os.stat(first).st_mode), 04755)
         self.assertFalse(os.path.exists(self.rollback.paths))
+
+    def test_cross_device_move_preserves_setid_mode(self):
+        source = os.path.join(self.target, 'source')
+        dest = os.path.join(self.target, 'dest')
+        self.write(source, 'original data')
+        os.chmod(source, 06755)
+        rename = os.rename
+        def cross_device(src, dst):
+            if src == source:
+                raise OSError(errno.EXDEV, 'simulated cross-device move')
+            rename(src, dst)
+        os.rename = cross_device
+        try:
+            self.rollback._move(source, dest)
+        finally:
+            os.rename = rename
+
+        self.assertFalse(os.path.exists(source))
+        self.assertEqual(stat.S_IMODE(os.stat(dest).st_mode), 06755)
+        with open(dest) as stream:
+            self.assertEqual(stream.read(), 'original data')
 
     def test_failed_rollback_keeps_originals_for_retry(self):
         path = os.path.join(self.target, 'data')

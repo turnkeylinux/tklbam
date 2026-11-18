@@ -9,6 +9,7 @@
 # the License, or (at your option) any later version.
 #
 import os
+import errno
 import sys
 import subprocess
 from os.path import *
@@ -73,7 +74,17 @@ class Rollback:
             os.makedirs(dirname(dest))
 
         utils.remove_any(dest)
-        utils.move(source, dest)
+        try:
+            os.rename(source, dest)
+        except OSError, e:
+            if e.errno != errno.EXDEV:
+                raise
+            mode = stat.S_IMODE(os.lstat(source).st_mode)
+            utils.move(source, dest)
+            # The copy fallback restores ownership with chown, which can
+            # clear the setuid and setgid bits.
+            if mode & (stat.S_ISUID | stat.S_ISGID):
+                os.chmod(dest, mode)
 
     def _move_to_originals(self, source):
         """Move source into originals"""
@@ -93,10 +104,12 @@ class Rollback:
     @staticmethod
     def _restore_metadata(path, saved):
         current = DirIndex.Record.frompath(path)
-        if saved.uid != current.uid or saved.gid != current.gid:
+        ownership_changed = saved.uid != current.uid or saved.gid != current.gid
+        if ownership_changed:
             os.lchown(path, saved.uid, saved.gid)
-        if saved.mod != current.mod:
-            os.chmod(path, stat.S_IMODE(saved.mod))
+        mode = stat.S_IMODE(saved.mod)
+        if saved.mod != current.mod or (ownership_changed and mode & (stat.S_ISUID | stat.S_ISGID)):
+            os.chmod(path, mode)
 
     def rollback_files(self):
         pending = exists(self.paths.pending_files)
