@@ -309,6 +309,7 @@ incremental.
 For a server with Hub-managed scheduling, set **Daily backups** on the
 server's **Connections** card. Finish backup setup and run
 ``sudo tklbam-init`` or create a manual backup to activate the daily job.
+TKLBAM prepares the profile when the first authorized backup starts.
 A server already initialized for an older Hub connection keeps its local
 schedule until connected with scheduling support. If TKLBAM still has
 an earlier authorization after reconnecting to the same Hub account,

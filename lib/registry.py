@@ -71,7 +71,7 @@ Run "tklbam-init --help" for further details.
 
     class Paths(_Paths):
         files = ['restore.log', 'backup.log', 'backup.pid',
-                 'backup-resume', 'sub_apikey', 'secret', 'key', 'credentials', 'hbr',
+                 'backup-resume', 'pending-profile', 'sub_apikey', 'secret', 'key', 'credentials', 'hbr',
                  'profile', 'profile/stamp', 'profile/profile_id']
 
     def __init__(self, path=None):
@@ -126,6 +126,10 @@ Run "tklbam-init --help" for further details.
     def sub_apikey(self, val=UNDEFINED):
         return self._file_str(self.path.sub_apikey, val)
     sub_apikey = property(sub_apikey, sub_apikey)
+
+    def pending_profile(self, val=UNDEFINED):
+        return self._file_str(self.path.pending_profile, val)
+    pending_profile = property(pending_profile, pending_profile)
 
     def secret(self, val=UNDEFINED):
         return self._file_str(self.path.secret, val)

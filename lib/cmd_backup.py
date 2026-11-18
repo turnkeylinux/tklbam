@@ -93,6 +93,9 @@ Resolution order for configurable options:
   2) configuration file ($CONF_PATH)
   3) built-in default (lowest precedence)
 
+Exit status:
+    12                             Hub backup plan record limit reached
+
 Configuration file format ($CONF_PATH):
 
   <option-name> <value>
@@ -186,6 +189,28 @@ def fatal(e):
     print >> sys.stderr, "error: " + str(e)
     sys.exit(1)
 
+PLAN_LIMIT_EXIT = 12
+
+def create_backup_record(hb, key, profile_id, server_id):
+    try:
+        return hb.new_backup_record(key, profile_id, server_id)
+    except hub.APIError, e:
+        if e.name != "BackupRecord.PlanLimitExceeded":
+            raise
+        print >> sys.stderr, ("Your free Hub plan's backup is already in use. "
+                              "Upgrade to back up more servers:\n"
+                              "https://hub.turnkeylinux.org/billing/\n\n"
+                              "After upgrading, run tklbam-backup again.")
+        sys.exit(PLAN_LIMIT_EXIT)
+
+def prepare_backup_profile(conf, command_profile=None, consume_pending=True):
+    pending = registry.pending_profile
+    selected = command_profile or pending or conf.force_profile
+    update_profile(selected)
+    conf.force_profile = selected
+    if consume_pending and pending and registry.pending_profile == pending:
+        registry.pending_profile = None
+
 from pylib.conffile import ConfFile
 
 class ServerConf(ConfFile):
@@ -241,6 +266,7 @@ def main():
     opt_resume = None
     opt_disable_resume = False
     opt_logfile = PATH_LOGFILE
+    opt_profile = None
 
     conf = Conf()
     conf.secretfile = registry.path.secret
@@ -278,6 +304,7 @@ def main():
 
         elif opt == '--force-profile':
             conf.force_profile = val
+            opt_profile = val
 
         elif opt in ('-q', '--quiet'):
             opt_verbose = False
@@ -380,9 +407,13 @@ def main():
 
     if not raw_upload_path:
         try:
-            update_profile(conf.force_profile)
+            if opt_resume:
+                saved_profile = registry.backup_resume_conf.get('force_profile')
+                update_profile(saved_profile)
+            else:
+                prepare_backup_profile(conf, opt_profile, consume_pending=not opt_simulate)
         except hub.Backups.NotInitialized, e:
-            fatal("you need a profile to backup, run tklbam-init first")
+            fatal("A backup profile is required. Connect to the Hub or use --force-profile=empty or a custom profile.")
 
     if not opt_simulate and not conf.address and not dump_path:
         if opt_scheduled:
@@ -442,7 +473,7 @@ def main():
                 warn("The saved backup record is unavailable for this destination. Creating a new backup record.")
                 registry.hbr = None
                 registry.backup_resume_conf = None
-            record = hb.new_backup_record(*record_args)
+            record = create_backup_record(hb, *record_args)
             check_schedule()
             registry.hbr = record
 

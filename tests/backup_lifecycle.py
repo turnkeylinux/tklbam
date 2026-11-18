@@ -300,6 +300,9 @@ class ScheduledBackupTests(unittest.TestCase):
 
     def test_opt_out_skips_before_profile_and_upload(self):
         self.assertEqual(['scheduled credentials'], self.run_child('disabled', 0))
+        directory = os.path.join(self.path, 'registry')
+        self.assertFalse(os.path.exists(os.path.join(directory, 'profile')))
+        self.assertEqual('empty', open(os.path.join(directory, 'pending-profile')).read().strip())
 
     def test_old_hub_acknowledgement_failure_does_not_upload(self):
         self.assertEqual(['scheduled credentials'], self.run_child('old-hub', 1))
@@ -371,7 +374,10 @@ def scheduled_child(mode, path):
         current.sub_apikey = token
         current.secret = 'previous key'
         current.key = 'previous keypacket'
-        current.profile = 'empty'
+        if mode in ('first', 'disabled'):
+            current.pending_profile = 'empty'
+        else:
+            current.profile = 'empty'
         current._file_str(os.path.join(current.path, 'hub-daily-initialized'), device)
         if mode in ('repeat', 'legacy-record-unavailable'):
             current.hbr = AttrDict(backup_id=17, address=target)
@@ -402,6 +408,8 @@ def scheduled_child(mode, path):
             else:
                 assert attrs == {'scheduled': '1'}
                 event('scheduled credentials')
+            if mode in ('first', 'disabled'):
+                assert current.profile is None and current.pending_profile == 'empty'
             if mode == 'disabled':
                 return {'scheduled': 'disabled'}
             if mode == 'unavailable':
@@ -415,6 +423,8 @@ def scheduled_child(mode, path):
             return response
         def new_backup_record(self, key, *args):
             assert key
+            if mode == 'first':
+                assert current.profile.profile_id == 'empty' and current.pending_profile is None
             event('record/create')
             if mode == 'relink-record':
                 set_pending('b' * 32)
@@ -507,9 +517,8 @@ class CronScheduleTests(unittest.TestCase):
 
     def test_initialized_daily_jitters_before_running_backup(self):
         self.enable_managed()
-        os.mkdir(os.path.join(self.path, 'profile'))
-        for filename, value in (('secret', 'key'), ('profile/profile_id', 'empty'),
-                                ('profile/stamp', ''), ('hub-daily-initialized', 'a' * 32),
+        for filename, value in (('secret', 'secret'), ('key', 'keypacket'),
+                                ('hub-daily-initialized', 'a' * 32),
                                 ('sub_apikey', 'tklbam2.' + 'a' * 32 + '.' + 'e' * 43)):
             with open(os.path.join(self.path, filename), 'w') as stream:
                 stream.write(value + '\n')

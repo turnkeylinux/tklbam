@@ -63,8 +63,7 @@ def initialized_daily(current):
     if not pending or not authorization or pending.group(1) != authorization.group(1):
         return None
     ready = daily_state(current, "hub-daily-initialized")
-    if (ready == authorization.group(1) and daily_state(current, "secret")
-            and daily_state(current, "profile/profile_id") and os.path.isfile(current.path.profile.stamp)):
+    if ready == authorization.group(1) and daily_state(current, "secret") and daily_state(current, "key"):
         return token
     return None
 
@@ -104,8 +103,7 @@ def complete_daily_initialization(current, validated_token=None):
     authorization = BACKUP_TOKEN.match(token) if token else None
     if not pending or not authorization or pending.group(1) != authorization.group(1):
         return
-    if (not current.secret or not current.profile or not daily_state(current, "profile/profile_id")
-            or initialized_daily(current) == token):
+    if not current.secret or not current.key or initialized_daily(current) == token:
         return
     mode = stock_cron_mode()
     if mode is None:
@@ -116,7 +114,7 @@ def complete_daily_initialization(current, validated_token=None):
         if os.path.isfile(alternate) and os.access(alternate, os.X_OK):
             return
 
-    # A retry may already have a profile and token but lack a completed init
+    # A retry may already have a key and token but lack a completed init
     # marker. Validate the current grant before activating its job.
     if validated_token != token:
         _, daily_ready = hub.Backups(token).get_credentials(initialize=True, existing_record=current.hbr)
@@ -146,7 +144,7 @@ def deactivate_daily(current):
             os.chmod(DAILY_CRON, mode & ~stat.S_IXUSR)
 
 
-def initialize(apikey=None, profile=None, fetch_profile=True):
+def initialize(apikey=None, profile=None, fetch_profile=False):
     import registry
     current = registry.registry
     token = hub.Backups.get_sub_apikey(apikey) if apikey else hub_token()

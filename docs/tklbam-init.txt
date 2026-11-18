@@ -3,7 +3,7 @@ tklbam-init
 ===========
 
 -------------------------------------------------------------------------
-Initialization: links TKLBAM to Hub account and downloads backup profile)
+Initialization: prepare TKLBAM for backups
 -------------------------------------------------------------------------
 
 :Author: Liraz Siri <liraz@turnkeylinux.org>
@@ -16,35 +16,32 @@ SYNOPSIS
 
 tklbam-init [ --force ] [ `API-KEY` ]
 
-By default, this links TKLBAM to your Hub account and downloads an appropriate
-backup profile, which is used to calculate the list of system changes we need
-to backup. On a TurnKey system the profile describes the installation state of
-the appliance and contains a list of packages, filesystem paths to scan for
-changes and an index of the contents of those paths which records timestamps,
-ownership and permissions. On a non-TurnKey system the default backup profile
-will not describe installation state, only a list of directories to backup.
+By default, this links TKLBAM to your Hub account. The first backup downloads
+a profile to calculate system changes. On a TurnKey system the profile describes
+the installation state of the server image, including packages and filesystem
+paths. On a non-TurnKey system the default profile lists directories to back up.
 
 ARGUMENTS
 =========
 
-`API-KEY`   Cut and paste this from your Hub account's user profile.
+`API-KEY`   Optional legacy Hub API key.
 
-If you do not provide the API-KEY as a command line argument you will be
-prompted for it interactively (unless you use the --solo option)
+Without an API key, TKLBAM uses the server's Hub connection and offers to
+connect it if needed.
 
 OPTIONS
 =======
 
---force                         Force re-initialization with new API-KEY
+--force                         Replace the Hub authorization
 
---force-profile=PROFILE_ID      Force a specific backup profile 
+--force-profile=PROFILE_ID      Select a profile for the next backup
                                 (e.g., "core", "turnkey-core-13.0-wheezy-amd64")
 
                                 Without --force-profile the profile_id is 
                                 automatically detected.
 
---force-profile=empty           "empty" is a special profile_id value that creates an empty
-                                backup profile. Backup configurations will only be taken 
+--force-profile=empty           Select an empty profile for the next backup.
+                                Backup configurations will only be taken
                                 from /etc/tklbam.
 
 --force-profile=PATH            Path to a custom backup profile
@@ -63,8 +60,7 @@ OPTIONS
 SECURITY WARNING
 ================
 
-Providing your Hub account's APIKEY as a command line argument is potentially less secure
-than allowing tklbam-init to prompt you for it interactively:
+Providing a legacy API key as a command line argument may expose it:
 
 * The shell may save the APIKEY to its history file (e.g., ~/.bash_history)
 * The APIKEY may briefly show up in the process list

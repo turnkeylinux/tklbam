@@ -25,6 +25,9 @@ override_dh_auto_build:
 override_dh_auto_test:
 	LD_LIBRARY_PATH=/usr/lib/tklbam-pypy2/bin /usr/lib/tklbam-pypy2/bin/pypy tests/profile_hooks.py -v
 	LD_LIBRARY_PATH=/usr/lib/tklbam-pypy2/bin /usr/lib/tklbam-pypy2/bin/pypy tests/restore_identity.py -v
+	LD_LIBRARY_PATH=/usr/lib/tklbam-pypy2/bin /usr/lib/tklbam-pypy2/bin/pypy tests/plan_limit.py -v
+	LD_LIBRARY_PATH=/usr/lib/tklbam-pypy2/bin /usr/lib/tklbam-pypy2/bin/pypy tests/connection.py -v
+	LD_LIBRARY_PATH=/usr/lib/tklbam-pypy2/bin /usr/lib/tklbam-pypy2/bin/pypy tests/profile_defer.py -v
 
 # don't try to link libs - won't work because we build against pypy
 override_dh_shlibdeps:

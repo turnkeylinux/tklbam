@@ -5,8 +5,7 @@ registry=${TKLBAM_REGISTRY:-/var/lib/tklbam}
 set -- --quiet
 if [ "$0" = /etc/cron.daily/tklbam-backup ] && [ -e "$registry/hub-managed-daily" ]; then
     [ "$registry" = /var/lib/tklbam ] || exit 0
-    [ -s "$registry/profile/profile_id" ] && [ -f "$registry/profile/stamp" ] || exit 0
-    [ -s "$registry/secret" ] || exit 0
+    [ -s "$registry/secret" ] && [ -s "$registry/key" ] || exit 0
     pending=$(cat "$registry/hub-managed-daily") || exit 0
     [[ $pending =~ ^([0-9a-f]{32})\ (local|managed)$ ]] || exit 0
     device=${BASH_REMATCH[1]}
