@@ -20,12 +20,14 @@ Options:
 """
 import _init_sys_path
 
+import hashlib
 import json
+import os
 import re
 import sys
 import time
 
-from registry import hub_backups
+from registry import hub_backups, registry
 import hub
 from pylib.retry import retry
 
@@ -111,13 +113,25 @@ def main():
     if args:
         usage()
 
-    try:
-        hb = hub_backups()
-    except hub.Backups.NotInitialized, e:
-        # used to print and fall through to a NameError on hb
-        fatal(e)
+    scheduled_token_hash = os.environ.get("TKLBAM_SCHEDULED_TOKEN_SHA256")
+    if scheduled_token_hash:
+        import connection
+        token = connection.initialized_daily(registry)
+        if not token or hashlib.sha256(token).hexdigest() != scheduled_token_hash:
+            fatal("The Hub connection changed while preparing scheduled backup credentials.")
+        hb = hub.Backups(token)
+    else:
+        try:
+            hb = hub_backups()
+        except hub.Backups.NotInitialized, e:
+            fatal(e)
 
     creds = get_credentials(hb)
+    if scheduled_token_hash:
+        try:
+            connection.verify_scheduled(registry, token)
+        except hub.Error, e:
+            fatal(e)
     if creds.type != 'iamrole':
         fatal("STS agent incompatible with '%s' type credentials" % creds.type)
 

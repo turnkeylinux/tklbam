@@ -210,6 +210,222 @@ class BackupLifecycleTests(unittest.TestCase):
                          open(os.path.join(self.path, 'events')).read().splitlines())
 
 
+class ScheduledBackupTests(unittest.TestCase):
+    def setUp(self):
+        self.path = tempfile.mkdtemp(prefix='tklbam-scheduled-')
+
+    def tearDown(self):
+        shutil.rmtree(self.path)
+
+    def run_child(self, mode, status):
+        process = subprocess.Popen([sys.executable, __file__, '--scheduled-child', mode, self.path],
+                                   stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        output = process.communicate()[0]
+        self.assertEqual(status, process.returncode, output)
+        with open(os.path.join(self.path, 'events')) as stream:
+            return stream.read().splitlines()
+
+    def test_first_scheduled_run_reuses_initialization_and_requests_credentials_once(self):
+        events = self.run_child('first', 0)
+        self.assertEqual(['scheduled credentials', 'profile', 'record/create',
+                          'inprogress/True', 'upload', 'upload', 'inprogress/False', 'updated'],
+                         events)
+
+    def test_initialized_run_reuses_the_scoped_token_and_record(self):
+        events = self.run_child('repeat', 0)
+        self.assertEqual(['scheduled credentials', 'profile', 'record/read',
+                          'inprogress/True', 'upload', 'upload', 'inprogress/False',
+                          'updated'], events)
+
+    def test_dormant_link_makes_no_request_and_leaves_state_uninitialized(self):
+        self.assertEqual([], self.run_child('dormant', 0))
+        self.assertEqual(['hub-managed-daily'], os.listdir(os.path.join(self.path, 'registry')))
+
+    def test_opt_out_skips_before_profile_and_upload(self):
+        self.assertEqual(['scheduled credentials'], self.run_child('disabled', 0))
+
+    def test_old_hub_acknowledgement_failure_does_not_upload(self):
+        self.assertEqual(['scheduled credentials'], self.run_child('old-hub', 1))
+
+    def test_relink_does_not_start_a_run_with_the_old_registry(self):
+        self.assertEqual([], self.run_child('relinked', 0))
+        directory = os.path.join(self.path, 'registry')
+        self.assertEqual('previous key', open(os.path.join(directory, 'secret')).read().strip())
+        self.assertTrue(open(os.path.join(directory, 'sub_apikey')).read().startswith('tklbam2.' + 'a' * 32))
+
+    def test_unavailable_hub_does_not_fall_back_to_cached_credentials(self):
+        self.assertEqual(['scheduled credentials'], self.run_child('unavailable', 1))
+
+    def test_relink_during_credentials_request_does_not_prepare_profile_or_record(self):
+        self.assertEqual(['scheduled credentials'], self.run_child('relink-auth', 1))
+
+    def test_relink_during_profile_preparation_does_not_prepare_record(self):
+        self.assertEqual(['scheduled credentials', 'profile'], self.run_child('relink-profile', 1))
+
+    def test_relink_during_record_request_does_not_upload_or_save_the_new_record(self):
+        self.assertEqual(['scheduled credentials', 'profile', 'record/create'],
+                         self.run_child('relink-record', 1))
+        self.assertFalse(os.path.exists(os.path.join(self.path, 'registry', 'hbr')))
+
+    def test_relink_during_backup_preparation_does_not_upload(self):
+        self.assertEqual(['scheduled credentials', 'profile', 'record/create',
+                          'inprogress/True', 'inprogress/False'],
+                         self.run_child('relink-upload', 1))
+
+
+def scheduled_child(mode, path):
+    import cmd_backup as command
+    import connection
+    import hub
+    import registry
+    from utils import AttrDict
+
+    current = registry._Registry(os.path.join(path, 'registry'))
+    registry.registry = command.registry = current
+    connection.DEFAULT_REGISTRY = str(current.path)
+    command.PATH_LOGFILE = os.path.join(path, 'backup.log')
+    command.PATH_PIDLOCK = os.path.join(path, 'backup.pid')
+    target = 'file://' + os.path.join(path, 'target')
+    device = 'a' * 32
+    token = 'tklbam2.%s.%s' % (device, 'c' * 43)
+    pending = os.path.join(current.path, 'hub-managed-daily')
+
+    def set_pending(id):
+        with open(pending, 'w') as stream:
+            stream.write(id + ' managed\n')
+
+    set_pending('b' * 32 if mode == 'relinked' else device)
+    events_path = os.path.join(path, 'events')
+    with open(events_path, 'w'):
+        pass
+
+    def event(name):
+        with open(events_path, 'a') as stream:
+            stream.write(name + '\n')
+
+    if mode != 'dormant':
+        current.sub_apikey = token
+        current.secret = 'previous key'
+        current.key = 'previous keypacket'
+        current.profile = 'empty'
+        current._file_str(os.path.join(current.path, 'hub-daily-initialized'), device)
+        if mode == 'repeat':
+            current.hbr = AttrDict(backup_id=17, address=target)
+        current.credentials = {'type': 'iamuser', 'accesskey': 'legacy-cache',
+                               'secretkey': 'legacy-cache', 'sessiontoken': ''}
+
+    def helper():
+        raise AssertionError('scheduled backup called the init helper')
+
+    class Hub(hub.Backups):
+        def _api(self, method, uri, attrs=None):
+            assert (self.subkey, method, uri, attrs) == (token, 'GET', 'credentials/', {'scheduled': '1'})
+            event('scheduled credentials')
+            if mode == 'disabled':
+                return {'scheduled': 'disabled'}
+            if mode == 'unavailable':
+                raise hub.APIError(503, 'Unavailable', 'Hub unavailable')
+            if mode == 'relink-auth':
+                set_pending('b' * 32)
+            response = dict(type='iamrole', accesskey='fixture', secretkey='fixture',
+                            sessiontoken='fixture', expiration='2030-01-01T00:00:00Z')
+            if mode != 'old-hub':
+                response['scheduled'] = 'allowed'
+            return response
+        def new_backup_record(self, key, *args):
+            assert key
+            event('record/create')
+            if mode == 'relink-record':
+                set_pending('b' * 32)
+            return AttrDict(backup_id=17, address=target)
+        def get_backup_record(self, *args):
+            event('record/read')
+            return current.hbr
+        def set_backup_inprogress(self, backup_id, value):
+            event('inprogress/' + str(value))
+        def updated_backup(self, address):
+            event('updated')
+
+    connection.hub_token = helper
+    hub.Backups = Hub
+    prepare_profile = registry._Registry.update_profile
+    def profile(self, profile_id=None):
+        event('profile')
+        if mode == 'relink-profile':
+            set_pending('b' * 32)
+        return prepare_profile(self, profile_id)
+    registry._Registry.update_profile = profile
+
+    def inspect(path):
+        if mode == 'relink-upload':
+            set_pending('b' * 32)
+
+    command.hooks.backup.pre = lambda: None
+    command.hooks.backup.inspect = inspect
+    command.hooks.backup.post = lambda: None
+    command.duplicity.Duplicity.run = lambda *a, **kw: event('upload')
+    sys.argv = ['tklbam-backup', '--scheduled', '--skip-files', '--skip-database', '--skip-packages']
+    command.main()
+
+
+class CronScheduleTests(unittest.TestCase):
+    def setUp(self):
+        self.path = tempfile.mkdtemp(prefix='tklbam-cron-')
+        self.calls = os.path.join(self.path, 'calls')
+        self.env = dict(os.environ, TKLBAM_REGISTRY=self.path, CALLS=self.calls,
+                        JITTER='1', PATH=self.path + ':' + os.environ['PATH'])
+        for command in ('sleep', 'tklbam-backup'):
+            with open(os.path.join(self.path, command), 'w') as stream:
+                stream.write('#!/bin/sh\nprintf "%%s %%s\\n" %s "$*" >> "$CALLS"\n' % command)
+            os.chmod(os.path.join(self.path, command), 0700)
+
+    def tearDown(self):
+        shutil.rmtree(self.path)
+
+    def run_cron(self, path):
+        # Set argv[0] to the installed path without modifying the system's cron.
+        script = open(os.path.join(ROOT, 'contrib/cron.sh')).read()
+        # Point the packaged default at an isolated registry without altering host /var/lib.
+        script = script.replace('/var/lib/tklbam', self.path)
+        subprocess.check_call(['bash', '-c', script, path], env=self.env)
+        return open(self.calls).read().splitlines() if os.path.exists(self.calls) else []
+
+    def enable_managed(self):
+        with open(os.path.join(self.path, 'hub-managed-daily'), 'w') as stream:
+            stream.write('a' * 32 + ' managed\n')
+
+    def test_pending_daily_does_not_sleep_or_run_backup(self):
+        self.enable_managed()
+        self.assertEqual([], self.run_cron('/etc/cron.daily/tklbam-backup'))
+
+    def test_initialized_daily_jitters_before_running_backup(self):
+        self.enable_managed()
+        os.mkdir(os.path.join(self.path, 'profile'))
+        for filename, value in (('secret', 'key'), ('profile/profile_id', 'empty'),
+                                ('profile/stamp', ''), ('hub-daily-initialized', 'a' * 32),
+                                ('sub_apikey', 'tklbam2.' + 'a' * 32 + '.' + 'e' * 43)):
+            with open(os.path.join(self.path, filename), 'w') as stream:
+                stream.write(value + '\n')
+        self.assertEqual(['sleep 0', 'tklbam-backup --scheduled --quiet'],
+                         self.run_cron('/etc/cron.daily/tklbam-backup'))
+        os.unlink(self.calls)
+        with open(os.path.join(self.path, 'hub-managed-daily'), 'w') as stream:
+            stream.write('b' * 32 + ' managed\n')
+        self.assertEqual([], self.run_cron('/etc/cron.daily/tklbam-backup'))
+
+    def test_uninitialized_legacy_cron_does_nothing(self):
+        self.assertEqual([], self.run_cron('/etc/cron.daily/tklbam-backup'))
+
+    def test_alternate_stock_copy_keeps_legacy_scheduling(self):
+        self.enable_managed()
+        os.mkdir(os.path.join(self.path, 'profile'))
+        for filename in ('sub_apikey', 'profile/profile_id'):
+            with open(os.path.join(self.path, filename), 'w') as stream:
+                stream.write('fixture\n')
+        self.assertEqual(['sleep 0', 'tklbam-backup --quiet'],
+                         self.run_cron('/etc/cron.weekly/tklbam-backup'))
+
+
 class SinkTests(unittest.TestCase):
     def test_transient_errors_and_partial_writes_preserve_required_data(self):
         from pylib import stdtrap
@@ -261,5 +477,7 @@ class SinkTests(unittest.TestCase):
 if __name__ == '__main__':
     if len(sys.argv) > 1 and sys.argv[1] == '--child':
         child(sys.argv[2], sys.argv[3])
+    elif len(sys.argv) > 1 and sys.argv[1] == '--scheduled-child':
+        scheduled_child(sys.argv[2], sys.argv[3])
     else:
         unittest.main()

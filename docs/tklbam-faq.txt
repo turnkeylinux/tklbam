@@ -306,8 +306,16 @@ By default, a full backup will happen if the last full backup is
 older than 30 days. Between full backups, all backup sessions are
 incremental.
 
-We recommend enabling the daily backup cron job so that daily
-incremental backups happen automatically::
+For a server with Hub-managed scheduling, set **Daily backups** on the
+server's **Connections** card. Finish backup setup and run
+``sudo tklbam-init`` or create a manual backup to activate the daily job.
+A server already initialized for an older Hub connection keeps its local
+schedule until connected with scheduling support. If TKLBAM still has
+an earlier authorization after reconnecting to the same Hub account,
+run ``sudo tklbam-init --force`` to authorize the current connection.
+
+For a locally managed schedule, enable the daily cron job on a server
+with TKLBAM already initialized::
 
     chmod +x /etc/cron.daily/tklbam-backup
 
@@ -316,6 +324,16 @@ the tklbam configuration::
 
     # create a full backup every 14 days
     echo full-backup 14D >> /etc/tklbam/conf
+
+Before downgrading a server with Hub-managed scheduling, disable the
+daily cron job. Older packages can preserve its executable permission
+and run it as a local schedule. Wait for any current backup to finish,
+then run::
+
+    sudo chmod a-x /etc/cron.daily/tklbam-backup
+
+After downgrading, enable a local schedule only if you want daily
+backups on that server.
 
 I forgot my passphrase, and I "lost" my escrow key. Can you help me?
 --------------------------------------------------------------------

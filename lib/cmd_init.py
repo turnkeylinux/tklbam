@@ -69,6 +69,7 @@ Examples:
 import _init_sys_path
 
 import sys
+import connection
 import hub
 import keypacket
 
@@ -111,6 +112,21 @@ def usage(e=None):
     pager(output + __doc__.strip())
     sys.exit(1)
 
+def initialize_key():
+    if registry.registry.secret:
+        return
+    registry.registry.secret = generate_secret()
+    registry.registry.key = keypacket.fmt(registry.registry.secret, "")
+    print """\
+Generated backup encryption key:
+
+    For extra security run "tklbam-passphrase" to cryptographically protect it
+    with a passphrase, which will be needed later to restore. If you use lose
+    the passphrase it will be impossible to restore your backup and you may
+    suffer data loss. To safeguard against this you may want to create an
+    escrow key with "tklbam-escrow".
+"""
+
 def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], "h", ["help", "solo", "force", "force-profile="])
@@ -148,20 +164,10 @@ def main():
         command = "tklbam init" if sys.argv[0] == "init" else "tklbam-init"
         fatal("Initialization requires root. Run sudo %s with the same options." % command)
 
-    if not registry.registry.secret:
-        registry.registry.secret = generate_secret()
-        registry.registry.key = keypacket.fmt(registry.registry.secret, "")
-        print """\
-Generated backup encryption key:
-
-    For extra security run "tklbam-passphrase" to cryptographically protect it
-    with a passphrase, which will be needed later to restore. If you use lose
-    the passphrase it will be impossible to restore your backup and you may
-    suffer data loss. To safeguard against this you may want to create an
-    escrow key with "tklbam-escrow".
-"""
+    initialize_key()
 
     if solo:
+        connection.deactivate_daily(registry.registry)
         if registry.registry.sub_apikey:
             print "Broken TKLBAM link to your Hub account (--solo mode)"
             registry.registry.sub_apikey = None
@@ -170,14 +176,22 @@ Generated backup encryption key:
         if force or not registry.registry.sub_apikey:
             if apikey and not is_valid_apikey(apikey):
                 fatal("Invalid legacy API key.")
-            import connection
             try:
-                connection.initialize(apikey, conf.force_profile)
+                validated_token = connection.initialize(apikey, conf.force_profile)
+                if apikey:
+                    connection.deactivate_daily(registry.registry)
+                elif validated_token:
+                    connection.complete_daily_initialization(registry.registry, validated_token)
             except Exception, e:
                 fatal(e)
             print "Linked TKLBAM to your Hub account."
             return
         elif not force_profile and registry.registry.profile:
+            if not apikey:
+                try:
+                    connection.complete_daily_initialization(registry.registry)
+                except (hub.Error, OSError), e:
+                    fatal(e)
             print "TKLBAM is already initialized. Use --force to replace its connection."
             return
 
@@ -186,6 +200,12 @@ Generated backup encryption key:
             registry.update_profile(conf.force_profile)
         except hub.Backups.NotInitialized:
             fatal("--solo requires --force-profile=empty or --force-profile=path/to/custom/profile ")
+
+    if not solo and not apikey:
+        try:
+            connection.complete_daily_initialization(registry.registry)
+        except (hub.Error, OSError), e:
+            fatal(e)
 
 if __name__=="__main__":
     main()

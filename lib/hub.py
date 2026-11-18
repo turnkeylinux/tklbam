@@ -24,7 +24,7 @@ subkey/
 
 credentials/
     method: GET
-    fields:
+    fields: [scheduled=1]
     return: accesskey, secretkey, usertoken, producttoken
 
 record/create/
@@ -109,6 +109,9 @@ into the Hub and go to the "Backups" section for instructions."""
         Error.__init__(self, desc)
 
 class InvalidBackupError(Error):
+    pass
+
+class ScheduleDisabled(Error):
     pass
 
 class API(_API):
@@ -230,9 +233,20 @@ class Backups:
         response = API().request('GET', cls.API_URL + 'subkey/', {'apikey': apikey})
         return response['subkey']
 
-    def get_credentials(self):
-        response = self._api('GET', 'credentials/')
-        return Credentials.from_dict(response)
+    def get_credentials(self, scheduled=False):
+        if not scheduled:
+            return Credentials.from_dict(self._api('GET', 'credentials/'))
+
+        response = self._api('GET', 'credentials/', {'scheduled': '1'})
+        decision = response.pop('scheduled', None) if isinstance(response, dict) else None
+        if decision == 'disabled':
+            raise ScheduleDisabled("Daily backups are disabled.")
+        if decision != 'allowed' or response.get('type') != 'iamrole':
+            raise Error("The Hub did not authorize this scheduled backup.")
+        try:
+            return Credentials.from_dict(response)
+        except TypeError:
+            raise Error("The Hub returned invalid scheduled backup credentials.")
 
     def get_new_profile(self, profile_id, profile_timestamp):
         """

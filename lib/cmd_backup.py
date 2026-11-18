@@ -50,6 +50,8 @@ Options:
 
     --simulate                     Do a dry run simulation of the backup.
 
+    --scheduled                    Request authorization for a Hub-managed daily backup
+
     -q --quiet                     Be less verbose (only print summary backup statistics)
     --logfile=PATH                 Path of file to log verbosely to
                                    default: $LOGFILE
@@ -128,6 +130,7 @@ from os.path import *
 
 import sys
 import getopt
+import hashlib
 
 import re
 import time
@@ -194,6 +197,20 @@ def get_server_id():
     except KeyError:
         return None
 
+def manual_credentials(hb):
+    try:
+        credentials = hb.get_credentials()
+    except hub.Error, e:
+        # The legacy DevPay credential may remain usable when the Hub is down.
+        cached = registry.credentials
+        if isinstance(e, hub.NotSubscribed) or not cached or cached.type == 'iamrole':
+            fatal(e)
+
+        warn("using cached backup credentials: " + e.description)
+        return cached
+    registry.credentials = credentials
+    return credentials
+
 def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], 'qh',
@@ -204,11 +221,16 @@ def main():
                                         'debug',
                                         'resume', 'disable-resume',
                                         'logfile=',
-                                        'simulate', 'quiet',
+                                        'simulate', 'quiet', 'scheduled',
                                         'force-profile=', 'secretfile=', 'address=',
                                         'volsize=', 's3-parallel-uploads=', 'full-backup='])
     except getopt.GetoptError, e:
         usage(e)
+
+    options = set(opt for opt, val in opts)
+    opt_scheduled = '--scheduled' in options
+    if opt_scheduled and options.intersection(('--address', '--dump', '--simulate', '--resume')):
+        fatal("--scheduled requires a Hub-managed backup without an explicit resume")
 
     raw_upload_path = None
     dump_path = None
@@ -328,7 +350,24 @@ def main():
     if conf.s3_parallel_uploads > 1 and conf.s3_parallel_uploads > (conf.volsize / 5):
         warn("s3-parallel-uploads > volsize / 5 (minimum upload chunk is 5MB)")
 
-    if not opt_simulate and not conf.address and not dump_path and (not registry.sub_apikey or not registry.secret):
+    credentials = None
+    def check_schedule():
+        if opt_scheduled:
+            try:
+                connection.verify_scheduled(registry, hb.subkey)
+            except hub.Error, e:
+                fatal(e)
+
+    if opt_scheduled:
+        import connection
+        try:
+            hb, credentials = connection.authorize_scheduled(registry)
+            os.environ['TKLBAM_SCHEDULED_TOKEN_SHA256'] = hashlib.sha256(hb.subkey).hexdigest()
+        except hub.ScheduleDisabled:
+            return
+        except hub.Error, e:
+            fatal(e)
+    elif not opt_simulate and not conf.address and not dump_path and (not registry.sub_apikey or not registry.secret):
         import cmd_init
         arguments = sys.argv
         try:
@@ -345,51 +384,43 @@ def main():
         except hub.Backups.NotInitialized, e:
             fatal("you need a profile to backup, run tklbam-init first")
 
-    credentials = None
     if not opt_simulate and not conf.address and not dump_path:
-        try:
-            hb = hub_backups()
-        except hub.Backups.NotInitialized, e:
-            fatal(str(e) + "\n" +
-                  "tip: you can still use tklbam-backup with --dump or --address")
-
-        try:
-            registry.credentials = hb.get_credentials()
-        except hb.Error, e:
-            # asking for get_credentials() might fail if the hub is down.
-            # But If we already have the credentials we can survive that.
-
-            if isinstance(e, hub.NotSubscribed) or \
-                    not registry.credentials or \
-                    registry.credentials.type == 'iamrole':
-                fatal(e)
-
-            warn("using cached backup credentials: " + e.description)
-
-        credentials = registry.credentials
-
-        if registry.hbr:
+        if opt_scheduled:
+            check_schedule()
+        else:
             try:
-                registry.hbr = hb.get_backup_record(registry.hbr.backup_id)
-            except hb.Error, e:
-                # if the Hub is down we can hope that the cached address
-                # is still valid and warn and try to backup anyway.
-                #
-                # But if we reach the Hub and it tells us the backup is invalid
-                # we must invalidate the cached backup record and start over.
+                hb = hub_backups()
+            except hub.Backups.NotInitialized, e:
+                fatal(str(e) + "\n" +
+                      "tip: you can still use tklbam-backup with --dump or --address")
+            credentials = manual_credentials(hb)
 
+        record = registry.hbr
+        if record:
+            try:
+                record = hb.get_backup_record(record.backup_id)
+            except hb.Error, e:
+                # The existing address may still be usable during Hub outages.
+                # An invalid record needs a new address from the Hub.
                 if isinstance(e, hub.InvalidBackupError):
                     warn("old backup record deleted, creating new ... ")
+                    record = None
+                    check_schedule()
                     registry.hbr = None
                 else:
                     warn("using cached backup record: " + str(e))
+            else:
+                check_schedule()
+                registry.hbr = record
 
-        if not registry.hbr:
-            registry.hbr = hb.new_backup_record(registry.key,
-                                                detect_profile_id(),
-                                                get_server_id())
+        if not record:
+            record_args = (registry.key, detect_profile_id(), get_server_id())
+            check_schedule()
+            record = hb.new_backup_record(*record_args)
+            check_schedule()
+            registry.hbr = record
 
-        conf.address = registry.hbr.address
+        conf.address = record.address
 
     if opt_resume:
         conf = registry.backup_resume_conf
@@ -430,15 +461,20 @@ def main():
         else:
             trap = None
 
-        def backup_inprogress(bool):
-            is_hub_address = registry.hbr and registry.hbr.address == conf.address
-            if is_hub_address and not (dump_path or opt_simulate):
+        def backup_inprogress(value):
+            if dump_path or opt_simulate:
+                return
+            inprogress_record = record if opt_scheduled else registry.hbr
+            if inprogress_record and inprogress_record.address == conf.address:
                 try:
-                    hb.set_backup_inprogress(registry.hbr.backup_id, bool)
+                    hb.set_backup_inprogress(inprogress_record.backup_id, value)
                 except hb.Error, e:
-                    warn("can't update Hub of backup %s: %s" % ("in progress" if bool else "completed", str(e)))
+                    warn("can't update Hub of backup %s: %s" % ("in progress" if value else "completed", str(e)))
 
+        started = False
         try:
+            check_schedule()
+            started = True
             backup_inprogress(True)
 
             def _print(s):
@@ -455,6 +491,7 @@ def main():
                                               conf.volsize,
                                               conf.full_backup,
                                               conf.s3_parallel_uploads)
+                check_schedule()
                 uploader(raw_upload_path, target, force_cleanup=not opt_resume, dry_run=opt_simulate, debug=opt_debug,
                          log=_print)
 
@@ -486,6 +523,7 @@ def main():
                                                                    else None,
                                                   excludes=[ '**' ])
 
+                    check_schedule()
                     uploader('/', target, force_cleanup=not b.resume, dry_run=opt_simulate, debug=opt_debug,
                              log=_print)
 
@@ -507,7 +545,8 @@ def main():
         finally:
             if simulate_path:
                 shutil.rmtree(simulate_path)
-            backup_inprogress(False)
+            if started:
+                backup_inprogress(False)
             if trap:
                 sys.stdout.flush()
                 sys.stderr.flush()
@@ -522,6 +561,7 @@ def main():
             stats = m.group(1)
             print stats.strip()
 
+    check_schedule()
     if not opt_simulate:
         registry.backup_resume_conf = None
 
