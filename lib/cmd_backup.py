@@ -200,6 +200,14 @@ def create_backup_record(hb, key, profile_id, server_id):
                               "After upgrading, run tklbam-backup again.")
         sys.exit(PLAN_LIMIT_EXIT)
 
+def prepare_backup_profile(conf, command_profile=None, consume_pending=True):
+    pending = registry.pending_profile
+    selected = command_profile or pending or conf.force_profile
+    update_profile(selected)
+    conf.force_profile = selected
+    if consume_pending and pending and registry.pending_profile == pending:
+        registry.pending_profile = None
+
 from pylib.conffile import ConfFile
 
 class ServerConf(ConfFile):
@@ -236,6 +244,7 @@ def main():
     opt_resume = None
     opt_disable_resume = False
     opt_logfile = PATH_LOGFILE
+    opt_profile = None
 
     conf = Conf()
     conf.secretfile = registry.path.secret
@@ -273,6 +282,7 @@ def main():
 
         elif opt == '--force-profile':
             conf.force_profile = val
+            opt_profile = val
 
         elif opt in ('-q', '--quiet'):
             opt_verbose = False
@@ -358,9 +368,13 @@ def main():
 
     if not raw_upload_path:
         try:
-            update_profile(conf.force_profile)
+            if opt_resume:
+                saved_profile = registry.backup_resume_conf.get('force_profile')
+                update_profile(saved_profile)
+            else:
+                prepare_backup_profile(conf, opt_profile, consume_pending=not opt_simulate)
         except hub.Backups.NotInitialized, e:
-            fatal("you need a profile to backup, run tklbam-init first")
+            fatal("A backup profile is required. Connect to the Hub or use --force-profile=empty or a custom profile.")
 
     credentials = None
     if not opt_simulate and not conf.address and not dump_path:

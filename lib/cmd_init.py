@@ -12,9 +12,9 @@
 """
 Initialization (start here)
 
-By default, this uses turnkey-hub to connect this server and downloads an appropriate
-backup profile, which is used to calculate the list of system changes we need
-to backup. On a TurnKey system the profile describes the installation state of
+By default, this uses turnkey-hub to connect this server. The first backup downloads
+an appropriate backup profile to calculate the list of system changes to back up.
+On a TurnKey system the profile describes the installation state of
 the appliance and contains a list of packages, filesystem paths to scan for
 changes and an index of the contents of those paths which records timestamps,
 ownership and permissions. On a non-TurnKey system the default backup profile
@@ -29,14 +29,14 @@ Options:
     --force                        Replace authorization using the Hub connection
                                    or an explicitly supplied legacy API key.
 
-    --force-profile=PROFILE_ID     Force a specific backup profile. E.g.:
+    --force-profile=PROFILE_ID     Select a profile for the next backup. E.g.:
                                    "core-18.1-bookworm"; or "turnkey-lamp-18.1-bookworm-amd64"
 
                                    Without --force-profile the profile_id is
                                    automatically detected - if it exists.
 
-    --force-profile=empty          "empty" is a special profile_id value that creates an empty
-                                   backup profile. Backup configurations will only be taken
+    --force-profile=empty          Select an empty profile for the next backup.
+                                   Backup configurations will only be taken
                                    from /etc/tklbam.
 
     --force-profile=PATH           Path to a custom backup profile DIRECTORY
@@ -46,7 +46,7 @@ Options:
                                    Details: tklbam-internal create-profile --help
 
     --solo                         Solo mode: disables link to Hub.
-                                   You'll need to --force-profile=empty or use a custom profile
+                                   Select an empty or custom profile before backing up.
 
                                    tklbam-backup will only work with --address or --dump options
                                    tklbam-restore will only work with --address or a backup extract
@@ -148,6 +148,23 @@ def main():
         command = "tklbam init" if sys.argv[0] == "init" else "tklbam-init"
         fatal("Initialization requires root. Run sudo %s with the same options." % command)
 
+    selected_profile = None
+    if force_profile:
+        try:
+            selected_profile = registry.registry._resolve_profile_id(conf.force_profile)
+        except registry._Registry.InvalidProfilePath, e:
+            fatal(e)
+        if not selected_profile:
+            fatal("--force-profile requires a profile ID or directory")
+        if os.path.isdir(selected_profile):
+            selected_profile = os.path.abspath(selected_profile)
+        if solo and selected_profile != registry.registry.EMPTY_PROFILE and not os.path.isdir(selected_profile):
+            fatal("--solo requires --force-profile=empty or a custom profile directory")
+    elif solo and not registry.registry.profile:
+        pending = registry.registry.pending_profile
+        if not pending or (pending != registry.registry.EMPTY_PROFILE and not os.path.isdir(pending)):
+            fatal("--solo requires --force-profile=empty or a custom profile directory")
+
     if not registry.registry.secret:
         registry.registry.secret = generate_secret()
         registry.registry.key = keypacket.fmt(registry.registry.secret, "")
@@ -166,26 +183,29 @@ Generated backup encryption key:
             print "Broken TKLBAM link to your Hub account (--solo mode)"
             registry.registry.sub_apikey = None
             registry.registry.credentials = None
+        if force_profile:
+            registry.registry.pending_profile = selected_profile
+        print "TKLBAM initialized in solo mode."
+        return
     else:
         if force or not registry.registry.sub_apikey:
             if apikey and not is_valid_apikey(apikey):
                 fatal("Invalid legacy API key.")
             import connection
             try:
-                connection.initialize(apikey, conf.force_profile)
+                connection.initialize(apikey, fetch_profile=False)
             except Exception, e:
                 fatal(e)
+            if force_profile:
+                registry.registry.pending_profile = selected_profile
             print "Linked TKLBAM to your Hub account."
             return
-        elif not force_profile and registry.registry.profile:
+        elif not force_profile:
             print "TKLBAM is already initialized. Use --force to replace its connection."
             return
 
-    if force_profile or not registry.registry.profile:
-        try:
-            registry.update_profile(conf.force_profile)
-        except hub.Backups.NotInitialized:
-            fatal("--solo requires --force-profile=empty or --force-profile=path/to/custom/profile ")
+    registry.registry.pending_profile = selected_profile
+    print "The selected profile will be used for the next backup."
 
 if __name__=="__main__":
     main()

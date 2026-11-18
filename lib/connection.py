@@ -10,7 +10,7 @@ import tempfile
 import hub
 
 
-def initialize(apikey=None, profile=None, fetch_profile=True):
+def initialize(apikey=None, profile=None, fetch_profile=False):
     import registry
     current = registry.registry
     if apikey:

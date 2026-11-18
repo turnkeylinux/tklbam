@@ -20,6 +20,7 @@ INSTANCE_PATHS = (
     '/var/lib/inithooks/cache/HUB_ACCOUNT_EMAIL',
     '/var/lib/tklbam/sub_apikey',
     '/var/lib/tklbam/credentials',
+    '/var/lib/tklbam/pending-profile',
     '/var/lib/hubdns',
     '/etc/turnkey-runtime',
     '/etc/turnkey-build.json',
