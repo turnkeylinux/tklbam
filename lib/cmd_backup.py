@@ -91,6 +91,9 @@ Resolution order for configurable options:
   2) configuration file ($CONF_PATH)
   3) built-in default (lowest precedence)
 
+Exit status:
+    12                             Hub backup plan record limit reached
+
 Configuration file format ($CONF_PATH):
 
   <option-name> <value>
@@ -182,6 +185,20 @@ def warn(e):
 def fatal(e):
     print >> sys.stderr, "error: " + str(e)
     sys.exit(1)
+
+PLAN_LIMIT_EXIT = 12
+
+def create_backup_record(hb, key, profile_id, server_id):
+    try:
+        return hb.new_backup_record(key, profile_id, server_id)
+    except hub.APIError, e:
+        if e.name != "BackupRecord.PlanLimitExceeded":
+            raise
+        print >> sys.stderr, ("Your free Hub plan's backup is already in use. "
+                              "Upgrade to back up more servers:\n"
+                              "https://hub.turnkeylinux.org/billing/\n\n"
+                              "After upgrading, run tklbam-backup again.")
+        sys.exit(PLAN_LIMIT_EXIT)
 
 from pylib.conffile import ConfFile
 
@@ -385,7 +402,7 @@ def main():
                     warn("using cached backup record: " + str(e))
 
         if not registry.hbr:
-            registry.hbr = hb.new_backup_record(registry.key,
+            registry.hbr = create_backup_record(hb, registry.key,
                                                 detect_profile_id(),
                                                 get_server_id())
 
