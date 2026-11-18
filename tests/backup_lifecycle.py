@@ -515,7 +515,7 @@ class CronScheduleTests(unittest.TestCase):
         self.enable_managed()
         self.assertEqual([], self.run_cron('/etc/cron.daily/tklbam-backup'))
 
-    def test_initialized_daily_jitters_before_running_backup(self):
+    def test_initialized_daily_jitters_and_delegates_connection_check(self):
         self.enable_managed()
         for filename, value in (('secret', 'secret'), ('key', 'keypacket'),
                                 ('hub-daily-initialized', 'a' * 32),
@@ -527,7 +527,8 @@ class CronScheduleTests(unittest.TestCase):
         os.unlink(self.calls)
         with open(os.path.join(self.path, 'hub-managed-daily'), 'w') as stream:
             stream.write('b' * 32 + ' managed\n')
-        self.assertEqual([], self.run_cron('/etc/cron.daily/tklbam-backup'))
+        self.assertEqual(['sleep 0', 'tklbam-backup --scheduled --quiet'],
+                         self.run_cron('/etc/cron.daily/tklbam-backup'))
 
     def test_uninitialized_legacy_cron_does_nothing(self):
         self.assertEqual([], self.run_cron('/etc/cron.daily/tklbam-backup'))

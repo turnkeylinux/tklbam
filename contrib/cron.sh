@@ -6,13 +6,8 @@ set -- --quiet
 if [ "$0" = /etc/cron.daily/tklbam-backup ] && [ -e "$registry/hub-managed-daily" ]; then
     [ "$registry" = /var/lib/tklbam ] || exit 0
     [ -s "$registry/secret" ] && [ -s "$registry/key" ] || exit 0
-    pending=$(cat "$registry/hub-managed-daily") || exit 0
-    [[ $pending =~ ^([0-9a-f]{32})\ (local|managed)$ ]] || exit 0
-    device=${BASH_REMATCH[1]}
-    ready=$(cat "$registry/hub-daily-initialized" 2>/dev/null) || exit 0
-    [ "$ready" = "$device" ] || exit 0
-    token=$(cat "$registry/sub_apikey" 2>/dev/null) || exit 0
-    [[ $token =~ ^tklbam2\.$device\.[A-Za-z0-9_-]{43}$ ]] || exit 0
+    [ -s "$registry/hub-daily-initialized" ] && [ -s "$registry/sub_apikey" ] || exit 0
+    # The backup command verifies the connection before it contacts the Hub.
     set -- --scheduled "$@"
 else
     # Locally managed schedules need an initialized backup profile.
