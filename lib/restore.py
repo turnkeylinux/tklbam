@@ -65,6 +65,8 @@ class Restore:
     INSTANCE_FILE_PATTERN = r'^/etc/postfix/turnkey-mail-[0-9a-f]{16}\.(sasl(\.db)?|sender|headers)($|/)'
     DOCKER_RUNTIME_PATH = '/etc/turnkey-runtime'
     DOCKER_HOSTS_PATH = '/etc/hosts'
+    MOUNTINFO_PATH = '/proc/self/mountinfo'
+    NETWORK_PATHS = ('/etc/hosts', '/etc/hostname', '/etc/resolv.conf')
 
     def _docker_runtime(self):
         try:
@@ -74,6 +76,28 @@ class Restore:
             if e.errno == errno.ENOENT:
                 return False
             raise
+
+    def _runtime_network_paths(self):
+        # A bind mount may have the same device number as its parent, so
+        # os.path.ismount cannot identify all of these files.
+        try:
+            with open(self.MOUNTINFO_PATH) as stream:
+                mounted = set(re.sub(r'\\([0-7]{3})',
+                                     lambda m: chr(int(m.group(1), 8)),
+                                     line.split()[4]) for line in stream)
+        except IOError, e:
+            if e.errno != errno.ENOENT:
+                raise
+            mounted = set()
+
+        protected = set()
+        for path in self.NETWORK_PATHS:
+            target = realpath(path)
+            if path in mounted or target in mounted:
+                protected.update((path, target))
+        if self._docker_runtime():
+            protected.add(self.DOCKER_HOSTS_PATH)
+        return tuple(protected)
 
     def __init__(self, backup_extract_path, limits=[], rollback=True, simulate=False):
         self.extras = backup.ExtrasPaths(backup_extract_path)
@@ -243,10 +267,7 @@ class Restore:
 
             print
 
-        protected_paths = self.INSTANCE_PATHS
-        if self._docker_runtime():
-            # Docker owns this mount; it cannot be replaced by an old archive.
-            protected_paths += (self.DOCKER_HOSTS_PATH,)
+        protected_paths = self.INSTANCE_PATHS + self._runtime_network_paths()
         instance_paths = PathMap(['-' + path for path in protected_paths])
         instance_file = re.compile(self.INSTANCE_FILE_PATTERN)
         # An ancestor move, replacement, chmod or recursive overlay can affect

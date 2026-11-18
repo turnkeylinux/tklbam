@@ -13,6 +13,8 @@ import unittest
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path[:0] = [os.path.join(ROOT, 'lib'), '/usr/lib/tklbam/deps/lib']
 import restore
+from changes import Change, Changes
+from rollback import Rollback
 
 INSTANCE_PATHS = (
     '/var/lib/turnkey-mail',
@@ -46,6 +48,11 @@ class RestoreIdentityTest(unittest.TestCase):
         self.original_docker_hosts = restore.Restore.DOCKER_HOSTS_PATH
         restore.Restore.DOCKER_RUNTIME_PATH = self.path('/etc/turnkey-runtime')
         restore.Restore.DOCKER_HOSTS_PATH = self.path('/etc/hosts')
+        self.original_mountinfo = restore.Restore.MOUNTINFO_PATH
+        self.original_network_paths = restore.Restore.NETWORK_PATHS
+        restore.Restore.MOUNTINFO_PATH = os.path.join(self.base, 'mountinfo')
+        restore.Restore.NETWORK_PATHS = tuple(self.path(path) for path in self.original_network_paths)
+        self.write(restore.Restore.MOUNTINFO_PATH, '')
         self.original_open = getattr(restore, 'open', None)
         def target_open(path, *args):
             if path in ('/etc/passwd', '/etc/group'):
@@ -69,6 +76,8 @@ class RestoreIdentityTest(unittest.TestCase):
             restore.Restore.INSTANCE_FILE_DIRECTORY = self.original_file_directory
         restore.Restore.DOCKER_RUNTIME_PATH = self.original_docker_runtime
         restore.Restore.DOCKER_HOSTS_PATH = self.original_docker_hosts
+        restore.Restore.MOUNTINFO_PATH = self.original_mountinfo
+        restore.Restore.NETWORK_PATHS = self.original_network_paths
         if self.original_open is None:
             del restore.open
         else:
@@ -162,6 +171,29 @@ class RestoreIdentityTest(unittest.TestCase):
         self.run_restore()
         with open(hosts) as stream:
             self.assertEqual(stream.read(), 'source:/etc/hosts')
+
+    def test_network_mounts_are_preserved_without_a_runtime_marker(self):
+        hosts = self.archived('/etc/hosts')
+        hostname = self.archived('/etc/hostname', 'd')
+        resolver = self.archived('/etc/resolv.conf')
+        target = self.archived('/run/resolver config/resolv.conf', 's')
+        os.unlink(resolver)
+        os.symlink(target, resolver)
+        ordinary = self.archived('/etc/application-setting')
+        self.write(restore.Restore.MOUNTINFO_PATH, ''.join(
+            '10 1 0:1 / %s rw - tmpfs tmpfs rw\n' % path.replace(' ', r'\040')
+            for path in (hosts, hostname, target)))
+
+        operation = self.run_restore(rollback=True)
+
+        for path in (hosts, hostname, target):
+            with open(path) as stream:
+                self.assertEqual(stream.read(), 'destination:' + path[len(self.target):])
+            self.assertEqual(stat.S_IMODE(os.stat(path).st_mode), 0600)
+            self.assertFalse(os.path.exists(str(operation.rollback.paths.originals) + path))
+        self.assertEqual(os.readlink(resolver), target)
+        with open(ordinary) as stream:
+            self.assertEqual(stream.read(), 'source:/etc/application-setting')
 
     def test_generated_smtp_files_are_protected_but_user_mail_config_restores(self):
         protected = []
@@ -322,6 +354,107 @@ class RestoreIdentityTest(unittest.TestCase):
                                  ['restore:%s:%s' % (stage, signal) for stage in ('pre', 'inspect', 'post')])
             with open(configuration) as stream:
                 self.assertEqual(stream.read(), 'destination configuration' if simulate else 'reconciled')
+
+
+class RestoreRollbackTest(unittest.TestCase):
+    def setUp(self):
+        self.base = tempfile.mkdtemp(prefix='tklbam-restore-rollback-')
+        self.rollback = Rollback.create(os.path.join(self.base, 'rollback'))
+        self.target = os.path.join(self.base, 'target')
+        self.overlay = os.path.join(self.base, 'overlay')
+        os.mkdir(self.target)
+
+    def tearDown(self):
+        shutil.rmtree(self.base)
+
+    def write(self, path, value):
+        with open(path, 'w') as stream:
+            stream.write(value)
+
+    def test_interrupted_save_rolls_back_only_saved_files(self):
+        first = os.path.join(self.target, 'first')
+        second = os.path.join(self.target, 'second')
+        created = os.path.join(self.target, 'created')
+        self.write(first, 'original first')
+        self.write(second, 'original second')
+        changes = Changes([Change.Deleted(first), Change.Deleted(second),
+                           Change.Deleted(created)])
+        move = self.rollback._move_to_originals
+        def interrupted(path):
+            if path == second:
+                raise OSError('simulated move failure')
+            move(path)
+        self.rollback._move_to_originals = interrupted
+
+        self.assertRaises(OSError, self.rollback.save_files, changes, self.overlay)
+        self.assertFalse(os.path.exists(first))
+        self.write(second, 'edited after interruption')
+        self.write(created, 'created after interruption')
+
+        Rollback(self.rollback.paths).rollback()
+
+        for path, expected in ((first, 'original first'),
+                               (second, 'edited after interruption'),
+                               (created, 'created after interruption')):
+            with open(path) as stream:
+                self.assertEqual(stream.read(), expected)
+        self.assertFalse(os.path.exists(self.rollback.paths))
+
+    def test_failed_rollback_keeps_originals_for_retry(self):
+        path = os.path.join(self.target, 'data')
+        self.write(path, 'original data')
+        changes = Changes([Change.Deleted(path)])
+        move = self.rollback._move_to_originals
+        def interrupted(path):
+            move(path)
+            raise OSError('simulated interruption after moving original')
+        self.rollback._move_to_originals = interrupted
+        self.assertRaises(OSError, self.rollback.save_files, changes, self.overlay)
+        self.write(path, 'created after interruption')
+
+        self.assertRaises(Rollback.Error, self.rollback.rollback)
+        self.assertTrue(os.path.exists(self.rollback._original_path(path)))
+        with open(path) as stream:
+            self.assertEqual(stream.read(), 'created after interruption')
+
+        os.unlink(path)
+        Rollback(self.rollback.paths).rollback()
+        with open(path) as stream:
+            self.assertEqual(stream.read(), 'original data')
+
+    def test_incomplete_legacy_archive_is_retained(self):
+        path = os.path.join(self.target, 'data')
+        self.write(path, 'original data')
+        Changes([Change.Deleted(path)]).tofile(self.rollback.paths.fsdelta)
+        self.rollback._move_to_originals(path)
+
+        self.assertRaises(Rollback.Error, self.rollback.rollback)
+
+        with open(self.rollback._original_path(path)) as stream:
+            self.assertEqual(stream.read(), 'original data')
+
+    def test_completed_save_rolls_back_parent_and_child_changes(self):
+        parent = os.path.join(self.target, 'parent')
+        child = os.path.join(parent, 'data')
+        os.mkdir(parent)
+        self.write(child, 'original data')
+        changes = Changes([Change.Deleted('/' + child), Change.Deleted(parent)])
+        self.rollback.save_files(changes, self.overlay)
+        self.write(parent, 'a file restored in place of the directory')
+        accounts = os.path.join(self.base, 'accounts')
+        os.mkdir(accounts)
+        copy = shutil.copy
+        def copy_accounts(source, dest):
+            return copy(source, accounts if dest == '/etc' else dest)
+        shutil.copy = copy_accounts
+        try:
+            self.rollback.rollback()
+        finally:
+            shutil.copy = copy
+
+        with open(child) as stream:
+            self.assertEqual(stream.read(), 'original data')
+        self.assertFalse(os.path.exists(self.rollback.paths))
 
 
 if __name__ == '__main__':
