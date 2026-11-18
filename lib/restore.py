@@ -99,6 +99,16 @@ class Restore:
             protected.add(self.DOCKER_HOSTS_PATH)
         return tuple(protected)
 
+    @staticmethod
+    def _ancestor_paths(paths):
+        ancestors = set()
+        for path in paths:
+            ancestor = dirname(path)
+            while ancestor not in ancestors:
+                ancestors.add(ancestor)
+                ancestor = dirname(ancestor)
+        return ancestors
+
     def __init__(self, backup_extract_path, limits=[], rollback=True, simulate=False):
         self.extras = backup.ExtrasPaths(backup_extract_path)
         if not isdir(self.extras.path):
@@ -267,22 +277,44 @@ class Restore:
 
             print
 
-        protected_paths = self.INSTANCE_PATHS + self._runtime_network_paths()
-        instance_paths = PathMap(['-' + path for path in protected_paths])
+        instance_paths = PathMap(['-' + path for path in self.INSTANCE_PATHS])
         instance_file = re.compile(self.INSTANCE_FILE_PATTERN)
         # An ancestor move, replacement, chmod or recursive overlay can affect
         # identity even when the identity file itself is absent from fsdelta.
-        instance_ancestors = set([self.INSTANCE_FILE_DIRECTORY])
-        for protected in protected_paths + (self.INSTANCE_FILE_DIRECTORY,):
-            ancestor = dirname(protected)
-            while ancestor not in instance_ancestors:
-                instance_ancestors.add(ancestor)
-                ancestor = dirname(ancestor)
+        instance_ancestors = self._ancestor_paths(self.INSTANCE_PATHS +
+                                                  (self.INSTANCE_FILE_DIRECTORY,))
+        instance_ancestors.add(self.INSTANCE_FILE_DIRECTORY)
+
+        runtime_paths = set(self._runtime_network_paths())
+        runtime_protected = runtime_paths | self._ancestor_paths(runtime_paths)
+        runtime_prefixes = tuple(path + '/' for path in runtime_paths)
+        runtime_basenames = set(basename(path) for path in runtime_protected)
+        resolved_parents = {}
+
+        def is_runtime_path(path):
+            return path in runtime_protected or path.startswith(runtime_prefixes)
+
+        def reaches_runtime_path(path, lexical):
+            if is_runtime_path(lexical):
+                return True
+            # For example, /var/run points to /run on Debian. Resolve the
+            # parent of candidate paths to protect files below that symlink.
+            # Unrelated names do not require a filesystem lookup.
+            parent, name = split(path.rstrip('/'))
+            if name not in runtime_basenames and name not in ('.', '..'):
+                return False
+            if parent not in resolved_parents:
+                resolved_parents[parent] = realpath(parent)
+            resolved = normpath(join(resolved_parents[parent], name))
+            return (is_runtime_path(resolved) or
+                    (islink(resolved) and is_runtime_path(realpath(resolved))))
 
         def can_restore(path):
-            path = normpath('/' + path.lstrip('/'))
-            return (path not in instance_ancestors and path in instance_paths
-                    and not instance_file.match(path))
+            path = '/' + path.lstrip('/')
+            lexical = normpath(path)
+            return (lexical not in instance_ancestors and lexical in instance_paths
+                    and not instance_file.match(lexical)
+                    and not (runtime_paths and reaches_runtime_path(path, lexical)))
 
         changes = Changes(change for change in Changes.fromfile(extras.fsdelta, limits)
                           if can_restore(change.path))

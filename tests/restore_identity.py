@@ -176,10 +176,11 @@ class RestoreIdentityTest(unittest.TestCase):
         hosts = self.archived('/etc/hosts')
         hostname = self.archived('/etc/hostname', 'd')
         resolver = self.archived('/etc/resolv.conf')
-        target = self.archived('/run/resolver config/resolv.conf', 's')
+        target = self.archived('/run/[resolver] config/resolv.conf', 's')
         os.unlink(resolver)
         os.symlink(target, resolver)
         ordinary = self.archived('/etc/application-setting')
+        similar = self.archived('/run/r config/resolv.conf')
         self.write(restore.Restore.MOUNTINFO_PATH, ''.join(
             '10 1 0:1 / %s rw - tmpfs tmpfs rw\n' % path.replace(' ', r'\040')
             for path in (hosts, hostname, target)))
@@ -194,6 +195,34 @@ class RestoreIdentityTest(unittest.TestCase):
         self.assertEqual(os.readlink(resolver), target)
         with open(ordinary) as stream:
             self.assertEqual(stream.read(), 'source:/etc/application-setting')
+        with open(similar) as stream:
+            self.assertEqual(stream.read(), 'source:/run/r config/resolv.conf')
+
+    def test_runtime_mount_is_protected_through_symlinked_ancestors(self):
+        target = self.path('/run/resolvconf/resolv.conf')
+        resolver = self.path('/etc/resolv.conf')
+        alias = self.path('/var/run')
+        self.write(target, 'destination resolver')
+        os.symlink(target, resolver)
+        os.makedirs(os.path.dirname(alias))
+        os.symlink(self.path('/run'), alias)
+        self.archived('/var/run/resolvconf/resolv.conf', destination=False)
+        self.archived('/var/run/resolvconf', 'd', destination=False)
+        self.changes.insert(0, 'o\t%s\t%d\t%d\n' % (alias, os.getuid(), os.getgid()))
+        self.olist.insert(0, alias + '\n')
+        ordinary = self.archived('/srv/application/setting')
+        self.write(restore.Restore.MOUNTINFO_PATH,
+                   '10 1 0:1 / %s rw - tmpfs tmpfs rw\n' % target)
+
+        operation = self.run_restore(rollback=True)
+
+        self.assertEqual(os.readlink(alias), self.path('/run'))
+        self.assertEqual(os.readlink(resolver), target)
+        with open(target) as stream:
+            self.assertEqual(stream.read(), 'destination resolver')
+        self.assertFalse(os.path.exists(str(operation.rollback.paths.originals) + alias))
+        with open(ordinary) as stream:
+            self.assertEqual(stream.read(), 'source:/srv/application/setting')
 
     def test_generated_smtp_files_are_protected_but_user_mail_config_restores(self):
         protected = []
