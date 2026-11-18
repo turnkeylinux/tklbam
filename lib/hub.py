@@ -260,6 +260,18 @@ class Backups:
         except TypeError:
             raise Error("The Hub returned invalid scheduled backup credentials.")
 
+    def check_profile_eligibility(self, record=None):
+        attrs = {}
+        if record:
+            attrs['backup_id'] = record.backup_id
+            if getattr(record, 'record_id', None) is not None:
+                attrs['record_id'] = record.record_id
+            elif record.address:
+                attrs['address_digest'] = sha256(record.address.encode('utf-8')).hexdigest()
+        response = self._api('GET', 'profile/eligibility/', attrs)
+        if response.get('allowed') is not True:
+            raise Error('The Hub did not confirm backup profile eligibility.')
+
     def get_new_profile(self, profile_id, profile_timestamp):
         """
         Gets a profile for <profile_id> that is newer than <profile_timestamp>.

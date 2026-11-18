@@ -191,21 +191,44 @@ def fatal(e):
 
 PLAN_LIMIT_EXIT = 12
 
+def report_plan_limit(e):
+    if e.name != "BackupRecord.PlanLimitExceeded":
+        raise e
+    print >> sys.stderr, ("Your free Hub plan's backup is already in use. "
+                          "Upgrade to back up more servers:\n"
+                          "https://hub.turnkeylinux.org/billing/\n\n"
+                          "After upgrading, run tklbam-backup again.")
+    sys.exit(PLAN_LIMIT_EXIT)
+
 def create_backup_record(hb, key, profile_id, server_id):
     try:
         return hb.new_backup_record(key, profile_id, server_id)
     except hub.APIError, e:
-        if e.name != "BackupRecord.PlanLimitExceeded":
-            raise
-        print >> sys.stderr, ("Your free Hub plan's backup is already in use. "
-                              "Upgrade to back up more servers:\n"
-                              "https://hub.turnkeylinux.org/billing/\n\n"
-                              "After upgrading, run tklbam-backup again.")
-        sys.exit(PLAN_LIMIT_EXIT)
+        report_plan_limit(e)
+
+def check_profile_eligibility(selected):
+    selected = selected or (registry.profile.profile_id if registry.profile else detect_profile_id())
+    try:
+        selected = registry._resolve_profile_id(selected)
+    except registry.InvalidProfilePath, e:
+        fatal(e)
+    if selected == registry.EMPTY_PROFILE or os.path.isdir(selected):
+        return
+    if registry.profile and registry.profile.profile_id == selected:
+        return
+    try:
+        hub_backups().check_profile_eligibility(registry.hbr)
+    except hub.APIError, e:
+        if e.name == "BackupRecord.PlanLimitExceeded":
+            report_plan_limit(e)
+        fatal("Could not check backup profile eligibility: %s" % e)
+    except hub.Error, e:
+        fatal("Could not check backup profile eligibility: %s" % e)
 
 def prepare_backup_profile(conf, command_profile=None, consume_pending=True):
     pending = registry.pending_profile
     selected = command_profile or pending or conf.force_profile
+    check_profile_eligibility(selected)
     update_profile(selected)
     conf.force_profile = selected
     if consume_pending and pending and registry.pending_profile == pending:
@@ -409,6 +432,7 @@ def main():
         try:
             if opt_resume:
                 saved_profile = registry.backup_resume_conf.get('force_profile')
+                check_profile_eligibility(saved_profile)
                 update_profile(saved_profile)
             else:
                 prepare_backup_profile(conf, opt_profile, consume_pending=not opt_simulate)

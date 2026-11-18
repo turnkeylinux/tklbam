@@ -5,6 +5,8 @@ import os
 import sys
 import types
 import unittest
+import tempfile
+import shutil
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path[:0] = [os.path.join(ROOT, 'lib'), os.path.join(ROOT, 'deps', 'lib'),
@@ -12,6 +14,8 @@ sys.path[:0] = [os.path.join(ROOT, 'lib'), os.path.join(ROOT, 'deps', 'lib'),
 sys.modules['_init_sys_path'] = types.ModuleType('_init_sys_path')
 import cmd_backup
 import hub
+import registry
+from utils import AttrDict
 
 
 class HubStub(object):
@@ -51,6 +55,63 @@ class PlanLimitTests(unittest.TestCase):
         client = HubStub()
         self.assertEqual(cmd_backup.create_backup_record(client, 'key', 'profile', 'server'), 'record')
         self.assertEqual(client.calls, [('key', 'profile', 'server')])
+
+    def test_profile_limit_prevents_download_and_retains_selection(self):
+        path = tempfile.mkdtemp()
+        saved_registry = cmd_backup.registry
+        saved_hub = cmd_backup.hub_backups
+        saved_update = cmd_backup.update_profile
+        reg = registry._Registry(path)
+        reg.pending_profile = 'generic'
+        class Client(object):
+            def check_profile_eligibility(self, record):
+                raise hub.APIError(401, 'BackupRecord.PlanLimitExceeded', 'limit')
+        try:
+            cmd_backup.registry = reg
+            cmd_backup.hub_backups = lambda: Client()
+            cmd_backup.update_profile = lambda selected: self.fail('profile downloaded')
+            with self.assertRaises(SystemExit) as raised:
+                cmd_backup.prepare_backup_profile(AttrDict(force_profile=None))
+            self.assertEqual(12, raised.exception.code)
+            self.assertEqual('generic', reg.pending_profile)
+        finally:
+            cmd_backup.registry = saved_registry
+            cmd_backup.hub_backups = saved_hub
+            cmd_backup.update_profile = saved_update
+            shutil.rmtree(path)
+
+    def test_empty_profile_needs_no_hub_check(self):
+        cmd_backup.check_profile_eligibility('empty')
+
+    def test_cached_profile_needs_no_hub_check(self):
+        path = tempfile.mkdtemp()
+        saved_registry = cmd_backup.registry
+        saved_hub = cmd_backup.hub_backups
+        try:
+            reg = registry._Registry(path)
+            class Archive(object):
+                profile_id = 'generic'
+                timestamp = 100
+                def extract(self, destination):
+                    with open(os.path.join(destination, 'fixture'), 'w') as stream:
+                        stream.write('profile')
+                def remove(self):
+                    pass
+            reg.profile = Archive()
+            cmd_backup.registry = reg
+            cmd_backup.hub_backups = lambda: self.fail('unexpected Hub check')
+            cmd_backup.check_profile_eligibility('generic')
+        finally:
+            cmd_backup.registry = saved_registry
+            cmd_backup.hub_backups = saved_hub
+            shutil.rmtree(path)
+
+    def test_client_submits_record_identity(self):
+        client = hub.Backups('test')
+        calls = []
+        client._api = lambda method, uri, attrs: calls.append((method, uri, attrs)) or {'allowed': True}
+        client.check_profile_eligibility(AttrDict(backup_id=7, record_id=42, address='private'))
+        self.assertEqual([('GET', 'profile/eligibility/', {'backup_id': 7, 'record_id': 42})], calls)
 
 
 if __name__ == '__main__':

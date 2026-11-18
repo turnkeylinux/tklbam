@@ -24,6 +24,8 @@ class DeferredProfileTests(unittest.TestCase):
         self.original_registry = registry.registry
         self.original_backup_registry = cmd_backup.registry
         self.original_update = cmd_backup.update_profile
+        self.original_check = cmd_backup.check_profile_eligibility
+        cmd_backup.check_profile_eligibility = lambda selected: None
         self.original_environment = os.environ.get('TKLBAM_PROFILE_ID')
         self.reg = registry._Registry(self.path)
         registry.registry = cmd_backup.registry = self.reg
@@ -32,6 +34,7 @@ class DeferredProfileTests(unittest.TestCase):
         registry.registry = self.original_registry
         cmd_backup.registry = self.original_backup_registry
         cmd_backup.update_profile = self.original_update
+        cmd_backup.check_profile_eligibility = self.original_check
         if self.original_environment is None:
             os.environ.pop('TKLBAM_PROFILE_ID', None)
         else:
