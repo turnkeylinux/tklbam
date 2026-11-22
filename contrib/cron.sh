@@ -34,4 +34,14 @@ randomsleep() {
 
 # prevent everyone from hitting the Hub API at exactly the same time...
 randomsleep "$JITTER"
-exec tklbam-backup "$@"
+# Keep successful scheduled backups quiet unless explicitly requested.
+# Errors on stderr remain visible to cron in either mode.
+output=$(tklbam-backup "$@")
+status=$?
+if [ "$status" -ne 0 ]; then
+    printf 'Scheduled backup failed (exit %s). See /var/log/tklbam-backup for details.\n' "$status" >&2
+    [ -z "$output" ] || printf '%s\n' "$output" >&2
+elif [ -e /etc/tklbam/email-success ] && [ -n "$output" ]; then
+    printf '%s\n' "$output"
+fi
+exit "$status"
