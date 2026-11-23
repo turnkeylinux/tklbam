@@ -19,6 +19,7 @@ from rollback import Rollback
 
 INSTANCE_PATHS = (
     '/var/lib/turnkey-mail',
+    '/var/lib/turnkey-hub',
     '/var/lib/turnkey-onboarding',
     '/var/lib/inithooks/cache/HUB_ACCOUNT_EMAIL',
     '/var/lib/tklbam/sub_apikey',
@@ -121,7 +122,7 @@ class RestoreIdentityTest(unittest.TestCase):
     def test_old_archive_preserves_identity_and_restores_ordinary_data(self):
         protected = []
         for path in INSTANCE_PATHS:
-            if path in ('/var/lib/turnkey-mail', '/var/lib/turnkey-onboarding', '/var/lib/hubdns', '/var/lib/turnkey-docker'):
+            if path in ('/var/lib/turnkey-mail', '/var/lib/turnkey-hub', '/var/lib/turnkey-onboarding', '/var/lib/hubdns', '/var/lib/turnkey-docker'):
                 path += '/state'
             protected.append(self.archived(path))
         ordinary = self.archived('/srv/application/data')
@@ -256,6 +257,20 @@ class RestoreIdentityTest(unittest.TestCase):
         self.assertEqual(stat.S_IMODE(os.stat(permissions).st_mode), 0600)
         self.assertFalse(os.path.exists(missing))
         self.assertFalse(os.path.exists(ordinary))
+
+    def test_new_hub_identity_is_preserved_for_all_restore_operations(self):
+        overwritten = self.archived('/var/lib/turnkey-hub/state.json')
+        deleted = self.archived('/var/lib/turnkey-hub/provision-pending', 'd')
+        permissions = self.archived('/var/lib/turnkey-hub/registration.json', 's')
+        source_only = self.archived('/var/lib/turnkey-hub/source-only', destination=False)
+        old = self.archived('/var/lib/turnkey-mail/state.json')
+        operation = self.run_restore(limits=[self.target, source_only], rollback=True)
+        for path in (overwritten, deleted, permissions, old):
+            with open(path) as stream:
+                self.assertEqual(stream.read(), 'destination:' + path[len(self.target):])
+            self.assertEqual(stat.S_IMODE(os.stat(path).st_mode), 0600)
+            self.assertFalse(os.path.exists(str(operation.rollback.paths.originals) + path))
+        self.assertFalse(os.path.exists(source_only))
 
     def test_rollback_never_moves_destination_identity(self):
         protected = self.archived('/var/lib/tklbam/sub_apikey')

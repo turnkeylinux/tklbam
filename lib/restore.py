@@ -51,6 +51,7 @@ class Restore:
     # retain their normal restore behavior.
     INSTANCE_PATHS = (
         '/var/lib/turnkey-mail',
+        '/var/lib/turnkey-hub',
         '/var/lib/turnkey-onboarding',
         '/var/lib/inithooks/cache/HUB_ACCOUNT_EMAIL',
         '/var/lib/tklbam/sub_apikey',
